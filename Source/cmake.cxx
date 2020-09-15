@@ -73,6 +73,7 @@
 #  if !defined(CMAKE_BOOT_MINGW)
 #    include <cmext/memory>
 
+#    include "cmGlobalAtmelStudio7Generator.h"
 #    include "cmGlobalBorlandMakefileGenerator.h"
 #    include "cmGlobalJOMMakefileGenerator.h"
 #    include "cmGlobalNMakeMakefileGenerator.h"
@@ -2024,6 +2025,7 @@ void cmake::AddDefaultGenerators()
     cmGlobalVisualStudioVersionedGenerator::NewFactory16());
   this->Generators.push_back(
     cmGlobalVisualStudioVersionedGenerator::NewFactory15());
+  //this->Generators.push_back(cmGlobalAtmelStudio7Generator::NewFactory());
   this->Generators.push_back(cmGlobalVisualStudio14Generator::NewFactory());
   this->Generators.push_back(cmGlobalVisualStudio12Generator::NewFactory());
   this->Generators.push_back(cmGlobalVisualStudio11Generator::NewFactory());
