@@ -778,6 +778,7 @@ if (WIN32)
       cmGlobalVisualStudioGenerator.h
       cmGlobalVisualStudioVersionedGenerator.h
       cmGlobalVisualStudioVersionedGenerator.cxx
+
       cmIDEFlagTable.h
       cmIDEOptions.cxx
       cmIDEOptions.h
@@ -798,6 +799,9 @@ if (WIN32)
     # Add a manifest file to executables on Windows to allow for
     # GetVersion to work properly on Windows 8 and above.
     set(MANIFEST_FILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake.version.manifest)
+
+    add_subdirectory(ExternalLibraries)
+    add_subdirectory(AtmelStudio7Generators)
   endif()
 endif ()
 
@@ -886,6 +890,7 @@ target_link_libraries(CMakeLib cmsys
   ${CMAKE_LIBRHASH_LIBRARIES}
   ${CMake_KWIML_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
+  atmelstudio7generators
   )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "sparc")

@@ -2025,7 +2025,7 @@ void cmake::AddDefaultGenerators()
     cmGlobalVisualStudioVersionedGenerator::NewFactory16());
   this->Generators.push_back(
     cmGlobalVisualStudioVersionedGenerator::NewFactory15());
-  //this->Generators.push_back(cmGlobalAtmelStudio7Generator::NewFactory());
+  this->Generators.push_back(cmGlobalAtmelStudio7Generator::NewFactory());
   this->Generators.push_back(cmGlobalVisualStudio14Generator::NewFactory());
   this->Generators.push_back(cmGlobalVisualStudio12Generator::NewFactory());
   this->Generators.push_back(cmGlobalVisualStudio11Generator::NewFactory());
