@@ -50,10 +50,10 @@ public:
   */
   enum AvailablePlatforms
   {
-    Unsupported,
-    AVR8,  /**< 8 bit AVR cores   */
-    AVR32, /**< 32 bit AVR cores */
-    ARM    /**< ARM cores (for SAM devices) */
+    Unsupported, /**< Default value */
+    AVR8,        /**< 8 bit AVR cores   */
+    AVR32,       /**< 32 bit AVR cores */
+    ARM          /**< ARM cores (for SAM devices) */
   };
 
   static std::map<AvailablePlatforms, std::string> PlatformMap;
@@ -71,7 +71,7 @@ public:
 
   void Generate() override;
 
-  bool SetGeneratorPlatform(std::string const& p, cmMakefile* mf) override;
+  // bool SetGeneratorPlatform(std::string const& p, cmMakefile* mf) override;
 
   /** Return true if the generated build tree may contain multiple builds.
       i.e. "Can I build Debug and Release in the same tree?" */
@@ -89,9 +89,9 @@ public:
     return codecvt::ANSI;
   }
 
-  bool FindMakeProgram(cmMakefile*) override;
+  // bool FindMakeProgram(cmMakefile*) override;
 
-  void ComputeTargetObjectDirectory(cmGeneratorTarget* gt) const override;
+  // void ComputeTargetObjectDirectory(cmGeneratorTarget* gt) const override;
 
   bool IsVisualStudio() const override { return true; }
 
@@ -105,8 +105,7 @@ public:
   public:
     TargetCompare(std::string const& first)
       : First(first)
-    {
-    }
+    {}
     bool operator()(cmGeneratorTarget const* l,
                     cmGeneratorTarget const* r) const;
   };
@@ -131,7 +130,7 @@ protected:
                                 const std::string& platformInGeneratorName);
 
   const char* GetIDEVersion() const { return "7.0"; }
-  
+
   std::set<std::string> IsPartOfDefaultBuild(
     std::vector<std::string> const& configs,
     OrderedTargetDependSet const& projectTargets,
@@ -160,6 +159,8 @@ protected:
                            const std::string& path,
                            cmGeneratorTarget const* t);
 
+  std::string ConvertToSolutionPath(const std::string& path);
+
   void WriteProjectConfigurations(
     std::ostream& fout, const std::string& name,
     cmGeneratorTarget const& target, std::vector<std::string> const& configs,
@@ -171,17 +172,19 @@ protected:
 
   void WriteATSLNGlobalSections(std::ostream& fout, cmLocalGenerator* root);
   void WriteATSLNFooter(std::ostream& fout);
-  std::string WriteUtilityDepend(const cmGeneratorTarget* target);
+  // std::string WriteUtilityDepend(const cmGeneratorTarget* target);
 
   void WriteTargetsToSolution(std::ostream& fout, cmLocalGenerator* root,
                               OrderedTargetDependSet const& projectTargets);
 
-  void WriteTargetDepends(std::ostream& fout,
-                          OrderedTargetDependSet const& projectTargets);
+  // void WriteTargetDepends(std::ostream& fout,
+  //                        OrderedTargetDependSet const& projectTargets);
 
   void WriteTargetConfigurations(std::ostream& fout,
                                  std::vector<std::string> const& configs,
                                  OrderedTargetDependSet const& projectTargets);
+
+  const char* ExternalProjectType(const std::string& location);
 
   void WriteExternalProject(
     std::ostream& fout, const std::string& name, const std::string& path,
@@ -191,6 +194,9 @@ protected:
   void WriteFolders(std::ostream& fout);
   void WriteFoldersContent(std::ostream& fout);
   std::map<std::string, std::set<std::string>> AtmelStudioFolders;
+
+  using UtilityDependsMap = std::map<cmGeneratorTarget const*, std::string>;
+  UtilityDependsMap UtilityDepends;
 };
 
 class cmGlobalAtmelStudio7Generator::OrderedTargetDependSet

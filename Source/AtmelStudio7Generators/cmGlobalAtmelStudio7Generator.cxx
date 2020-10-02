@@ -88,18 +88,26 @@ std::string cmGlobalAtmelStudio7Generator::GetPlatform(
 cmGlobalAtmelStudio7Generator::AvailablePlatforms
 cmGlobalAtmelStudio7Generator::GetPlatform(const std::string& name)
 {
-  auto foundItem =
-    std::find_if(PlatformMap.begin(), PlatformMap.end(),
-    [name](const std::pair<AvailablePlatforms, 
-                           std::string>& target) 
-        {
-           return (target.second == name);
-        });
+  auto foundItem = std::find_if(
+    PlatformMap.begin(), PlatformMap.end(),
+    [name](const std::pair<AvailablePlatforms, std::string>& target) {
+      return (target.second == name);
+    });
   if (foundItem != PlatformMap.end()) {
     return (foundItem->first);
   }
   return AvailablePlatforms::Unsupported;
 }
+
+// Static map definition
+std::map<cmGlobalAtmelStudio7Generator::AvailablePlatforms, std::string>
+  cmGlobalAtmelStudio7Generator::PlatformMap = {
+    { cmGlobalAtmelStudio7Generator::AvailablePlatforms::ARM, "ARM" },
+    { cmGlobalAtmelStudio7Generator::AvailablePlatforms::AVR32, "AVR32" },
+    { cmGlobalAtmelStudio7Generator::AvailablePlatforms::AVR8, "AVR8" },
+    { cmGlobalAtmelStudio7Generator::AvailablePlatforms::Unsupported,
+      "Unsupported" }
+  };
 
 std::unique_ptr<cmGlobalGeneratorFactory>
 cmGlobalAtmelStudio7Generator::NewFactory()
@@ -338,6 +346,43 @@ void cmGlobalAtmelStudio7Generator::Generate()
   this->OutputATSLNFile();
 }
 
+// Write a dsp file into the SLN file, Note, that dependencies from
+// executables to the libraries it uses are also done here
+void cmGlobalAtmelStudio7Generator::WriteExternalProject(
+  std::ostream& fout, const std::string& name, const std::string& location,
+  const char* typeGuid,
+  const std::set<BT<std::pair<std::string, bool>>>& depends)
+{
+  fout << "Project(\"{"
+       << (typeGuid ? typeGuid : this->ExternalProjectType(location))
+       << "}\") = \"" << name << "\", \""
+       << this->ConvertToSolutionPath(location) << "\", \"{"
+       << this->GetGUID(name) << "}\"\n";
+
+  // write out the dependencies here VS 7.1 includes dependencies with the
+  // project instead of in the global section
+  if (!depends.empty()) {
+    fout << "\tProjectSection(ProjectDependencies) = postProject\n";
+    for (BT<std::pair<std::string, bool>> const& it : depends) {
+      std::string const& dep = it.Value.first;
+      if (!dep.empty()) {
+        fout << "\t\t{" << this->GetGUID(dep) << "} = {" << this->GetGUID(dep)
+             << "}\n";
+      }
+    }
+    fout << "\tEndProjectSection\n";
+  }
+
+  fout << "EndProject\n";
+}
+
+const char* cmGlobalAtmelStudio7Generator::ExternalProjectType(
+  const std::string& location)
+{
+  std::string extension = cmSystemTools::GetFilenameLastExtension(location);
+  return "8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942";
+}
+
 void cmGlobalAtmelStudio7Generator::WriteTargetsToSolution(
   std::ostream& fout, cmLocalGenerator* root,
   OrderedTargetDependSet const& projectTargets)
@@ -405,6 +450,80 @@ void cmGlobalAtmelStudio7Generator::WriteTargetsToSolution(
         }
       }
     }
+  }
+}
+
+std::string cmGlobalAtmelStudio7Generator::ConvertToSolutionPath(
+  const std::string& path)
+{
+  // Convert to backslashes.  Do not use ConvertToOutputPath because
+  // we will add quoting ourselves, and we know these projects always
+  // use windows slashes.
+  std::string d = path;
+  std::string::size_type pos = 0;
+  while ((pos = d.find('/', pos)) != d.npos) {
+    d[pos++] = '\\';
+  }
+  return d;
+}
+
+void cmGlobalAtmelStudio7Generator::WriteProjectDepends(
+  std::ostream& fout, const std::string&, const std::string&,
+  cmGeneratorTarget const* gt)
+{
+  TargetDependSet const& unordered = this->GetTargetDirectDepends(gt);
+  OrderedTargetDependSet depends(unordered, std::string());
+  for (cmTargetDepend const& i : depends) {
+    if (!i->IsInBuildSystem()) {
+      continue;
+    }
+    std::string guid = this->GetGUID(i->GetName());
+    fout << "\t\t{" << guid << "} = {" << guid << "}\n";
+  }
+}
+
+// Write a dsp file into the SLN file,
+// Note, that dependencies from executables to
+// the libraries it uses are also done here
+void cmGlobalAtmelStudio7Generator::WriteProject(std::ostream& fout,
+                                                 const std::string& dspname,
+                                                 const std::string& dir,
+                                                 cmGeneratorTarget const* t)
+{
+  // check to see if this is a fortran build
+  std::string ext = ".vcproj";
+  const char* project =
+    "Project(\"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}\") = \"";
+
+  cmProp targetExt = t->GetProperty("GENERATOR_FILE_NAME_EXT");
+  if (targetExt) {
+    ext = *targetExt;
+  }
+
+  std::string guid = this->GetGUID(dspname);
+  fout << project << dspname << "\", \"" << this->ConvertToSolutionPath(dir)
+       << (!dir.empty() ? "\\" : "") << dspname << ext << "\", \"{" << guid
+       << "}\"\n";
+  fout << "\tProjectSection(ProjectDependencies) = postProject\n";
+  this->WriteProjectDepends(fout, dspname, dir, t);
+  fout << "\tEndProjectSection\n";
+
+  fout << "EndProject\n";
+
+  UtilityDependsMap::iterator ui = this->UtilityDepends.find(t);
+  if (ui != this->UtilityDepends.end()) {
+    const char* uname = ui->second.c_str();
+    /* clang-format off */
+    fout << "Project(\"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}\") = \""
+         << uname << "\", \""
+         << this->ConvertToSolutionPath(dir) << (dir[0]? "\\":"")
+         << uname << ".vcproj" << "\", \"{"
+         << this->GetGUID(uname) << "}\"\n"
+         << "\tProjectSection(ProjectDependencies) = postProject\n"
+         << "\t\t{" << guid << "} = {" << guid << "}\n"
+         << "\tEndProjectSection\n"
+         << "EndProject\n";
+    /* clang-format on */
   }
 }
 
@@ -643,4 +762,35 @@ bool cmGlobalAtmelStudio7Generator::IsDependedOn(
     }
   }
   return false;
+}
+
+cmGlobalAtmelStudio7Generator::OrderedTargetDependSet::OrderedTargetDependSet(
+  TargetDependSet const& targets, std::string const& first)
+  : derived(TargetCompare(first))
+{
+  this->insert(targets.begin(), targets.end());
+}
+
+cmGlobalAtmelStudio7Generator::OrderedTargetDependSet::OrderedTargetDependSet(
+  TargetSet const& targets, std::string const& first)
+  : derived(TargetCompare(first))
+{
+  for (cmGeneratorTarget const* it : targets) {
+    this->insert(it);
+  }
+}
+
+bool cmGlobalAtmelStudio7Generator::TargetCompare::operator()(
+  cmGeneratorTarget const* l, cmGeneratorTarget const* r) const
+{
+  // Make sure a given named target is ordered first,
+  // e.g. to set ALL_BUILD as the default active project.
+  // When the empty string is named this is a no-op.
+  if (r->GetName() == this->First) {
+    return false;
+  }
+  if (l->GetName() == this->First) {
+    return true;
+  }
+  return l->GetName() < r->GetName();
 }
