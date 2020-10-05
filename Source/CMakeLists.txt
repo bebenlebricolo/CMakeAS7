@@ -803,7 +803,11 @@ if (WIN32)
     add_subdirectory(ExternalLibraries)
     add_subdirectory(AtmelStudio7Generators)
   endif()
-endif ()
+
+  endif ()
+
+# Add Utils as extra sources
+add_subdirectory(Utils)
 
 # Watcom support
 if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
