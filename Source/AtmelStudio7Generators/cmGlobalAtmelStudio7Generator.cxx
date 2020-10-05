@@ -99,6 +99,12 @@ cmGlobalAtmelStudio7Generator::GetPlatform(const std::string& name)
   return AvailablePlatforms::Unsupported;
 }
 
+cmGlobalAtmelStudio7Generator::AvailablePlatforms
+cmGlobalAtmelStudio7Generator::GetCurrentPlatform() const
+{
+  return CurrentPlatform;
+}
+
 // Static map definition
 std::map<cmGlobalAtmelStudio7Generator::AvailablePlatforms, std::string>
   cmGlobalAtmelStudio7Generator::PlatformMap = {

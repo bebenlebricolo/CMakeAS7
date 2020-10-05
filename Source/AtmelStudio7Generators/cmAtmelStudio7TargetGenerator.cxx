@@ -1,6 +1,6 @@
 /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
    file Copyright.txt or https://cmake.org/licensing for details.  */
-#include "cmVisualStudio10TargetGenerator.h"
+#include "cmAtmelStudio7TargetGenerator.h"
 
 #include <iterator>
 #include <set>
@@ -18,17 +18,15 @@
 #include "cmGeneratedFileStream.h"
 #include "cmGeneratorExpression.h"
 #include "cmGeneratorTarget.h"
-#include "cmGlobalVisualStudio10Generator.h"
+#include "cmGlobalAtmelStudio7Generator.h"
 #include "cmGlobalVisualStudioVersionedGenerator.h"
 #include "cmLinkLineDeviceComputer.h"
-#include "cmLocalVisualStudio10Generator.h"
+#include "cmLocalAtmelStudio7Generator.h"
 #include "cmMakefile.h"
 #include "cmSourceFile.h"
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
 #include "cmVisualStudioGeneratorOptions.h"
-
-static void ConvertToWindowsSlash(std::string& s);
 
 static std::string cmVS10EscapeXML(std::string arg)
 {
@@ -48,7 +46,7 @@ static std::string cmVS10EscapeAttr(std::string arg)
   return arg;
 }
 
-struct cmVisualStudio10TargetGenerator::Elem
+struct cmAtmelStudio7TargetGenerator::Elem
 {
   std::ostream& S;
   const int Indent;
@@ -121,10 +119,10 @@ struct cmVisualStudio10TargetGenerator::Elem
 class cmVS10GeneratorOptions : public cmVisualStudioGeneratorOptions
 {
 public:
-  using Elem = cmVisualStudio10TargetGenerator::Elem;
+  using Elem = cmAtmelStudio7TargetGenerator::Elem;
   cmVS10GeneratorOptions(cmLocalVisualStudioGenerator* lg, Tool tool,
                          cmVS7FlagTable const* table,
-                         cmVisualStudio10TargetGenerator* g = nullptr)
+                         cmAtmelStudio7TargetGenerator* g = nullptr)
     : cmVisualStudioGeneratorOptions(lg, tool, table)
     , TargetGenerator(g)
   {
@@ -145,12 +143,12 @@ public:
   }
 
 private:
-  cmVisualStudio10TargetGenerator* const TargetGenerator;
+  cmAtmelStudio7TargetGenerator* const TargetGenerator;
   Elem* Parent = nullptr;
-  friend cmVisualStudio10TargetGenerator::OptionsHelper;
+  friend cmAtmelStudio7TargetGenerator::OptionsHelper;
 };
 
-struct cmVisualStudio10TargetGenerator::OptionsHelper
+struct cmAtmelStudio7TargetGenerator::OptionsHelper
 {
   cmVS10GeneratorOptions& O;
   OptionsHelper(cmVS10GeneratorOptions& o, Elem& e)
@@ -213,38 +211,22 @@ static bool cmVS10IsTargetsFile(std::string const& path)
 
 static std::string computeProjectFileExtension(cmGeneratorTarget const* t)
 {
-  std::string res;
-  res = ".vcxproj";
-  if (t->IsCSharpOnly()) {
-    res = ".csproj";
-  }
-  return res;
+  (void)t;
+  return ".cproj";
 }
 
-cmVisualStudio10TargetGenerator::cmVisualStudio10TargetGenerator(
-  cmGeneratorTarget* target, cmGlobalVisualStudio10Generator* gg)
+cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
+  cmGeneratorTarget* target, cmGlobalAtmelStudio7Generator* gg)
   : GeneratorTarget(target)
   , Makefile(target->Target->GetMakefile())
-  , Platform(gg->GetPlatformName())
+  , Platform(gg->GetPlatform(gg->GetCurrentPlatform()))
   , Name(target->GetName())
   , GUID(gg->GetGUID(this->Name))
   , GlobalGenerator(gg)
-  , LocalGenerator(
-      (cmLocalVisualStudio10Generator*)target->GetLocalGenerator())
+  , LocalGenerator((cmLocalAtmelStudio7Generator*)target->GetLocalGenerator())
 {
   this->Configurations =
     this->Makefile->GetGeneratorConfigs(cmMakefile::ExcludeEmptyConfig);
-  this->NsightTegra = gg->IsNsightTegra();
-  this->Android = gg->TargetsAndroid();
-  for (int i = 0; i < 4; ++i) {
-    this->NsightTegraVersion[i] = 0;
-  }
-  sscanf(gg->GetNsightTegraVersion().c_str(), "%u.%u.%u.%u",
-         &this->NsightTegraVersion[0], &this->NsightTegraVersion[1],
-         &this->NsightTegraVersion[2], &this->NsightTegraVersion[3]);
-  this->MSTools = !this->NsightTegra && !this->Android;
-  this->Managed = false;
-  this->TargetCompileAsWinRT = false;
   this->IsMissingFiles = false;
   this->DefaultArtifactDir =
     this->LocalGenerator->GetCurrentBinaryDirectory() + "/" +
@@ -254,34 +236,27 @@ cmVisualStudio10TargetGenerator::cmVisualStudio10TargetGenerator(
   this->ClassifyAllConfigSources();
 }
 
-cmVisualStudio10TargetGenerator::~cmVisualStudio10TargetGenerator()
+cmAtmelStudio7TargetGenerator::~cmAtmelStudio7TargetGenerator()
 {
 }
 
-std::string cmVisualStudio10TargetGenerator::CalcCondition(
+std::string cmAtmelStudio7TargetGenerator::CalcCondition(
   const std::string& config) const
 {
   std::ostringstream oss;
   oss << "'$(Configuration)|$(Platform)'=='";
   oss << config << "|" << this->Platform;
   oss << "'";
-  // handle special case for 32 bit C# targets
-  if (this->ProjectType == csproj && this->Platform == "Win32") {
-    oss << " Or ";
-    oss << "'$(Configuration)|$(Platform)'=='";
-    oss << config << "|x86";
-    oss << "'";
-  }
   return oss.str();
 }
 
-void cmVisualStudio10TargetGenerator::Elem::WritePlatformConfigTag(
+void cmAtmelStudio7TargetGenerator::Elem::WritePlatformConfigTag(
   const std::string& tag, const std::string& cond, const std::string& content)
 {
   Elem(*this, tag).Attribute("Condition", cond).Content(content);
 }
 
-std::ostream& cmVisualStudio10TargetGenerator::Elem::WriteString(
+std::ostream& cmAtmelStudio7TargetGenerator::Elem::WriteString(
   const char* line)
 {
   this->S << '\n';
@@ -312,29 +287,15 @@ std::ostream& cmVisualStudio10TargetGenerator::Elem::WriteString(
   "$(TargetFrameworkTargetsVersion)\\Microsoft.$(TargetFrameworkIdentifier)"  \
   ".CSharp.targets"
 
-void cmVisualStudio10TargetGenerator::Generate()
+void cmAtmelStudio7TargetGenerator::Generate()
 {
+  // Retrieve project file extension
   const std::string ProjectFileExtension =
     computeProjectFileExtension(this->GeneratorTarget);
-  if (ProjectFileExtension == ".vcxproj") {
-    this->ProjectType = vcxproj;
-    this->Managed = false;
-  } else if (ProjectFileExtension == ".csproj") {
-    if (this->GeneratorTarget->GetType() == cmStateEnums::STATIC_LIBRARY) {
-      std::string message = "The C# target \"" +
-        this->GeneratorTarget->GetName() +
-        "\" is of type STATIC_LIBRARY. This is discouraged (and may be "
-        "disabled in future). Make it a SHARED library instead.";
-      this->Makefile->IssueMessage(MessageType::DEPRECATION_WARNING, message);
-    }
-    this->ProjectType = csproj;
-    this->Managed = true;
-  }
-
-  if (this->Android &&
-      this->GeneratorTarget->GetType() == cmStateEnums::EXECUTABLE &&
-      !this->GeneratorTarget->Target->IsAndroidGuiExecutable()) {
-    this->GlobalGenerator->AddAndroidExecutableWarning(this->Name);
+  if (ProjectFileExtension == ".cppproj") {
+    this->ProjectType = cppproj;
+  } else {
+    this->ProjectType = cproj;
   }
 
   // Tell the global generator the name of the project file
@@ -342,7 +303,6 @@ void cmVisualStudio10TargetGenerator::Generate()
                                              this->Name);
   this->GeneratorTarget->Target->SetProperty("GENERATOR_FILE_NAME_EXT",
                                              ProjectFileExtension);
-  this->DotNetHintReferences.clear();
   this->AdditionalUsingDirectories.clear();
   if (this->GeneratorTarget->GetType() <= cmStateEnums::OBJECT_LIBRARY) {
     if (!this->ComputeClOptions()) {
@@ -796,7 +756,7 @@ void cmVisualStudio10TargetGenerator::Generate()
   this->WriteGroups();
 }
 
-void cmVisualStudio10TargetGenerator::WritePackageReferences(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WritePackageReferences(Elem& e0)
 {
   std::vector<std::string> packageReferences;
   if (cmProp vsPackageReferences =
@@ -816,7 +776,7 @@ void cmVisualStudio10TargetGenerator::WritePackageReferences(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteDotNetReferences(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteDotNetReferences(Elem& e0)
 {
   std::vector<std::string> references;
   if (cmProp vsDotNetReferences =
@@ -862,14 +822,14 @@ void cmVisualStudio10TargetGenerator::WriteDotNetReferences(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteDotNetReference(
+void cmAtmelStudio7TargetGenerator::WriteDotNetReference(
   Elem& e1, std::string const& ref, std::string const& hint,
   std::string const& config)
 {
   Elem e2(e1, "Reference");
   // If 'config' is not empty, the reference is only added for the given
   // configuration. This is used when referencing imported managed assemblies.
-  // See also cmVisualStudio10TargetGenerator::AddLibraries().
+  // See also cmAtmelStudio7TargetGenerator::AddLibraries().
   if (!config.empty()) {
     e2.Attribute("Condition", this->CalcCondition(config));
   }
@@ -890,7 +850,7 @@ void cmVisualStudio10TargetGenerator::WriteDotNetReference(
   this->WriteDotNetReferenceCustomTags(e2, ref);
 }
 
-void cmVisualStudio10TargetGenerator::WriteImports(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteImports(Elem& e0)
 {
   cmProp imports =
     this->GeneratorTarget->Target->GetProperty("VS_PROJECT_IMPORT");
@@ -907,7 +867,7 @@ void cmVisualStudio10TargetGenerator::WriteImports(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteDotNetReferenceCustomTags(
+void cmAtmelStudio7TargetGenerator::WriteDotNetReferenceCustomTags(
   Elem& e2, std::string const& ref)
 {
 
@@ -927,7 +887,7 @@ void cmVisualStudio10TargetGenerator::WriteDotNetReferenceCustomTags(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteDotNetDocumentationFile(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteDotNetDocumentationFile(Elem& e0)
 {
   std::string const& documentationFile =
     this->GeneratorTarget->GetSafeProperty("VS_DOTNET_DOCUMENTATION_FILE");
@@ -939,7 +899,7 @@ void cmVisualStudio10TargetGenerator::WriteDotNetDocumentationFile(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteEmbeddedResourceGroup(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteEmbeddedResourceGroup(Elem& e0)
 {
   if (!this->ResxObjs.empty()) {
     Elem e1(e0, "ItemGroup");
@@ -1032,7 +992,7 @@ void cmVisualStudio10TargetGenerator::WriteEmbeddedResourceGroup(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteXamlFilesGroup(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteXamlFilesGroup(Elem& e0)
 {
   if (!this->XamlObjs.empty()) {
     Elem e1(e0, "ItemGroup");
@@ -1054,7 +1014,7 @@ void cmVisualStudio10TargetGenerator::WriteXamlFilesGroup(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteTargetSpecificReferences(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteTargetSpecificReferences(Elem& e0)
 {
   if (this->MSTools) {
     if (this->GlobalGenerator->TargetsWindowsPhone() &&
@@ -1068,7 +1028,7 @@ void cmVisualStudio10TargetGenerator::WriteTargetSpecificReferences(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteTargetsFileReferences(Elem& e1)
+void cmAtmelStudio7TargetGenerator::WriteTargetsFileReferences(Elem& e1)
 {
   for (TargetsFileAndConfigs const& tac : this->TargetsFileAndConfigsVec) {
     std::ostringstream oss;
@@ -1090,7 +1050,7 @@ void cmVisualStudio10TargetGenerator::WriteTargetsFileReferences(Elem& e1)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteWinRTReferences(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteWinRTReferences(Elem& e0)
 {
   std::vector<std::string> references;
   if (cmProp vsWinRTReferences =
@@ -1115,7 +1075,7 @@ void cmVisualStudio10TargetGenerator::WriteWinRTReferences(Elem& e0)
 
 // ConfigurationType Application, Utility StaticLibrary DynamicLibrary
 
-void cmVisualStudio10TargetGenerator::WriteProjectConfigurations(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteProjectConfigurations(Elem& e0)
 {
   Elem e1(e0, "ItemGroup");
   e1.Attribute("Label", "ProjectConfigurations");
@@ -1127,7 +1087,7 @@ void cmVisualStudio10TargetGenerator::WriteProjectConfigurations(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteProjectConfigurationValues(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteProjectConfigurationValues(Elem& e0)
 {
   for (std::string const& c : this->Configurations) {
     Elem e1(e0, "PropertyGroup");
@@ -1192,7 +1152,7 @@ void cmVisualStudio10TargetGenerator::WriteProjectConfigurationValues(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteCEDebugProjectConfigurationValues(
+void cmAtmelStudio7TargetGenerator::WriteCEDebugProjectConfigurationValues(
   Elem& e0)
 {
   if (!this->GlobalGenerator->TargetsWindowsCE()) {
@@ -1218,10 +1178,10 @@ void cmVisualStudio10TargetGenerator::WriteCEDebugProjectConfigurationValues(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteMSToolConfigurationValues(
+void cmAtmelStudio7TargetGenerator::WriteMSToolConfigurationValues(
   Elem& e1, std::string const& config)
 {
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   cmProp mfcFlag = this->Makefile->GetDefinition("CMAKE_MFC_FLAG");
   if (mfcFlag) {
     std::string const mfcFlagValue = *mfcFlag;
@@ -1272,14 +1232,14 @@ void cmVisualStudio10TargetGenerator::WriteMSToolConfigurationValues(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteMSToolConfigurationValuesManaged(
+void cmAtmelStudio7TargetGenerator::WriteMSToolConfigurationValuesManaged(
   Elem& e1, std::string const& config)
 {
   if (this->GeneratorTarget->GetType() > cmStateEnums::OBJECT_LIBRARY) {
     return;
   }
 
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
 
   Options& o = *(this->ClOptions[config]);
 
@@ -1323,10 +1283,10 @@ void cmVisualStudio10TargetGenerator::WriteMSToolConfigurationValuesManaged(
 }
 
 //----------------------------------------------------------------------------
-void cmVisualStudio10TargetGenerator::WriteNsightTegraConfigurationValues(
+void cmAtmelStudio7TargetGenerator::WriteNsightTegraConfigurationValues(
   Elem& e1, std::string const&)
 {
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   const char* toolset = gg->GetPlatformToolset();
   e1.Element("NdkToolchainVersion", toolset ? toolset : "Default");
   if (cmProp minApi = this->GeneratorTarget->GetProperty("ANDROID_API_MIN")) {
@@ -1346,10 +1306,10 @@ void cmVisualStudio10TargetGenerator::WriteNsightTegraConfigurationValues(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteAndroidConfigurationValues(
+void cmAtmelStudio7TargetGenerator::WriteAndroidConfigurationValues(
   Elem& e1, std::string const&)
 {
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   if (cmProp projectToolsetOverride =
         this->GeneratorTarget->GetProperty("VS_PLATFORM_TOOLSET")) {
     e1.Element("PlatformToolset", *projectToolsetOverride);
@@ -1364,7 +1324,7 @@ void cmVisualStudio10TargetGenerator::WriteAndroidConfigurationValues(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteCustomCommands(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteCustomCommands(Elem& e0)
 {
   this->CSharpCustomCommandNames.clear();
 
@@ -1393,8 +1353,8 @@ void cmVisualStudio10TargetGenerator::WriteCustomCommands(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteCustomCommand(
-  Elem& e0, cmSourceFile const* sf)
+void cmAtmelStudio7TargetGenerator::WriteCustomCommand(Elem& e0,
+                                                       cmSourceFile const* sf)
 {
   if (this->LocalGenerator->GetSourcesVisited(this->GeneratorTarget)
         .insert(sf)
@@ -1412,7 +1372,7 @@ void cmVisualStudio10TargetGenerator::WriteCustomCommand(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteCustomRule(
+void cmAtmelStudio7TargetGenerator::WriteCustomRule(
   Elem& e0, cmSourceFile const* source, cmCustomCommand const& command)
 {
   std::string sourcePath = source->GetFullPath();
@@ -1529,7 +1489,7 @@ void cmVisualStudio10TargetGenerator::WriteCustomRule(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteCustomRuleCpp(
+void cmAtmelStudio7TargetGenerator::WriteCustomRuleCpp(
   Elem& e2, std::string const& config, std::string const& script,
   std::string const& additional_inputs, std::string const& outputs,
   std::string const& comment, bool symbolic)
@@ -1553,7 +1513,7 @@ void cmVisualStudio10TargetGenerator::WriteCustomRuleCpp(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteCustomRuleCSharp(
+void cmAtmelStudio7TargetGenerator::WriteCustomRuleCSharp(
   Elem& e0, std::string const& config, std::string const& name,
   std::string const& script, std::string const& inputs,
   std::string const& outputs, std::string const& comment)
@@ -1570,8 +1530,8 @@ void cmVisualStudio10TargetGenerator::WriteCustomRuleCSharp(
   Elem(e1, "Exec").Attribute("Command", script);
 }
 
-std::string cmVisualStudio10TargetGenerator::ConvertPath(
-  std::string const& path, bool forceRelative)
+std::string cmAtmelStudio7TargetGenerator::ConvertPath(std::string const& path,
+                                                       bool forceRelative)
 {
   return forceRelative
     ? cmSystemTools::RelativePath(
@@ -1589,7 +1549,7 @@ static void ConvertToWindowsSlash(std::string& s)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteGroups()
+void cmAtmelStudio7TargetGenerator::WriteGroups()
 {
   if (this->ProjectType == csproj) {
     return;
@@ -1718,7 +1678,7 @@ void cmVisualStudio10TargetGenerator::WriteGroups()
 }
 
 // Add to groupsUsed empty source groups that have non-empty children.
-void cmVisualStudio10TargetGenerator::AddMissingSourceGroups(
+void cmAtmelStudio7TargetGenerator::AddMissingSourceGroups(
   std::set<cmSourceGroup const*>& groupsUsed,
   const std::vector<cmSourceGroup>& allGroups)
 {
@@ -1752,7 +1712,7 @@ void cmVisualStudio10TargetGenerator::AddMissingSourceGroups(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteGroupSources(
+void cmAtmelStudio7TargetGenerator::WriteGroupSources(
   Elem& e0, std::string const& name, ToolSources const& sources,
   std::vector<cmSourceGroup>& sourceGroups)
 {
@@ -1774,8 +1734,8 @@ void cmVisualStudio10TargetGenerator::WriteGroupSources(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteHeaderSource(Elem& e1,
-                                                        cmSourceFile const* sf)
+void cmAtmelStudio7TargetGenerator::WriteHeaderSource(Elem& e1,
+                                                      cmSourceFile const* sf)
 {
   std::string const& fileName = sf->GetFullPath();
   Elem e2(e1, "ClInclude");
@@ -1788,7 +1748,7 @@ void cmVisualStudio10TargetGenerator::WriteHeaderSource(Elem& e1,
   }
 }
 
-void cmVisualStudio10TargetGenerator::ParseSettingsProperty(
+void cmAtmelStudio7TargetGenerator::ParseSettingsProperty(
   const std::string& settingsPropertyValue, ConfigToSettings& toolSettings)
 {
   if (!settingsPropertyValue.empty()) {
@@ -1816,7 +1776,7 @@ void cmVisualStudio10TargetGenerator::ParseSettingsProperty(
   }
 }
 
-bool cmVisualStudio10TargetGenerator::PropertyIsSameInAllConfigs(
+bool cmAtmelStudio7TargetGenerator::PropertyIsSameInAllConfigs(
   const ConfigToSettings& toolSettings, const std::string& propName)
 {
   std::string firstPropValue = "";
@@ -1842,8 +1802,8 @@ bool cmVisualStudio10TargetGenerator::PropertyIsSameInAllConfigs(
   return true;
 }
 
-void cmVisualStudio10TargetGenerator::WriteExtraSource(Elem& e1,
-                                                       cmSourceFile const* sf)
+void cmAtmelStudio7TargetGenerator::WriteExtraSource(Elem& e1,
+                                                     cmSourceFile const* sf)
 {
   bool toolHasSettings = false;
   const char* tool = "None";
@@ -2099,8 +2059,8 @@ void cmVisualStudio10TargetGenerator::WriteExtraSource(Elem& e1,
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteSource(Elem& e2,
-                                                  cmSourceFile const* sf)
+void cmAtmelStudio7TargetGenerator::WriteSource(Elem& e2,
+                                                cmSourceFile const* sf)
 {
   // Visual Studio tools append relative paths to the current dir, as in:
   //
@@ -2155,7 +2115,7 @@ void cmVisualStudio10TargetGenerator::WriteSource(Elem& e2,
   this->Tools[e2.Tag].push_back(toolSource);
 }
 
-void cmVisualStudio10TargetGenerator::WriteAllSources(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteAllSources(Elem& e0)
 {
   if (this->GeneratorTarget->GetType() == cmStateEnums::GLOBAL_TARGET) {
     return;
@@ -2322,7 +2282,7 @@ void cmVisualStudio10TargetGenerator::WriteAllSources(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::OutputSourceSpecificFlags(
+void cmAtmelStudio7TargetGenerator::OutputSourceSpecificFlags(
   Elem& e2, cmSourceFile const* source)
 {
   cmSourceFile const& sf = *source;
@@ -2422,7 +2382,7 @@ void cmVisualStudio10TargetGenerator::OutputSourceSpecificFlags(
     if (!flags.empty() || !options.empty() || !configDefines.empty() ||
         !includes.empty() || compileAs || noWinRT ||
         !customAndPchOptions.empty()) {
-      cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+      cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
       cmIDEFlagTable const* flagtable = nullptr;
       const std::string& srclang = source->GetLanguage();
       if (srclang == "C" || srclang == "CXX") {
@@ -2514,7 +2474,7 @@ void cmVisualStudio10TargetGenerator::OutputSourceSpecificFlags(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteExcludeFromBuild(
+void cmAtmelStudio7TargetGenerator::WriteExcludeFromBuild(
   Elem& e2, std::vector<size_t> const& exclude_configs)
 {
   for (size_t ci : exclude_configs) {
@@ -2526,7 +2486,7 @@ void cmVisualStudio10TargetGenerator::WriteExcludeFromBuild(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WritePathAndIncrementalLinkOptions(
+void cmAtmelStudio7TargetGenerator::WritePathAndIncrementalLinkOptions(
   Elem& e0)
 {
   cmStateEnums::TargetType ttype = this->GeneratorTarget->GetType();
@@ -2655,7 +2615,7 @@ void cmVisualStudio10TargetGenerator::WritePathAndIncrementalLinkOptions(
   }
 }
 
-void cmVisualStudio10TargetGenerator::OutputLinkIncremental(
+void cmAtmelStudio7TargetGenerator::OutputLinkIncremental(
   Elem& e1, std::string const& configName)
 {
   if (!this->MSTools) {
@@ -2697,7 +2657,7 @@ void cmVisualStudio10TargetGenerator::OutputLinkIncremental(
   }
 }
 
-std::vector<std::string> cmVisualStudio10TargetGenerator::GetIncludes(
+std::vector<std::string> cmAtmelStudio7TargetGenerator::GetIncludes(
   std::string const& config, std::string const& lang) const
 {
   std::vector<std::string> includes;
@@ -2709,7 +2669,7 @@ std::vector<std::string> cmVisualStudio10TargetGenerator::GetIncludes(
   return includes;
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeClOptions()
+bool cmAtmelStudio7TargetGenerator::ComputeClOptions()
 {
   for (std::string const& c : this->Configurations) {
     if (!this->ComputeClOptions(c)) {
@@ -2719,14 +2679,14 @@ bool cmVisualStudio10TargetGenerator::ComputeClOptions()
   return true;
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeClOptions(
+bool cmAtmelStudio7TargetGenerator::ComputeClOptions(
   std::string const& configName)
 {
   // much of this was copied from here:
   // copied from cmLocalVisualStudio7Generator.cxx 805
   // TODO: Integrate code below with cmLocalVisualStudio7Generator.
 
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   std::unique_ptr<Options> pOptions;
   switch (this->ProjectType) {
     case vcxproj:
@@ -2934,7 +2894,7 @@ bool cmVisualStudio10TargetGenerator::ComputeClOptions(
   return true;
 }
 
-void cmVisualStudio10TargetGenerator::WriteClOptions(
+void cmAtmelStudio7TargetGenerator::WriteClOptions(
   Elem& e1, std::string const& configName)
 {
   Options& clOptions = *(this->ClOptions[configName]);
@@ -3003,7 +2963,7 @@ void cmVisualStudio10TargetGenerator::WriteClOptions(
   }
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeRcOptions()
+bool cmAtmelStudio7TargetGenerator::ComputeRcOptions()
 {
   for (std::string const& c : this->Configurations) {
     if (!this->ComputeRcOptions(c)) {
@@ -3013,10 +2973,10 @@ bool cmVisualStudio10TargetGenerator::ComputeRcOptions()
   return true;
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeRcOptions(
+bool cmAtmelStudio7TargetGenerator::ComputeRcOptions(
   std::string const& configName)
 {
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   auto pOptions = cm::make_unique<Options>(
     this->LocalGenerator, Options::ResourceCompiler, gg->GetRcFlagTable());
   Options& rcOptions = *pOptions;
@@ -3039,7 +2999,7 @@ bool cmVisualStudio10TargetGenerator::ComputeRcOptions(
   return true;
 }
 
-void cmVisualStudio10TargetGenerator::WriteRCOptions(
+void cmAtmelStudio7TargetGenerator::WriteRCOptions(
   Elem& e1, std::string const& configName)
 {
   if (!this->MSTools) {
@@ -3054,7 +3014,7 @@ void cmVisualStudio10TargetGenerator::WriteRCOptions(
   rcOptions.OutputFlagMap();
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeCudaOptions()
+bool cmAtmelStudio7TargetGenerator::ComputeCudaOptions()
 {
   if (!this->GlobalGenerator->IsCudaEnabled()) {
     return true;
@@ -3067,10 +3027,10 @@ bool cmVisualStudio10TargetGenerator::ComputeCudaOptions()
   return true;
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeCudaOptions(
+bool cmAtmelStudio7TargetGenerator::ComputeCudaOptions(
   std::string const& configName)
 {
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   auto pOptions = cm::make_unique<Options>(
     this->LocalGenerator, Options::CudaCompiler, gg->GetCudaFlagTable());
   Options& cudaOptions = *pOptions;
@@ -3197,7 +3157,7 @@ bool cmVisualStudio10TargetGenerator::ComputeCudaOptions(
   return true;
 }
 
-void cmVisualStudio10TargetGenerator::WriteCudaOptions(
+void cmAtmelStudio7TargetGenerator::WriteCudaOptions(
   Elem& e1, std::string const& configName)
 {
   if (!this->MSTools || !this->GlobalGenerator->IsCudaEnabled()) {
@@ -3212,7 +3172,7 @@ void cmVisualStudio10TargetGenerator::WriteCudaOptions(
   cudaOptions.OutputFlagMap();
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeCudaLinkOptions()
+bool cmAtmelStudio7TargetGenerator::ComputeCudaLinkOptions()
 {
   if (!this->GlobalGenerator->IsCudaEnabled()) {
     return true;
@@ -3225,10 +3185,10 @@ bool cmVisualStudio10TargetGenerator::ComputeCudaLinkOptions()
   return true;
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeCudaLinkOptions(
+bool cmAtmelStudio7TargetGenerator::ComputeCudaLinkOptions(
   std::string const& configName)
 {
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   auto pOptions = cm::make_unique<Options>(
     this->LocalGenerator, Options::CudaCompiler, gg->GetCudaFlagTable());
   Options& cudaLinkOptions = *pOptions;
@@ -3337,7 +3297,7 @@ bool cmVisualStudio10TargetGenerator::ComputeCudaLinkOptions(
   return true;
 }
 
-void cmVisualStudio10TargetGenerator::WriteCudaLinkOptions(
+void cmAtmelStudio7TargetGenerator::WriteCudaLinkOptions(
   Elem& e1, std::string const& configName)
 {
   if (this->GeneratorTarget->GetType() > cmStateEnums::MODULE_LIBRARY) {
@@ -3353,7 +3313,7 @@ void cmVisualStudio10TargetGenerator::WriteCudaLinkOptions(
   cudaLinkOptions.OutputFlagMap();
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeMasmOptions()
+bool cmAtmelStudio7TargetGenerator::ComputeMasmOptions()
 {
   if (!this->GlobalGenerator->IsMasmEnabled()) {
     return true;
@@ -3366,10 +3326,10 @@ bool cmVisualStudio10TargetGenerator::ComputeMasmOptions()
   return true;
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeMasmOptions(
+bool cmAtmelStudio7TargetGenerator::ComputeMasmOptions(
   std::string const& configName)
 {
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   auto pOptions = cm::make_unique<Options>(
     this->LocalGenerator, Options::MasmCompiler, gg->GetMasmFlagTable());
   Options& masmOptions = *pOptions;
@@ -3387,7 +3347,7 @@ bool cmVisualStudio10TargetGenerator::ComputeMasmOptions(
   return true;
 }
 
-void cmVisualStudio10TargetGenerator::WriteMasmOptions(
+void cmAtmelStudio7TargetGenerator::WriteMasmOptions(
   Elem& e1, std::string const& configName)
 {
   if (!this->MSTools || !this->GlobalGenerator->IsMasmEnabled()) {
@@ -3405,7 +3365,7 @@ void cmVisualStudio10TargetGenerator::WriteMasmOptions(
   masmOptions.OutputFlagMap();
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeNasmOptions()
+bool cmAtmelStudio7TargetGenerator::ComputeNasmOptions()
 {
   if (!this->GlobalGenerator->IsNasmEnabled()) {
     return true;
@@ -3418,10 +3378,10 @@ bool cmVisualStudio10TargetGenerator::ComputeNasmOptions()
   return true;
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeNasmOptions(
+bool cmAtmelStudio7TargetGenerator::ComputeNasmOptions(
   std::string const& configName)
 {
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   auto pOptions = cm::make_unique<Options>(
     this->LocalGenerator, Options::NasmCompiler, gg->GetNasmFlagTable());
   Options& nasmOptions = *pOptions;
@@ -3440,7 +3400,7 @@ bool cmVisualStudio10TargetGenerator::ComputeNasmOptions(
   return true;
 }
 
-void cmVisualStudio10TargetGenerator::WriteNasmOptions(
+void cmAtmelStudio7TargetGenerator::WriteNasmOptions(
   Elem& e1, std::string const& configName)
 {
   if (!this->GlobalGenerator->IsNasmEnabled()) {
@@ -3461,8 +3421,8 @@ void cmVisualStudio10TargetGenerator::WriteNasmOptions(
   clOptions.OutputPreprocessorDefinitions("ASM_NASM");
 }
 
-void cmVisualStudio10TargetGenerator::WriteLibOptions(
-  Elem& e1, std::string const& config)
+void cmAtmelStudio7TargetGenerator::WriteLibOptions(Elem& e1,
+                                                    std::string const& config)
 {
   if (this->GeneratorTarget->GetType() != cmStateEnums::STATIC_LIBRARY &&
       this->GeneratorTarget->GetType() != cmStateEnums::OBJECT_LIBRARY) {
@@ -3477,7 +3437,7 @@ void cmVisualStudio10TargetGenerator::WriteLibOptions(
                                               this->GeneratorTarget);
   if (!libflags.empty()) {
     Elem e2(e1, "Lib");
-    cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+    cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
     cmVS10GeneratorOptions libOptions(this->LocalGenerator,
                                       cmVisualStudioGeneratorOptions::Linker,
                                       gg->GetLibFlagTable(), this);
@@ -3497,7 +3457,7 @@ void cmVisualStudio10TargetGenerator::WriteLibOptions(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteManifestOptions(
+void cmAtmelStudio7TargetGenerator::WriteManifestOptions(
   Elem& e1, std::string const& config)
 {
   if (this->GeneratorTarget->GetType() != cmStateEnums::EXECUTABLE &&
@@ -3536,7 +3496,7 @@ void cmVisualStudio10TargetGenerator::WriteManifestOptions(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteAntBuildOptions(
+void cmAtmelStudio7TargetGenerator::WriteAntBuildOptions(
   Elem& e1, std::string const& configName)
 {
   // Look through the sources for AndroidManifest.xml and use
@@ -3630,7 +3590,7 @@ void cmVisualStudio10TargetGenerator::WriteAntBuildOptions(
   }
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeLinkOptions()
+bool cmAtmelStudio7TargetGenerator::ComputeLinkOptions()
 {
   if (this->GeneratorTarget->GetType() == cmStateEnums::EXECUTABLE ||
       this->GeneratorTarget->GetType() == cmStateEnums::SHARED_LIBRARY ||
@@ -3644,10 +3604,10 @@ bool cmVisualStudio10TargetGenerator::ComputeLinkOptions()
   return true;
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeLinkOptions(
+bool cmAtmelStudio7TargetGenerator::ComputeLinkOptions(
   std::string const& config)
 {
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   auto pOptions = cm::make_unique<Options>(
     this->LocalGenerator, Options::Linker, gg->GetLinkFlagTable(), this);
   Options& linkOptions = *pOptions;
@@ -3842,7 +3802,7 @@ bool cmVisualStudio10TargetGenerator::ComputeLinkOptions(
   return true;
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeLibOptions()
+bool cmAtmelStudio7TargetGenerator::ComputeLibOptions()
 {
   if (this->GeneratorTarget->GetType() == cmStateEnums::STATIC_LIBRARY) {
     for (std::string const& c : this->Configurations) {
@@ -3854,7 +3814,7 @@ bool cmVisualStudio10TargetGenerator::ComputeLibOptions()
   return true;
 }
 
-bool cmVisualStudio10TargetGenerator::ComputeLibOptions(
+bool cmAtmelStudio7TargetGenerator::ComputeLibOptions(
   std::string const& config)
 {
   cmComputeLinkInformation* pcli =
@@ -3883,8 +3843,8 @@ bool cmVisualStudio10TargetGenerator::ComputeLibOptions(
   return true;
 }
 
-void cmVisualStudio10TargetGenerator::WriteLinkOptions(
-  Elem& e1, std::string const& config)
+void cmAtmelStudio7TargetGenerator::WriteLinkOptions(Elem& e1,
+                                                     std::string const& config)
 {
   if (this->GeneratorTarget->GetType() == cmStateEnums::STATIC_LIBRARY ||
       this->GeneratorTarget->GetType() > cmStateEnums::MODULE_LIBRARY) {
@@ -3908,7 +3868,7 @@ void cmVisualStudio10TargetGenerator::WriteLinkOptions(
   }
 }
 
-void cmVisualStudio10TargetGenerator::AddLibraries(
+void cmAtmelStudio7TargetGenerator::AddLibraries(
   const cmComputeLinkInformation& cli, std::vector<std::string>& libVec,
   std::vector<std::string>& vsTargetVec, const std::string& config)
 {
@@ -3972,7 +3932,7 @@ void cmVisualStudio10TargetGenerator::AddLibraries(
   }
 }
 
-void cmVisualStudio10TargetGenerator::AddTargetsFileAndConfigPair(
+void cmAtmelStudio7TargetGenerator::AddTargetsFileAndConfigPair(
   std::string const& targetsFile, std::string const& config)
 {
   for (TargetsFileAndConfigs& i : this->TargetsFileAndConfigsVec) {
@@ -3989,7 +3949,7 @@ void cmVisualStudio10TargetGenerator::AddTargetsFileAndConfigPair(
   this->TargetsFileAndConfigsVec.push_back(entry);
 }
 
-void cmVisualStudio10TargetGenerator::WriteMidlOptions(
+void cmAtmelStudio7TargetGenerator::WriteMidlOptions(
   Elem& e1, std::string const& configName)
 {
   if (!this->MSTools) {
@@ -4031,7 +3991,7 @@ void cmVisualStudio10TargetGenerator::WriteMidlOptions(
   e2.Element("ProxyFileName", "%(Filename)_p.c");
 }
 
-void cmVisualStudio10TargetGenerator::WriteItemDefinitionGroups(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteItemDefinitionGroups(Elem& e0)
 {
   if (this->ProjectType == csproj) {
     return;
@@ -4069,8 +4029,8 @@ void cmVisualStudio10TargetGenerator::WriteItemDefinitionGroups(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteEvents(
-  Elem& e1, std::string const& configName)
+void cmAtmelStudio7TargetGenerator::WriteEvents(Elem& e1,
+                                                std::string const& configName)
 {
   bool addedPrelink = false;
   cmGeneratorTarget::ModuleDefinitionInfo const* mdi =
@@ -4093,7 +4053,7 @@ void cmVisualStudio10TargetGenerator::WriteEvents(
                    this->GeneratorTarget->GetPostBuildCommands(), configName);
 }
 
-void cmVisualStudio10TargetGenerator::WriteEvent(
+void cmAtmelStudio7TargetGenerator::WriteEvent(
   Elem& e1, const std::string& name,
   std::vector<cmCustomCommand> const& commands, std::string const& configName)
 {
@@ -4139,7 +4099,7 @@ void cmVisualStudio10TargetGenerator::WriteEvent(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteProjectReferences(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteProjectReferences(Elem& e0)
 {
   cmGlobalGenerator::TargetDependSet const& unordered =
     this->GlobalGenerator->GetTargetDirectDepends(this->GeneratorTarget);
@@ -4187,7 +4147,7 @@ void cmVisualStudio10TargetGenerator::WriteProjectReferences(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WritePlatformExtensions(Elem& e1)
+void cmAtmelStudio7TargetGenerator::WritePlatformExtensions(Elem& e1)
 {
   // This only applies to Windows 10 apps
   if (this->GlobalGenerator->TargetsWindowsStore() &&
@@ -4207,7 +4167,7 @@ void cmVisualStudio10TargetGenerator::WritePlatformExtensions(Elem& e1)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteSinglePlatformExtension(
+void cmAtmelStudio7TargetGenerator::WriteSinglePlatformExtension(
   Elem& e1, std::string const& extension, std::string const& version)
 {
   const std::string s = "$([Microsoft.Build.Utilities.ToolLocationHelper]"
@@ -4223,7 +4183,7 @@ void cmVisualStudio10TargetGenerator::WriteSinglePlatformExtension(
   e2.Attribute("Condition", "exists('" + s + "')");
 }
 
-void cmVisualStudio10TargetGenerator::WriteSDKReferences(Elem& e0)
+void cmAtmelStudio7TargetGenerator::WriteSDKReferences(Elem& e0)
 {
   std::vector<std::string> sdkReferences;
   std::unique_ptr<Elem> spe1;
@@ -4267,14 +4227,14 @@ void cmVisualStudio10TargetGenerator::WriteSDKReferences(Elem& e0)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteSingleSDKReference(
+void cmAtmelStudio7TargetGenerator::WriteSingleSDKReference(
   Elem& e1, std::string const& extension, std::string const& version)
 {
   Elem(e1, "SDKReference")
     .Attribute("Include", extension + ", Version=" + version);
 }
 
-void cmVisualStudio10TargetGenerator::WriteWinRTPackageCertificateKeyFile(
+void cmAtmelStudio7TargetGenerator::WriteWinRTPackageCertificateKeyFile(
   Elem& e0)
 {
   if ((this->GlobalGenerator->TargetsWindowsStore() ||
@@ -4333,7 +4293,7 @@ void cmVisualStudio10TargetGenerator::WriteWinRTPackageCertificateKeyFile(
   }
 }
 
-void cmVisualStudio10TargetGenerator::ClassifyAllConfigSources()
+void cmAtmelStudio7TargetGenerator::ClassifyAllConfigSources()
 {
   for (cmGeneratorTarget::AllConfigSource const& source :
        this->GeneratorTarget->GetAllConfigSources()) {
@@ -4341,7 +4301,7 @@ void cmVisualStudio10TargetGenerator::ClassifyAllConfigSources()
   }
 }
 
-void cmVisualStudio10TargetGenerator::ClassifyAllConfigSource(
+void cmAtmelStudio7TargetGenerator::ClassifyAllConfigSource(
   cmGeneratorTarget::AllConfigSource const& acs)
 {
   switch (acs.Kind) {
@@ -4372,27 +4332,24 @@ void cmVisualStudio10TargetGenerator::ClassifyAllConfigSource(
   }
 }
 
-bool cmVisualStudio10TargetGenerator::IsResxHeader(
-  const std::string& headerFile)
+bool cmAtmelStudio7TargetGenerator::IsResxHeader(const std::string& headerFile)
 {
   return this->ExpectedResxHeaders.count(headerFile) > 0;
 }
 
-bool cmVisualStudio10TargetGenerator::IsXamlHeader(
-  const std::string& headerFile)
+bool cmAtmelStudio7TargetGenerator::IsXamlHeader(const std::string& headerFile)
 {
   return this->ExpectedXamlHeaders.count(headerFile) > 0;
 }
 
-bool cmVisualStudio10TargetGenerator::IsXamlSource(
-  const std::string& sourceFile)
+bool cmAtmelStudio7TargetGenerator::IsXamlSource(const std::string& sourceFile)
 {
   return this->ExpectedXamlSources.count(sourceFile) > 0;
 }
 
-void cmVisualStudio10TargetGenerator::WriteApplicationTypeSettings(Elem& e1)
+void cmAtmelStudio7TargetGenerator::WriteApplicationTypeSettings(Elem& e1)
 {
-  cmGlobalVisualStudio10Generator* gg = this->GlobalGenerator;
+  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   bool isAppContainer = false;
   bool const isWindowsPhone = this->GlobalGenerator->TargetsWindowsPhone();
   bool const isWindowsStore = this->GlobalGenerator->TargetsWindowsStore();
@@ -4470,7 +4427,7 @@ void cmVisualStudio10TargetGenerator::WriteApplicationTypeSettings(Elem& e1)
   }
 }
 
-void cmVisualStudio10TargetGenerator::VerifyNecessaryFiles()
+void cmAtmelStudio7TargetGenerator::VerifyNecessaryFiles()
 {
   // For Windows and Windows Phone executables, we will assume that if a
   // manifest is not present that we need to add all the necessary files
@@ -4513,7 +4470,7 @@ void cmVisualStudio10TargetGenerator::VerifyNecessaryFiles()
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteMissingFiles(Elem& e1)
+void cmAtmelStudio7TargetGenerator::WriteMissingFiles(Elem& e1)
 {
   std::string const& v = this->GlobalGenerator->GetSystemVersion();
   if (this->GlobalGenerator->TargetsWindowsPhone()) {
@@ -4533,7 +4490,7 @@ void cmVisualStudio10TargetGenerator::WriteMissingFiles(Elem& e1)
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteMissingFilesWP80(Elem& e1)
+void cmAtmelStudio7TargetGenerator::WriteMissingFilesWP80(Elem& e1)
 {
   std::string templateFolder =
     cmSystemTools::GetCMakeRoot() + "/Templates/Windows";
@@ -4622,7 +4579,7 @@ void cmVisualStudio10TargetGenerator::WriteMissingFilesWP80(Elem& e1)
   this->AddedFiles.push_back(applicationIcon);
 }
 
-void cmVisualStudio10TargetGenerator::WriteMissingFilesWP81(Elem& e1)
+void cmAtmelStudio7TargetGenerator::WriteMissingFilesWP81(Elem& e1)
 {
   std::string manifestFile =
     this->DefaultArtifactDir + "/package.appxManifest";
@@ -4685,7 +4642,7 @@ void cmVisualStudio10TargetGenerator::WriteMissingFilesWP81(Elem& e1)
   this->WriteCommonMissingFiles(e1, manifestFile);
 }
 
-void cmVisualStudio10TargetGenerator::WriteMissingFilesWS80(Elem& e1)
+void cmAtmelStudio7TargetGenerator::WriteMissingFilesWS80(Elem& e1)
 {
   std::string manifestFile =
     this->DefaultArtifactDir + "/package.appxManifest";
@@ -4740,7 +4697,7 @@ void cmVisualStudio10TargetGenerator::WriteMissingFilesWS80(Elem& e1)
   this->WriteCommonMissingFiles(e1, manifestFile);
 }
 
-void cmVisualStudio10TargetGenerator::WriteMissingFilesWS81(Elem& e1)
+void cmAtmelStudio7TargetGenerator::WriteMissingFilesWS81(Elem& e1)
 {
   std::string manifestFile =
     this->DefaultArtifactDir + "/package.appxManifest";
@@ -4800,7 +4757,7 @@ void cmVisualStudio10TargetGenerator::WriteMissingFilesWS81(Elem& e1)
   this->WriteCommonMissingFiles(e1, manifestFile);
 }
 
-void cmVisualStudio10TargetGenerator::WriteMissingFilesWS10_0(Elem& e1)
+void cmAtmelStudio7TargetGenerator::WriteMissingFilesWS10_0(Elem& e1)
 {
   std::string manifestFile =
     this->DefaultArtifactDir + "/package.appxManifest";
@@ -4861,7 +4818,7 @@ void cmVisualStudio10TargetGenerator::WriteMissingFilesWS10_0(Elem& e1)
   this->WriteCommonMissingFiles(e1, manifestFile);
 }
 
-void cmVisualStudio10TargetGenerator::WriteCommonMissingFiles(
+void cmAtmelStudio7TargetGenerator::WriteCommonMissingFiles(
   Elem& e1, const std::string& manifestFile)
 {
   std::string templateFolder =
@@ -4919,7 +4876,7 @@ void cmVisualStudio10TargetGenerator::WriteCommonMissingFiles(
   }
 }
 
-bool cmVisualStudio10TargetGenerator::ForceOld(const std::string& source) const
+bool cmAtmelStudio7TargetGenerator::ForceOld(const std::string& source) const
 {
   HANDLE h =
     CreateFileW(cmSystemTools::ConvertToWindowsExtendedPath(source).c_str(),
@@ -4939,7 +4896,7 @@ bool cmVisualStudio10TargetGenerator::ForceOld(const std::string& source) const
   return true;
 }
 
-void cmVisualStudio10TargetGenerator::GetCSharpSourceProperties(
+void cmAtmelStudio7TargetGenerator::GetCSharpSourceProperties(
   cmSourceFile const* sf, std::map<std::string, std::string>& tags)
 {
   if (this->ProjectType == csproj) {
@@ -4961,7 +4918,7 @@ void cmVisualStudio10TargetGenerator::GetCSharpSourceProperties(
   }
 }
 
-void cmVisualStudio10TargetGenerator::WriteCSharpSourceProperties(
+void cmAtmelStudio7TargetGenerator::WriteCSharpSourceProperties(
   Elem& e2, const std::map<std::string, std::string>& tags)
 {
   for (const auto& i : tags) {
@@ -4969,7 +4926,7 @@ void cmVisualStudio10TargetGenerator::WriteCSharpSourceProperties(
   }
 }
 
-std::string cmVisualStudio10TargetGenerator::GetCSharpSourceLink(
+std::string cmAtmelStudio7TargetGenerator::GetCSharpSourceLink(
   cmSourceFile const* source)
 {
   // For out of source files, we first check if a matching source group
@@ -4999,7 +4956,7 @@ std::string cmVisualStudio10TargetGenerator::GetCSharpSourceLink(
   return link;
 }
 
-std::string cmVisualStudio10TargetGenerator::GetCMakeFilePath(
+std::string cmAtmelStudio7TargetGenerator::GetCMakeFilePath(
   const char* relativeFilePath) const
 {
   // Always search in the standard modules location.
@@ -5010,7 +4967,7 @@ std::string cmVisualStudio10TargetGenerator::GetCMakeFilePath(
   return path;
 }
 
-void cmVisualStudio10TargetGenerator::WriteStdOutEncodingUtf8(Elem& e1)
+void cmAtmelStudio7TargetGenerator::WriteStdOutEncodingUtf8(Elem& e1)
 {
   if (this->GlobalGenerator->IsStdOutEncodingSupported()) {
     e1.Element("StdOutEncoding", "UTF-8");

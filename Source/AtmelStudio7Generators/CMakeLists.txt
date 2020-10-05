@@ -21,4 +21,5 @@ target_include_directories(atmelstudio7generators PUBLIC
 
 target_link_libraries(atmelstudio7generators PUBLIC
     pugixml
+    cmutils
 )

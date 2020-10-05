@@ -60,6 +60,8 @@ public:
   static std::string GetPlatform(AvailablePlatforms platform);
   static AvailablePlatforms GetPlatform(const std::string& name);
 
+  AvailablePlatforms GetCurrentPlatform() const;
+
   static std::unique_ptr<cmGlobalGeneratorFactory> NewFactory();
   bool MatchesGeneratorName(const std::string& name) const;
   bool IsAtmelStudioInstalled() const;
@@ -89,6 +91,9 @@ public:
     return codecvt::ANSI;
   }
 
+  codecvt::Encoding GetProjectFileEncoding() const { return codecvt::UTF8;
+  }
+
   // bool FindMakeProgram(cmMakefile*) override;
 
   // void ComputeTargetObjectDirectory(cmGeneratorTarget* gt) const override;
@@ -110,6 +115,9 @@ public:
                     cmGeneratorTarget const* r) const;
   };
   class OrderedTargetDependSet;
+
+  //! Lookup a stored GUID or compute one deterministically.
+  std::string GetGUID(std::string const& name);
 
 protected:
   class Factory;
@@ -145,9 +153,6 @@ protected:
   void OutputATSLNFile();
   void OutputATSLNFile(cmLocalGenerator* root,
                        std::vector<cmLocalGenerator*>& generators);
-
-  //! Lookup a stored GUID or compute one deterministically.
-  std::string GetGUID(std::string const& name);
 
   void WriteATSLNFile(std::ostream& fout, cmLocalGenerator* root,
                       std::vector<cmLocalGenerator*>& generators);

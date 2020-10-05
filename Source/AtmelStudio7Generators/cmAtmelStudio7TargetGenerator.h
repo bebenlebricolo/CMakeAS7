@@ -17,8 +17,8 @@
 class cmComputeLinkInformation;
 class cmCustomCommand;
 class cmGeneratedFileStream;
-class cmGlobalVisualStudio10Generator;
-class cmLocalVisualStudio10Generator;
+class cmGlobalAtmelStudio7Generator;
+class cmLocalAtmelStudio7Generator;
 class cmMakefile;
 class cmSourceFile;
 class cmSourceGroup;
@@ -28,11 +28,10 @@ class cmAtmelStudio7TargetGenerator
 {
 public:
   cmAtmelStudio7TargetGenerator(cmGeneratorTarget* target,
-                                  cmGlobalVisualStudio10Generator* gg);
+                                cmGlobalAtmelStudio7Generator* gg);
   ~cmAtmelStudio7TargetGenerator();
 
-  cmAtmelStudio7TargetGenerator(cmAtmelStudio7TargetGenerator const&) =
-    delete;
+  cmAtmelStudio7TargetGenerator(cmAtmelStudio7TargetGenerator const&) = delete;
   cmAtmelStudio7TargetGenerator& operator=(
     cmAtmelStudio7TargetGenerator const&) = delete;
 
@@ -199,11 +198,13 @@ private:
   OptionsMap NasmOptions;
   OptionsMap LinkOptions;
   std::string LangForClCompile;
-  enum VsProjectType
+
+  enum As7ProjectType
   {
-    vcxproj,
-    csproj
+    cppproj,
+    cproj
   } ProjectType;
+
   bool InSourceBuild;
   std::vector<std::string> Configurations;
   std::vector<TargetsFileAndConfigs> TargetsFileAndConfigsVec;
@@ -212,27 +213,16 @@ private:
   std::string const Platform;
   std::string const Name;
   std::string const GUID;
-  bool MSTools;
-  bool Managed;
-  bool NsightTegra;
-  bool Android;
-  unsigned int NsightTegraVersion[4];
-  bool TargetCompileAsWinRT;
   std::set<std::string> IPOEnabledConfigurations;
   std::map<std::string, std::string> SpectreMitigation;
-  cmGlobalVisualStudio10Generator* const GlobalGenerator;
-  cmLocalVisualStudio10Generator* const LocalGenerator;
+  cmGlobalAtmelStudio7Generator* const GlobalGenerator;
+  cmLocalAtmelStudio7Generator* const LocalGenerator;
   std::set<std::string> CSharpCustomCommandNames;
   bool IsMissingFiles;
   std::vector<std::string> AddedFiles;
   std::string DefaultArtifactDir;
   bool AddedDefaultCertificate = false;
-  // managed C++/C# relevant members
-  using DotNetHintReference = std::pair<std::string, std::string>;
-  using DotNetHintReferenceList = std::vector<DotNetHintReference>;
-  using DotNetHintReferenceMap =
-    std::map<std::string, DotNetHintReferenceList>;
-  DotNetHintReferenceMap DotNetHintReferences;
+
   using UsingDirectories = std::set<std::string>;
   using UsingDirectoriesMap = std::map<std::string, UsingDirectories>;
   UsingDirectoriesMap AdditionalUsingDirectories;
