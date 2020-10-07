@@ -7,14 +7,14 @@ namespace cmutils {
 EncodingProperties::EncodingProperties()
   : encoding(Encoding::ASCII)
   , name("ASCII")
-  , signature(magic_signature(""))
+  , signature("")
   , max_frame_length(8U)
 {
 }
 
 EncodingProperties::EncodingProperties(Encoding _encoding,
                                        const std::string& _name,
-                                       const magic_signature& _signature,
+                                       const signature_t& _signature,
                                        const unsigned int _max_frame_length)
   : encoding(_encoding)
   , name(_name)
@@ -28,21 +28,21 @@ namespace EncodingHandler {
 static std::map<std::string, EncodingProperties> encoding_table = {
   { "ANSI",
     EncodingProperties(Encoding::ANSI, "ANSI",
-                       EncodingProperties::magic_signature(""), 8U) },
+                       EncodingProperties::signature_t(""), 8U) },
   { "ASCII",
     EncodingProperties(Encoding::ANSI, "ASCII",
-                       EncodingProperties::magic_signature(""), 7U) },
+                       EncodingProperties::signature_t(""), 7U) },
   { "UTF8",
-    EncodingProperties(Encoding::ANSI, "UTF8",
-                       EncodingProperties::magic_signature(
-                         { char(0xEF), char(0xBB), char(0xBF) }),
-                       32U) },
+    EncodingProperties(
+      Encoding::ANSI, "UTF8",
+      EncodingProperties::signature_t({ char(0xEF), char(0xBB), char(0xBF) }),
+      32U) },
 
   { "UTF16",
     EncodingProperties(
       Encoding::ANSI, "ANSI",
-      EncodingProperties::magic_signature({ char(0xFE), char(0xFF) },
-                                          { char(0xFF), char(0xFE) }),
+      EncodingProperties::signature_t({ char(0xFE), char(0xFF) },
+                                      { char(0xFF), char(0xFE) }),
       32U) },
 };
 
@@ -61,7 +61,7 @@ EncodingProperties get_encoding_properties(Encoding encoding)
     [encoding](const std::pair<std::string, EncodingProperties>& item) {
       return item.second.encoding == encoding;
     });
-  
+
   // Create a default encoding object (ascii)
   if (encoding_table.end() == found_item) {
     return EncodingProperties();
@@ -73,7 +73,7 @@ EncodingProperties get_encoding_properties(Encoding encoding)
 EncodingProperties get_encoding_properties(const std::string& encoding_name)
 {
   auto iterator = encoding_table.find(encoding_name);
-  
+
   // Create a default encoding object (ascii)
   if (iterator == encoding_table.end()) {
     return EncodingProperties();
@@ -81,6 +81,33 @@ EncodingProperties get_encoding_properties(const std::string& encoding_name)
 
   return iterator->second;
 }
+
+namespace compat
+{
+Encoding convert(const codecvt::Encoding encoding)
+{
+  switch (encoding) {
+    case codecvt::Encoding::ANSI:
+      return Encoding::ANSI;
+    case codecvt::Encoding::UTF8:
+      return Encoding::UTF8;
+    default:
+      return Encoding::ASCII;
+  }
+}
+
+codecvt::Encoding convert(Encoding encoding)
+{
+  switch (encoding) {
+    case Encoding::ANSI:
+      return codecvt::Encoding::ANSI;
+    case Encoding::UTF8:
+      return codecvt::Encoding::UTF8;
+    default:
+      return codecvt::Encoding::None;
+  }
+}
+} /* end of namespace compat */
 
 }
 }
