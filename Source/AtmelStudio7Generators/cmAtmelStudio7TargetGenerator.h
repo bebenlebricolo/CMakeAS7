@@ -191,11 +191,6 @@ private:
   using Options = cmVS10GeneratorOptions;
   using OptionsMap = std::map<std::string, std::unique_ptr<Options>>;
   OptionsMap ClOptions;
-  OptionsMap RcOptions;
-  OptionsMap CudaOptions;
-  OptionsMap CudaLinkOptions;
-  OptionsMap MasmOptions;
-  OptionsMap NasmOptions;
   OptionsMap LinkOptions;
   std::string LangForClCompile;
 

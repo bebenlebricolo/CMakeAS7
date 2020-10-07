@@ -28,187 +28,6 @@
 #include "cmSystemTools.h"
 #include "cmVisualStudioGeneratorOptions.h"
 
-static std::string cmVS10EscapeXML(std::string arg)
-{
-  cmSystemTools::ReplaceString(arg, "&", "&amp;");
-  cmSystemTools::ReplaceString(arg, "<", "&lt;");
-  cmSystemTools::ReplaceString(arg, ">", "&gt;");
-  return arg;
-}
-
-static std::string cmVS10EscapeAttr(std::string arg)
-{
-  cmSystemTools::ReplaceString(arg, "&", "&amp;");
-  cmSystemTools::ReplaceString(arg, "<", "&lt;");
-  cmSystemTools::ReplaceString(arg, ">", "&gt;");
-  cmSystemTools::ReplaceString(arg, "\"", "&quot;");
-  cmSystemTools::ReplaceString(arg, "\n", "&#10;");
-  return arg;
-}
-
-struct cmAtmelStudio7TargetGenerator::Elem
-{
-  std::ostream& S;
-  const int Indent;
-  bool HasElements = false;
-  bool HasContent = false;
-  std::string Tag;
-
-  Elem(std::ostream& s, const std::string& tag)
-    : S(s)
-    , Indent(0)
-    , Tag(tag)
-  {
-    this->StartElement();
-  }
-  Elem(const Elem&) = delete;
-  Elem(Elem& par, cm::string_view tag)
-    : S(par.S)
-    , Indent(par.Indent + 1)
-    , Tag(std::string(tag))
-  {
-    par.SetHasElements();
-    this->StartElement();
-  }
-  void SetHasElements()
-  {
-    if (!HasElements) {
-      this->S << ">";
-      HasElements = true;
-    }
-  }
-  std::ostream& WriteString(const char* line);
-  void StartElement() { this->WriteString("<") << this->Tag; }
-  void Element(cm::string_view tag, std::string val)
-  {
-    Elem(*this, tag).Content(std::move(val));
-  }
-  Elem& Attribute(const char* an, std::string av)
-  {
-    this->S << " " << an << "=\"" << cmVS10EscapeAttr(std::move(av)) << "\"";
-    return *this;
-  }
-  void Content(std::string val)
-  {
-    if (!this->HasContent) {
-      this->S << ">";
-      this->HasContent = true;
-    }
-    this->S << cmVS10EscapeXML(std::move(val));
-  }
-  ~Elem()
-  {
-    // Do not emit element which has not been started
-    if (Tag.empty()) {
-      return;
-    }
-
-    if (HasElements) {
-      this->WriteString("</") << this->Tag << ">";
-    } else if (HasContent) {
-      this->S << "</" << this->Tag << ">";
-    } else {
-      this->S << " />";
-    }
-  }
-
-  void WritePlatformConfigTag(const std::string& tag, const std::string& cond,
-                              const std::string& content);
-};
-
-class cmVS10GeneratorOptions : public cmVisualStudioGeneratorOptions
-{
-public:
-  using Elem = cmAtmelStudio7TargetGenerator::Elem;
-  cmVS10GeneratorOptions(cmLocalVisualStudioGenerator* lg, Tool tool,
-                         cmVS7FlagTable const* table,
-                         cmAtmelStudio7TargetGenerator* g = nullptr)
-    : cmVisualStudioGeneratorOptions(lg, tool, table)
-    , TargetGenerator(g)
-  {
-  }
-
-  void OutputFlag(std::ostream& /*fout*/, int /*indent*/,
-                  const std::string& tag, const std::string& content) override
-  {
-    if (!this->GetConfiguration().empty()) {
-      // if there are configuration specific flags, then
-      // use the configuration specific tag for PreprocessorDefinitions
-      const std::string cond =
-        this->TargetGenerator->CalcCondition(this->GetConfiguration());
-      this->Parent->WritePlatformConfigTag(tag, cond, content);
-    } else {
-      this->Parent->Element(tag, content);
-    }
-  }
-
-private:
-  cmAtmelStudio7TargetGenerator* const TargetGenerator;
-  Elem* Parent = nullptr;
-  friend cmAtmelStudio7TargetGenerator::OptionsHelper;
-};
-
-struct cmAtmelStudio7TargetGenerator::OptionsHelper
-{
-  cmVS10GeneratorOptions& O;
-  OptionsHelper(cmVS10GeneratorOptions& o, Elem& e)
-    : O(o)
-  {
-    O.Parent = &e;
-  }
-  ~OptionsHelper() { O.Parent = nullptr; }
-
-  void OutputPreprocessorDefinitions(const std::string& lang)
-  {
-    O.OutputPreprocessorDefinitions(O.Parent->S, O.Parent->Indent + 1, lang);
-  }
-  void OutputAdditionalIncludeDirectories(const std::string& lang)
-  {
-    O.OutputAdditionalIncludeDirectories(O.Parent->S, O.Parent->Indent + 1,
-                                         lang);
-  }
-  void OutputFlagMap() { O.OutputFlagMap(O.Parent->S, O.Parent->Indent + 1); }
-  void PrependInheritedString(std::string const& key)
-  {
-    O.PrependInheritedString(key);
-  }
-};
-
-static std::string cmVS10EscapeComment(std::string comment)
-{
-  // MSBuild takes the CDATA of a <Message></Message> element and just
-  // does "echo $CDATA" with no escapes.  We must encode the string.
-  // http://technet.microsoft.com/en-us/library/cc772462%28WS.10%29.aspx
-  std::string echoable;
-  for (char c : comment) {
-    switch (c) {
-      case '\r':
-        break;
-      case '\n':
-        echoable += '\t';
-        break;
-      case '"': /* no break */
-      case '|': /* no break */
-      case '&': /* no break */
-      case '<': /* no break */
-      case '>': /* no break */
-      case '^':
-        echoable += '^'; /* no break */
-        CM_FALLTHROUGH;
-      default:
-        echoable += c;
-        break;
-    }
-  }
-  return echoable;
-}
-
-static bool cmVS10IsTargetsFile(std::string const& path)
-{
-  std::string const ext = cmSystemTools::GetFilenameLastExtension(path);
-  return cmSystemTools::Strucmp(ext.c_str(), ".targets") == 0;
-}
-
 static std::string computeProjectFileExtension(cmGeneratorTarget const* t)
 {
   (void)t;
@@ -240,53 +59,6 @@ cmAtmelStudio7TargetGenerator::~cmAtmelStudio7TargetGenerator()
 {
 }
 
-std::string cmAtmelStudio7TargetGenerator::CalcCondition(
-  const std::string& config) const
-{
-  std::ostringstream oss;
-  oss << "'$(Configuration)|$(Platform)'=='";
-  oss << config << "|" << this->Platform;
-  oss << "'";
-  return oss.str();
-}
-
-void cmAtmelStudio7TargetGenerator::Elem::WritePlatformConfigTag(
-  const std::string& tag, const std::string& cond, const std::string& content)
-{
-  Elem(*this, tag).Attribute("Condition", cond).Content(content);
-}
-
-std::ostream& cmAtmelStudio7TargetGenerator::Elem::WriteString(
-  const char* line)
-{
-  this->S << '\n';
-  this->S.fill(' ');
-  this->S.width(this->Indent * 2);
-  // write an empty string to get the fill level indent to print
-  this->S << "";
-  this->S << line;
-  return this->S;
-}
-
-#define VS10_CXX_DEFAULT_PROPS "$(VCTargetsPath)\\Microsoft.Cpp.Default.props"
-#define VS10_CXX_PROPS "$(VCTargetsPath)\\Microsoft.Cpp.props"
-#define VS10_CXX_USER_PROPS                                                   \
-  "$(UserRootDir)\\Microsoft.Cpp.$(Platform).user.props"
-#define VS10_CXX_TARGETS "$(VCTargetsPath)\\Microsoft.Cpp.targets"
-
-#define VS10_CSharp_DEFAULT_PROPS                                             \
-  "$(MSBuildExtensionsPath)\\$(MSBuildToolsVersion)\\Microsoft.Common.props"
-// This does not seem to exist by default, it's just provided for consistency
-// in case users want to have default custom props for C# targets
-#define VS10_CSharp_USER_PROPS                                                \
-  "$(UserRootDir)\\Microsoft.CSharp.$(Platform).user.props"
-#define VS10_CSharp_TARGETS "$(MSBuildToolsPath)\\Microsoft.CSharp.targets"
-
-#define VS10_CSharp_NETCF_TARGETS                                             \
-  "$(MSBuildExtensionsPath)\\Microsoft\\$(TargetFrameworkIdentifier)\\"       \
-  "$(TargetFrameworkTargetsVersion)\\Microsoft.$(TargetFrameworkIdentifier)"  \
-  ".CSharp.targets"
-
 void cmAtmelStudio7TargetGenerator::Generate()
 {
   // Retrieve project file extension
@@ -308,28 +80,16 @@ void cmAtmelStudio7TargetGenerator::Generate()
     if (!this->ComputeClOptions()) {
       return;
     }
-    if (!this->ComputeRcOptions()) {
-      return;
-    }
-    if (!this->ComputeCudaOptions()) {
-      return;
-    }
-    if (!this->ComputeCudaLinkOptions()) {
-      return;
-    }
-    if (!this->ComputeMasmOptions()) {
-      return;
-    }
-    if (!this->ComputeNasmOptions()) {
-      return;
-    }
+
     if (!this->ComputeLinkOptions()) {
       return;
     }
+
     if (!this->ComputeLibOptions()) {
       return;
     }
   }
+
   std::string path =
     cmStrCat(this->LocalGenerator->GetCurrentBinaryDirectory(), '/',
              this->Name, ProjectFileExtension);
@@ -355,36 +115,13 @@ void cmAtmelStudio7TargetGenerator::Generate()
     e0.Attribute("xmlns",
                  "http://schemas.microsoft.com/developer/msbuild/2003");
 
-    if (this->NsightTegra) {
-      Elem e1(e0, "PropertyGroup");
-      e1.Attribute("Label", "NsightTegraProject");
-      const unsigned int nsightTegraMajorVersion = this->NsightTegraVersion[0];
-      const unsigned int nsightTegraMinorVersion = this->NsightTegraVersion[1];
-      if (nsightTegraMajorVersion >= 2) {
-        if (nsightTegraMajorVersion > 3 ||
-            (nsightTegraMajorVersion == 3 && nsightTegraMinorVersion >= 1)) {
-          e1.Element("NsightTegraProjectRevisionNumber", "11");
-        } else {
-          // Nsight Tegra 2.0 uses project revision 9.
-          e1.Element("NsightTegraProjectRevisionNumber", "9");
-        }
-        // Tell newer versions to upgrade silently when loading.
-        e1.Element("NsightTegraUpgradeOnceWithoutPrompt", "true");
-      } else {
-        // Require Nsight Tegra 1.6 for JCompile support.
-        e1.Element("NsightTegraProjectRevisionNumber", "7");
-      }
-    }
-
     if (const char* hostArch =
           this->GlobalGenerator->GetPlatformToolsetHostArchitecture()) {
       Elem e1(e0, "PropertyGroup");
       e1.Element("PreferredToolArchitecture", hostArch);
     }
 
-    if (this->ProjectType != csproj) {
-      this->WriteProjectConfigurations(e0);
-    }
+    this->WriteProjectConfigurations(e0);
 
     {
       Elem e1(e0, "PropertyGroup");
@@ -1094,239 +831,41 @@ void cmAtmelStudio7TargetGenerator::WriteProjectConfigurationValues(Elem& e0)
     e1.Attribute("Condition", this->CalcCondition(c));
     e1.Attribute("Label", "Configuration");
 
-    if (this->ProjectType != csproj) {
-      std::string configType;
-      if (cmProp vsConfigurationType =
-            this->GeneratorTarget->GetProperty("VS_CONFIGURATION_TYPE")) {
-        configType = cmGeneratorExpression::Evaluate(*vsConfigurationType,
-                                                     this->LocalGenerator, c);
-      } else {
-        switch (this->GeneratorTarget->GetType()) {
-          case cmStateEnums::SHARED_LIBRARY:
-          case cmStateEnums::MODULE_LIBRARY:
-            configType = "DynamicLibrary";
-            break;
-          case cmStateEnums::OBJECT_LIBRARY:
-          case cmStateEnums::STATIC_LIBRARY:
-            configType = "StaticLibrary";
-            break;
-          case cmStateEnums::EXECUTABLE:
-            if (this->NsightTegra &&
-                !this->GeneratorTarget->Target->IsAndroidGuiExecutable()) {
-              // Android executables are .so too.
-              configType = "DynamicLibrary";
-            } else if (this->Android) {
-              configType = "DynamicLibrary";
-            } else {
-              configType = "Application";
-            }
-            break;
-          case cmStateEnums::UTILITY:
-          case cmStateEnums::INTERFACE_LIBRARY:
-          case cmStateEnums::GLOBAL_TARGET:
-            if (this->NsightTegra) {
-              // Tegra-Android platform does not understand "Utility".
-              configType = "StaticLibrary";
-            } else {
-              configType = "Utility";
-            }
-            break;
-          case cmStateEnums::UNKNOWN_LIBRARY:
-            break;
-        }
-      }
-      e1.Element("ConfigurationType", configType);
-    }
-
-    if (this->MSTools) {
-      if (!this->Managed) {
-        this->WriteMSToolConfigurationValues(e1, c);
-      } else {
-        this->WriteMSToolConfigurationValuesManaged(e1, c);
-      }
-    } else if (this->NsightTegra) {
-      this->WriteNsightTegraConfigurationValues(e1, c);
-    } else if (this->Android) {
-      this->WriteAndroidConfigurationValues(e1, c);
-    }
-  }
-}
-
-void cmAtmelStudio7TargetGenerator::WriteCEDebugProjectConfigurationValues(
-  Elem& e0)
-{
-  if (!this->GlobalGenerator->TargetsWindowsCE()) {
-    return;
-  }
-  cmProp additionalFiles =
-    this->GeneratorTarget->GetProperty("DEPLOYMENT_ADDITIONAL_FILES");
-  cmProp remoteDirectory =
-    this->GeneratorTarget->GetProperty("DEPLOYMENT_REMOTE_DIRECTORY");
-  if (!(additionalFiles || remoteDirectory)) {
-    return;
-  }
-  for (std::string const& c : this->Configurations) {
-    Elem e1(e0, "PropertyGroup");
-    e1.Attribute("Condition", this->CalcCondition(c));
-
-    if (remoteDirectory) {
-      e1.Element("RemoteDirectory", *remoteDirectory);
-    }
-    if (additionalFiles) {
-      e1.Element("CEAdditionalFiles", *additionalFiles);
-    }
-  }
-}
-
-void cmAtmelStudio7TargetGenerator::WriteMSToolConfigurationValues(
-  Elem& e1, std::string const& config)
-{
-  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
-  cmProp mfcFlag = this->Makefile->GetDefinition("CMAKE_MFC_FLAG");
-  if (mfcFlag) {
-    std::string const mfcFlagValue = *mfcFlag;
-
-    std::string useOfMfcValue = "false";
-    if (this->GeneratorTarget->GetType() <= cmStateEnums::OBJECT_LIBRARY) {
-      if (mfcFlagValue == "1") {
-        useOfMfcValue = "Static";
-      } else if (mfcFlagValue == "2") {
-        useOfMfcValue = "Dynamic";
+    std::string configType;
+    if (cmProp vsConfigurationType =
+          this->GeneratorTarget->GetProperty("VS_CONFIGURATION_TYPE")) {
+      configType = cmGeneratorExpression::Evaluate(*vsConfigurationType,
+                                                   this->LocalGenerator, c);
+    } else {
+      switch (this->GeneratorTarget->GetType()) {
+        case cmStateEnums::SHARED_LIBRARY:
+        case cmStateEnums::MODULE_LIBRARY:
+          configType = "DynamicLibrary";
+          break;
+        case cmStateEnums::OBJECT_LIBRARY:
+        case cmStateEnums::STATIC_LIBRARY:
+          configType = "StaticLibrary";
+          break;
+        case cmStateEnums::EXECUTABLE:
+          configType = "Application";
+          break;
+        case cmStateEnums::UTILITY:
+        case cmStateEnums::INTERFACE_LIBRARY:
+        case cmStateEnums::GLOBAL_TARGET:
+          configType = "Utility";
+          break;
+        case cmStateEnums::UNKNOWN_LIBRARY:
+          break;
       }
     }
-    e1.Element("UseOfMfc", useOfMfcValue);
+    e1.Element("ConfigurationType", configType);
   }
-
-  if ((this->GeneratorTarget->GetType() <= cmStateEnums::OBJECT_LIBRARY &&
-       this->ClOptions[config]->UsingUnicode()) ||
-      this->GeneratorTarget->GetPropertyAsBool("VS_WINRT_COMPONENT") ||
-      this->GlobalGenerator->TargetsWindowsPhone() ||
-      this->GlobalGenerator->TargetsWindowsStore() ||
-      this->GeneratorTarget->GetPropertyAsBool("VS_WINRT_EXTENSIONS")) {
-    e1.Element("CharacterSet", "Unicode");
-  } else if (this->GeneratorTarget->GetType() <=
-               cmStateEnums::OBJECT_LIBRARY &&
-             this->ClOptions[config]->UsingSBCS()) {
-    e1.Element("CharacterSet", "NotSet");
-  } else {
-    e1.Element("CharacterSet", "MultiByte");
-  }
-  if (cmProp projectToolsetOverride =
-        this->GeneratorTarget->GetProperty("VS_PLATFORM_TOOLSET")) {
-    e1.Element("PlatformToolset", *projectToolsetOverride);
-  } else if (const char* toolset = gg->GetPlatformToolset()) {
-    e1.Element("PlatformToolset", toolset);
-  }
-  if (this->GeneratorTarget->GetPropertyAsBool("VS_WINRT_COMPONENT") ||
-      this->GeneratorTarget->GetPropertyAsBool("VS_WINRT_EXTENSIONS")) {
-    e1.Element("WindowsAppContainer", "true");
-  }
-  if (this->IPOEnabledConfigurations.count(config) > 0) {
-    e1.Element("WholeProgramOptimization", "true");
-  }
-  {
-    auto s = this->SpectreMitigation.find(config);
-    if (s != this->SpectreMitigation.end()) {
-      e1.Element("SpectreMitigation", s->second);
-    }
-  }
-}
-
-void cmAtmelStudio7TargetGenerator::WriteMSToolConfigurationValuesManaged(
-  Elem& e1, std::string const& config)
-{
-  if (this->GeneratorTarget->GetType() > cmStateEnums::OBJECT_LIBRARY) {
-    return;
-  }
-
-  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
-
-  Options& o = *(this->ClOptions[config]);
-
-  if (o.IsDebug()) {
-    e1.Element("DebugSymbols", "true");
-    e1.Element("DefineDebug", "true");
-  }
-
-  std::string outDir = this->GeneratorTarget->GetDirectory(config) + "/";
-  ConvertToWindowsSlash(outDir);
-  e1.Element("OutputPath", outDir);
-
-  if (o.HasFlag("Platform")) {
-    e1.Element("PlatformTarget", o.GetFlag("Platform"));
-    o.RemoveFlag("Platform");
-  }
-
-  if (cmProp projectToolsetOverride =
-        this->GeneratorTarget->GetProperty("VS_PLATFORM_TOOLSET")) {
-    e1.Element("PlatformToolset", *projectToolsetOverride);
-  } else if (const char* toolset = gg->GetPlatformToolset()) {
-    e1.Element("PlatformToolset", toolset);
-  }
-
-  std::string postfixName =
-    cmStrCat(cmSystemTools::UpperCase(config), "_POSTFIX");
-  std::string assemblyName = this->GeneratorTarget->GetOutputName(
-    config, cmStateEnums::RuntimeBinaryArtifact);
-  if (cmProp postfix = this->GeneratorTarget->GetProperty(postfixName)) {
-    assemblyName += *postfix;
-  }
-  e1.Element("AssemblyName", assemblyName);
-
-  if (cmStateEnums::EXECUTABLE == this->GeneratorTarget->GetType()) {
-    e1.Element("StartAction", "Program");
-    e1.Element("StartProgram", outDir + assemblyName + ".exe");
-  }
-
-  OptionsHelper oh(o, e1);
-  oh.OutputFlagMap();
 }
 
 //----------------------------------------------------------------------------
-void cmAtmelStudio7TargetGenerator::WriteNsightTegraConfigurationValues(
-  Elem& e1, std::string const&)
-{
-  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
-  const char* toolset = gg->GetPlatformToolset();
-  e1.Element("NdkToolchainVersion", toolset ? toolset : "Default");
-  if (cmProp minApi = this->GeneratorTarget->GetProperty("ANDROID_API_MIN")) {
-    e1.Element("AndroidMinAPI", "android-" + *minApi);
-  }
-  if (cmProp api = this->GeneratorTarget->GetProperty("ANDROID_API")) {
-    e1.Element("AndroidTargetAPI", "android-" + *api);
-  }
-
-  if (cmProp cpuArch = this->GeneratorTarget->GetProperty("ANDROID_ARCH")) {
-    e1.Element("AndroidArch", *cpuArch);
-  }
-
-  if (cmProp stlType =
-        this->GeneratorTarget->GetProperty("ANDROID_STL_TYPE")) {
-    e1.Element("AndroidStlType", *stlType);
-  }
-}
-
-void cmAtmelStudio7TargetGenerator::WriteAndroidConfigurationValues(
-  Elem& e1, std::string const&)
-{
-  cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
-  if (cmProp projectToolsetOverride =
-        this->GeneratorTarget->GetProperty("VS_PLATFORM_TOOLSET")) {
-    e1.Element("PlatformToolset", *projectToolsetOverride);
-  } else if (const char* toolset = gg->GetPlatformToolset()) {
-    e1.Element("PlatformToolset", toolset);
-  }
-  if (cmProp stlType =
-        this->GeneratorTarget->GetProperty("ANDROID_STL_TYPE")) {
-    if (*stlType != "none") {
-      e1.Element("UseOfStl", *stlType);
-    }
-  }
-}
 
 void cmAtmelStudio7TargetGenerator::WriteCustomCommands(Elem& e0)
 {
-  this->CSharpCustomCommandNames.clear();
 
   cmSourceFile const* srcCMakeLists =
     this->LocalGenerator->CreateVCProjBuildRule();
@@ -1398,7 +937,7 @@ void cmAtmelStudio7TargetGenerator::WriteCustomRule(
       }
     }
   }
-  cmLocalVisualStudio7Generator* lg = this->LocalGenerator;
+  cmLocalAtmelStudio7Generator* lg = this->LocalGenerator;
 
   std::unique_ptr<Elem> spe1;
   std::unique_ptr<Elem> spe2;
@@ -1416,6 +955,7 @@ void cmAtmelStudio7TargetGenerator::WriteCustomRule(
     this->WriteSource(e2, source);
     e2.SetHasElements();
   }
+
   for (std::string const& c : this->Configurations) {
     cmCustomCommandGenerator ccg(command, c, lg);
     std::string comment = lg->ConstructComment(ccg);
@@ -1513,23 +1053,6 @@ void cmAtmelStudio7TargetGenerator::WriteCustomRuleCpp(
   }
 }
 
-void cmAtmelStudio7TargetGenerator::WriteCustomRuleCSharp(
-  Elem& e0, std::string const& config, std::string const& name,
-  std::string const& script, std::string const& inputs,
-  std::string const& outputs, std::string const& comment)
-{
-  this->CSharpCustomCommandNames.insert(name);
-  Elem e1(e0, "Target");
-  e1.Attribute("Condition", this->CalcCondition(config));
-  e1.S << "\n    Name=\"" << name << "\"";
-  e1.S << "\n    Inputs=\"" << cmVS10EscapeAttr(inputs) << "\"";
-  e1.S << "\n    Outputs=\"" << cmVS10EscapeAttr(outputs) << "\"";
-  if (!comment.empty()) {
-    Elem(e1, "Exec").Attribute("Command", "echo " + comment);
-  }
-  Elem(e1, "Exec").Attribute("Command", script);
-}
-
 std::string cmAtmelStudio7TargetGenerator::ConvertPath(std::string const& path,
                                                        bool forceRelative)
 {
@@ -1551,10 +1074,6 @@ static void ConvertToWindowsSlash(std::string& s)
 
 void cmAtmelStudio7TargetGenerator::WriteGroups()
 {
-  if (this->ProjectType == csproj) {
-    return;
-  }
-
   // collect up group information
   std::vector<cmSourceGroup> sourceGroups = this->Makefile->GetSourceGroups();
 
@@ -1926,20 +1445,6 @@ void cmAtmelStudio7TargetGenerator::WriteExtraSource(Elem& e1,
   std::map<std::string, std::string> sourceFileTags;
   this->GetCSharpSourceProperties(sf, sourceFileTags);
 
-  if (this->NsightTegra) {
-    // Nsight Tegra needs specific file types to check up-to-dateness.
-    std::string name = cmSystemTools::LowerCase(sf->GetLocation().GetName());
-    if (name == "androidmanifest.xml" || name == "build.xml" ||
-        name == "proguard.cfg" || name == "proguard-project.txt" ||
-        ext == "properties") {
-      tool = "AndroidBuild";
-    } else if (ext == "java") {
-      tool = "JCompile";
-    } else if (ext == "asm" || ext == "s") {
-      tool = "ClCompile";
-    }
-  }
-
   cmProp toolOverride = sf->GetProperty("VS_TOOL_OVERRIDE");
   if (cmNonempty(toolOverride)) {
     tool = toolOverride->c_str();
@@ -1947,19 +1452,6 @@ void cmAtmelStudio7TargetGenerator::WriteExtraSource(Elem& e1,
 
   std::string deployContent;
   std::string deployLocation;
-  if (this->GlobalGenerator->TargetsWindowsPhone() ||
-      this->GlobalGenerator->TargetsWindowsStore()) {
-    cmProp content = sf->GetProperty("VS_DEPLOYMENT_CONTENT");
-    if (cmNonempty(content)) {
-      toolHasSettings = true;
-      deployContent = *content;
-
-      cmProp location = sf->GetProperty("VS_DEPLOYMENT_LOCATION");
-      if (cmNonempty(location)) {
-        deployLocation = *location;
-      }
-    }
-  }
 
   if (ParsedToolTargetSettings.find(tool) == ParsedToolTargetSettings.end()) {
     cmProp toolTargetProperty = this->GeneratorTarget->Target->GetProperty(
@@ -2194,18 +1686,6 @@ void cmAtmelStudio7TargetGenerator::WriteAllSources(Elem& e0)
         const std::string& lang = si.Source->GetLanguage();
         if (lang == "C" || lang == "CXX") {
           tool = "ClCompile";
-        } else if (lang == "ASM_MASM" &&
-                   this->GlobalGenerator->IsMasmEnabled()) {
-          tool = "MASM";
-        } else if (lang == "ASM_NASM" &&
-                   this->GlobalGenerator->IsNasmEnabled()) {
-          tool = "NASM";
-        } else if (lang == "RC") {
-          tool = "ResourceCompile";
-        } else if (lang == "CSharp") {
-          tool = "Compile";
-        } else if (lang == "CUDA" && this->GlobalGenerator->IsCudaEnabled()) {
-          tool = "CudaCompile";
         } else {
           tool = "None";
         }
@@ -2384,25 +1864,19 @@ void cmAtmelStudio7TargetGenerator::OutputSourceSpecificFlags(
         !customAndPchOptions.empty()) {
       cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
       cmIDEFlagTable const* flagtable = nullptr;
+      
       const std::string& srclang = source->GetLanguage();
       if (srclang == "C" || srclang == "CXX") {
         flagtable = gg->GetClFlagTable();
-      } else if (srclang == "ASM_MASM" &&
-                 this->GlobalGenerator->IsMasmEnabled()) {
-        flagtable = gg->GetMasmFlagTable();
-      } else if (lang == "ASM_NASM" &&
-                 this->GlobalGenerator->IsNasmEnabled()) {
-        flagtable = gg->GetNasmFlagTable();
-      } else if (srclang == "RC") {
-        flagtable = gg->GetRcFlagTable();
-      } else if (srclang == "CSharp") {
-        flagtable = gg->GetCSharpFlagTable();
       }
+
       cmGeneratorExpressionInterpreter genexInterpreter(
         this->LocalGenerator, config, this->GeneratorTarget, lang);
+      
       cmVS10GeneratorOptions clOptions(
         this->LocalGenerator, cmVisualStudioGeneratorOptions::Compiler,
         flagtable, this);
+
       if (compileAs) {
         clOptions.AddFlag("CompileAs", compileAs);
       }
@@ -2682,18 +2156,14 @@ bool cmAtmelStudio7TargetGenerator::ComputeClOptions()
 bool cmAtmelStudio7TargetGenerator::ComputeClOptions(
   std::string const& configName)
 {
-  // much of this was copied from here:
-  // copied from cmLocalVisualStudio7Generator.cxx 805
-  // TODO: Integrate code below with cmLocalVisualStudio7Generator.
-
   cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
   std::unique_ptr<Options> pOptions;
   switch (this->ProjectType) {
-    case vcxproj:
+    case cppproj:
       pOptions = cm::make_unique<Options>(
         this->LocalGenerator, Options::Compiler, gg->GetClFlagTable());
       break;
-    case csproj:
+    case cproj:
       pOptions =
         cm::make_unique<Options>(this->LocalGenerator, Options::CSharpCompiler,
                                  gg->GetCSharpFlagTable());
@@ -2738,13 +2208,6 @@ bool cmAtmelStudio7TargetGenerator::ComputeClOptions(
   // Put the IPO enabled configurations into a set.
   if (this->GeneratorTarget->IsIPOEnabled(linkLanguage, configName)) {
     this->IPOEnabledConfigurations.insert(configName);
-  }
-
-  // Precompile Headers
-  std::string pchHeader =
-    this->GeneratorTarget->GetPchHeader(configName, linkLanguage);
-  if (this->MSTools && vcxproj == this->ProjectType && pchHeader.empty()) {
-    clOptions.AddFlag("PrecompiledHeader", "NotUsing");
   }
 
   // Get preprocessor definitions for this directory.
