@@ -6,6 +6,7 @@
 
 #include "cmAlgorithms.h"
 #include "cmDocumentationEntry.h"
+#include "cmEncoding.h"
 #include "cmGeneratedFileStream.h"
 #include "cmGeneratorExpression.h"
 #include "cmGeneratorTarget.h"
@@ -16,8 +17,6 @@
 #include "cmStringAlgorithms.h"
 #include "cmUuid.h"
 #include "cmake.h"
-
-static const char vs11generatorName[] = "Visual Studio 11 2012";
 
 class cmGlobalAtmelStudio7Generator::Factory : public cmGlobalGeneratorFactory
 {
@@ -142,14 +141,14 @@ cmGlobalAtmelStudio7Generator::cmGlobalAtmelStudio7Generator(
 void cmGlobalAtmelStudio7Generator::WriteATSLNHeader(std::ostream& fout)
 {
   // Write magic numbers first
-  char utf8bom[] = { char(0xEF), char(0xBB), char(0xBF) };
-  fout.write(utf8bom, 3);
-  fout << '\n';
+  const cmutils::EncodingProperties& encoding_prop =
+    cmutils::EncodingHandler::get_encoding_properties(cmutils::Encoding::UTF8);
+  std::string utf8bom = encoding_prop.signature.magic;
+  fout << utf8bom << std::endl;
 
   // Uses Microsoft Visual Studio VS11 format version
-  fout << "Microsoft Visual Studio Solution File,"
-          "Format Version 12.00\n"
-          "# Atmel Studio Solution File, Format Version 11.00\n";
+  fout << "Microsoft Visual Studio Solution File, Format Version 12.00\n"
+       << "# Atmel Studio Solution File, Format Version 11.00\n";
 }
 
 std::string cmGlobalAtmelStudio7Generator::GetATSLNFile(

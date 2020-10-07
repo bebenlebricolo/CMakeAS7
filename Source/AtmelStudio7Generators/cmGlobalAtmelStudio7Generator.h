@@ -21,14 +21,14 @@ class cmLocalGenerator;
 class cmMakefile;
 class cmake;
 
-/** \class cmGlobalAtmelStudio7Generator
- *  \brief Base class for global Atmel Studio generators.
+/** @class cmGlobalAtmelStudio7Generator
+ *  @brief Base class for global Atmel Studio generators.
  *
  * cmGlobalAtmelStudio7Generator aims to generate Atmel Studio 7 IDE
  * Solution & Project files (build tree and files content is similar to those
  * of Visual Studio 10).
  *
- * \note A lot of code has been duplicated from VisualStudio generators,
+ * @note A lot of code has been duplicated from VisualStudio generators,
  * however AtmelStudio's behavior is quite different to the classic
  * VisualStudio one. As a result, code was partially duplicated and brought
  * back from many derived classes of VisualStudioXX generator.
@@ -91,7 +91,9 @@ public:
     return codecvt::ANSI;
   }
 
-  codecvt::Encoding GetProjectFileEncoding() const { return codecvt::UTF8;
+  codecvt::Encoding GetProjectFileEncoding() const
+  {
+    return codecvt::Encoding::UTF8;
   }
 
   // bool FindMakeProgram(cmMakefile*) override;
@@ -110,7 +112,8 @@ public:
   public:
     TargetCompare(std::string const& first)
       : First(first)
-    {}
+    {
+    }
     bool operator()(cmGeneratorTarget const* l,
                     cmGeneratorTarget const* r) const;
   };
@@ -123,10 +126,8 @@ protected:
   class Factory;
   friend class Factory;
 
-  static constexpr AvailablePlatforms DefaultPlatform =
-    AvailablePlatforms::AVR8;
-  static constexpr char* ProjectConfigurationSectionName =
-    "ProjectConfiguration";
+  static constexpr AvailablePlatforms DefaultPlatform = AvailablePlatforms::AVR8;
+  static constexpr char* ProjectConfigurationSectionName = "ProjectConfiguration";
   AvailablePlatforms CurrentPlatform = DefaultPlatform;
 
   // Set during OutputATSLNFile with the name of the current project.
@@ -139,10 +140,9 @@ protected:
 
   const char* GetIDEVersion() const { return "7.0"; }
 
-  std::set<std::string> IsPartOfDefaultBuild(
-    std::vector<std::string> const& configs,
-    OrderedTargetDependSet const& projectTargets,
-    cmGeneratorTarget const* target);
+  std::set<std::string> IsPartOfDefaultBuild(std::vector<std::string> const& configs,
+                                             OrderedTargetDependSet const& projectTargets,
+                                             cmGeneratorTarget const* target);
 
   bool IsDependedOn(OrderedTargetDependSet const& projectTargets,
                     cmGeneratorTarget const* gtIn);
@@ -154,11 +154,14 @@ protected:
   void OutputATSLNFile(cmLocalGenerator* root,
                        std::vector<cmLocalGenerator*>& generators);
 
-  void WriteATSLNFile(std::ostream& fout, cmLocalGenerator* root,
+  void WriteATSLNFile(std::ostream& fout,
+                      cmLocalGenerator* root,
                       std::vector<cmLocalGenerator*>& generators);
 
-  void WriteProject(std::ostream& fout, const std::string& name,
-                    const std::string& path, const cmGeneratorTarget* t);
+  void WriteProject(std::ostream& fout,
+                    const std::string& name,
+                    const std::string& path,
+                    const cmGeneratorTarget* t);
 
   void WriteProjectDepends(std::ostream& fout, const std::string& name,
                            const std::string& path,
@@ -166,20 +169,22 @@ protected:
 
   std::string ConvertToSolutionPath(const std::string& path);
 
-  void WriteProjectConfigurations(
-    std::ostream& fout, const std::string& name,
-    cmGeneratorTarget const& target, std::vector<std::string> const& configs,
-    const std::set<std::string>& configsPartOfDefaultBuild,
-    const std::string& platformMapping = "");
+  void WriteProjectConfigurations(std::ostream& fout,
+                                  const std::string& name,
+                                  cmGeneratorTarget const& target,
+                                  std::vector<std::string> const& configs,
+                                  const std::set<std::string>& configsPartOfDefaultBuild,
+                                  const std::string& platformMapping = "");
 
   void WriteSolutionConfigurations(std::ostream& fout,
                                    std::vector<std::string> const& configs);
 
-  void WriteATSLNGlobalSections(std::ostream& fout, cmLocalGenerator* root);
+  void WriteATSLNGlobalSections(std::ostream& fout,
+                                cmLocalGenerator* root);
   void WriteATSLNFooter(std::ostream& fout);
-  // std::string WriteUtilityDepend(const cmGeneratorTarget* target);
 
-  void WriteTargetsToSolution(std::ostream& fout, cmLocalGenerator* root,
+  void WriteTargetsToSolution(std::ostream& fout,
+                              cmLocalGenerator* root,
                               OrderedTargetDependSet const& projectTargets);
 
   // void WriteTargetDepends(std::ostream& fout,
@@ -191,10 +196,10 @@ protected:
 
   const char* ExternalProjectType(const std::string& location);
 
-  void WriteExternalProject(
-    std::ostream& fout, const std::string& name, const std::string& path,
-    const char* typeGuid,
-    const std::set<BT<std::pair<std::string, bool>>>& dependencies);
+  void WriteExternalProject(std::ostream& fout,
+                            const std::string& name, const std::string& path,
+                            const char* typeGuid,
+                            const std::set<BT<std::pair<std::string, bool>>>& dependencies);
 
   void WriteFolders(std::ostream& fout);
   void WriteFoldersContent(std::ostream& fout);
@@ -205,11 +210,9 @@ protected:
 };
 
 class cmGlobalAtmelStudio7Generator::OrderedTargetDependSet
-  : public std::multiset<cmTargetDepend,
-                         cmGlobalAtmelStudio7Generator::TargetCompare>
+  : public std::multiset<cmTargetDepend, cmGlobalAtmelStudio7Generator::TargetCompare>
 {
-  using derived = std::multiset<cmTargetDepend,
-                                cmGlobalAtmelStudio7Generator::TargetCompare>;
+  using derived = std::multiset<cmTargetDepend, cmGlobalAtmelStudio7Generator::TargetCompare>;
 
 public:
   using TargetDependSet = cmGlobalGenerator::TargetDependSet;
