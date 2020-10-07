@@ -5,6 +5,12 @@
 
 namespace cmutils {
 
+#ifdef WIN32
+#  define CMUTILS_API __declspec(dllexport)
+#else
+    #define CMUTILS_API
+#endif
+
 /**
  * @brief lists general purpose encodings
  */
@@ -98,7 +104,7 @@ namespace EncodingHandler {
  * @return EncodingProperties   : the resulting EncodingProperties structure,
  * of a default object if input key is not handled
  */
-EncodingProperties get_encoding_properties(Encoding encoding);
+CMUTILS_API EncodingProperties get_encoding_properties(Encoding encoding);
 
 /**
  * @brief returns an EncodingProperties object using the Encoding enum as a key
@@ -107,7 +113,8 @@ EncodingProperties get_encoding_properties(Encoding encoding);
  * @return EncodingProperties   : the resulting EncodingProperties structure,
  * of a default object if input key is not handled
  */
-EncodingProperties get_encoding_properties(const std::string& encoding_name);
+CMUTILS_API EncodingProperties get_encoding_properties(
+  const std::string& encoding_name);
 };
 
 }
