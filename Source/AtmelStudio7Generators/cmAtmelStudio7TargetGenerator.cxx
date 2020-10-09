@@ -10,11 +10,6 @@
 #include <cm/vector>
 #include <cmext/algorithm>
 
-#include "windows.h"
-
-#include "cmComputeLinkInformation.h"
-#include "cmCustomCommand.h"
-#include "cmCustomCommandGenerator.h"
 #include "cmGeneratedFileStream.h"
 #include "cmGeneratorExpression.h"
 #include "cmGeneratorTarget.h"
@@ -28,12 +23,6 @@
 #include "cmSystemTools.h"
 #include "cmVisualStudioGeneratorOptions.h"
 
-static std::string computeProjectFileExtension(cmGeneratorTarget const* t)
-{
-  (void)t;
-  return ".cproj";
-}
-
 cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
   cmGeneratorTarget* target, cmGlobalAtmelStudio7Generator* gg)
   : GeneratorTarget(target)
@@ -46,8 +35,6 @@ cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
 {
   this->Configurations =
     this->Makefile->GetGeneratorConfigs(cmMakefile::ExcludeEmptyConfig);
-  this->IsMissingFiles = false;
-  this->DefaultArtifactDir =
     this->LocalGenerator->GetCurrentBinaryDirectory() + "/" +
     this->LocalGenerator->GetTargetDirectory(this->GeneratorTarget);
   this->InSourceBuild = (this->Makefile->GetCurrentSourceDirectory() ==
@@ -1864,7 +1851,7 @@ void cmAtmelStudio7TargetGenerator::OutputSourceSpecificFlags(
         !customAndPchOptions.empty()) {
       cmGlobalAtmelStudio7Generator* gg = this->GlobalGenerator;
       cmIDEFlagTable const* flagtable = nullptr;
-      
+
       const std::string& srclang = source->GetLanguage();
       if (srclang == "C" || srclang == "CXX") {
         flagtable = gg->GetClFlagTable();
@@ -1872,7 +1859,7 @@ void cmAtmelStudio7TargetGenerator::OutputSourceSpecificFlags(
 
       cmGeneratorExpressionInterpreter genexInterpreter(
         this->LocalGenerator, config, this->GeneratorTarget, lang);
-      
+
       cmVS10GeneratorOptions clOptions(
         this->LocalGenerator, cmVisualStudioGeneratorOptions::Compiler,
         flagtable, this);
