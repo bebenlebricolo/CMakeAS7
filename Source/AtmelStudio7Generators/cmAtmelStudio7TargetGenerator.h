@@ -20,9 +20,60 @@ class cmGeneratedFileStream;
 class cmGlobalAtmelStudio7Generator;
 class cmLocalAtmelStudio7Generator;
 class cmMakefile;
-class cmSourceFile;
-class cmSourceGroup;
-class cmVS10GeneratorOptions;
+
+/**
+  * @brief forward declaring pugixml classes
+  */
+namespace pugi {
+class xml_node;
+class xml_doc;
+}
+
+class AS7ProjectDescriptor
+{
+  public:
+  /**
+    * @brief Describes the available project types supported in AtmelStudio7
+  */
+  enum Type : uint8_t
+  {
+    cppproj = 0, /**< Target needs CPP support       */
+    cproj,       /**< Target needs C support         */
+    asmproj,     /**< Target needs Assembler support */
+    maxval       /**< Used to determine the size of the embedded std::array*/
+  } ProjectType;
+
+  struct Properties
+  {
+    std::string name; /**< Embeds its own name     */
+    Type type;        /**< Embeds its project type */
+    std::string language;
+    std::string compiler_vs_targets;
+    std::string default_output_file_extension;
+  };
+
+  /**
+   * @brief Resolves a project type properties using its name as a key
+   * @param[in] name  : name of the targeted project type
+   * @return As7ProjectProperties structure or nullptr if it does not exist
+  */
+  static Properties* get_project_type_properties(const std::string& name);
+
+  /**
+   * @brief Resolves a project type properties using its enum version as a key
+   * @param[in] name  : name of the targeted project type
+   * @return As7ProjectProperties structure or nullptr if it does not exist
+  */
+  static Properties* get_project_type_properties(Type type);
+
+  static inline std::string get_extension(Type type);
+
+private:
+  static std::array<Properties,
+                      static_cast<uint8_t>(Type::maxval)>
+      collection; /**< Stores an array of PropjectTypeProperties to link properties
+                            alongside with the right projet type name                    */
+};
 
 class cmAtmelStudio7TargetGenerator
 {
@@ -43,193 +94,34 @@ private:
     cmSourceFile const* SourceFile;
     bool RelativePath;
   };
-  struct ToolSources : public std::vector<ToolSource>
-  {
-  };
-
-  struct TargetsFileAndConfigs
-  {
-    std::string File;
-    std::vector<std::string> Configs;
-  };
-
-  struct Elem;
-  struct OptionsHelper;
 
   std::string ConvertPath(std::string const& path, bool forceRelative);
-  std::string CalcCondition(const std::string& config) const;
-  void WriteProjectConfigurations(Elem& e0);
-  void WriteProjectConfigurationValues(Elem& e0);
-  void WriteMSToolConfigurationValues(Elem& e1, std::string const& config);
-  void WriteCEDebugProjectConfigurationValues(Elem& e0);
-  void WriteMSToolConfigurationValuesManaged(Elem& e1,
-                                             std::string const& config);
-  void WriteHeaderSource(Elem& e1, cmSourceFile const* sf);
-  void WriteExtraSource(Elem& e1, cmSourceFile const* sf);
-  void WriteNsightTegraConfigurationValues(Elem& e1,
-                                           std::string const& config);
-  void WriteAndroidConfigurationValues(Elem& e1, std::string const& config);
-  void WriteSource(Elem& e2, cmSourceFile const* sf);
-  void WriteExcludeFromBuild(Elem& e2,
-                             std::vector<size_t> const& exclude_configs);
-  void WriteAllSources(Elem& e0);
-  void WritePackageReferences(Elem& e0);
-  void WriteDotNetReferences(Elem& e0);
-  void WriteDotNetReference(Elem& e1, std::string const& ref,
-                            std::string const& hint,
-                            std::string const& config);
-  void WriteDotNetDocumentationFile(Elem& e0);
-  void WriteImports(Elem& e0);
-  void WriteDotNetReferenceCustomTags(Elem& e2, std::string const& ref);
-  void WriteEmbeddedResourceGroup(Elem& e0);
-  void WriteWinRTReferences(Elem& e0);
-  void WriteWinRTPackageCertificateKeyFile(Elem& e0);
-  void WriteXamlFilesGroup(Elem& e0);
-  void WritePathAndIncrementalLinkOptions(Elem& e0);
-  void WriteItemDefinitionGroups(Elem& e0);
-  void VerifyNecessaryFiles();
-  void WriteMissingFiles(Elem& e1);
-  void WriteMissingFilesWP80(Elem& e1);
-  void WriteMissingFilesWP81(Elem& e1);
-  void WriteMissingFilesWS80(Elem& e1);
-  void WriteMissingFilesWS81(Elem& e1);
-  void WriteMissingFilesWS10_0(Elem& e1);
-  void WritePlatformExtensions(Elem& e1);
-  void WriteSinglePlatformExtension(Elem& e1, std::string const& extension,
-                                    std::string const& version);
-  void WriteSDKReferences(Elem& e0);
-  void WriteSingleSDKReference(Elem& e1, std::string const& extension,
-                               std::string const& version);
-  void WriteCommonMissingFiles(Elem& e1, const std::string& manifestFile);
-  void WriteTargetSpecificReferences(Elem& e0);
-  void WriteTargetsFileReferences(Elem& e1);
+  void WriteTargetGlobalProperties(pugi::xml_node& node);
+  void WriteBuildConfigurations(pugi::xml_node& node);
+  void WriteCompileGroup(pugi::xml_node& node);
+  void WriteProjectReferenceGroup(pugi::xml_node& node);
+  void WriteAS7CompilerTargetsProp(pugi::xml_node& node);
 
   std::vector<std::string> GetIncludes(std::string const& config,
                                        std::string const& lang) const;
 
-  bool ComputeClOptions();
-  bool ComputeClOptions(std::string const& configName);
-  void WriteClOptions(Elem& e1, std::string const& config);
-  bool ComputeRcOptions();
-  bool ComputeRcOptions(std::string const& config);
-  void WriteRCOptions(Elem& e1, std::string const& config);
-  bool ComputeCudaOptions();
-  bool ComputeCudaOptions(std::string const& config);
-  void WriteCudaOptions(Elem& e1, std::string const& config);
-
-  bool ComputeCudaLinkOptions();
-  bool ComputeCudaLinkOptions(std::string const& config);
-  void WriteCudaLinkOptions(Elem& e1, std::string const& config);
-
-  bool ComputeMasmOptions();
-  bool ComputeMasmOptions(std::string const& config);
-  void WriteMasmOptions(Elem& e1, std::string const& config);
-  bool ComputeNasmOptions();
-  bool ComputeNasmOptions(std::string const& config);
-  void WriteNasmOptions(Elem& e1, std::string const& config);
-
-  bool ComputeLinkOptions();
-  bool ComputeLinkOptions(std::string const& config);
-  bool ComputeLibOptions();
-  bool ComputeLibOptions(std::string const& config);
-  void WriteLinkOptions(Elem& e1, std::string const& config);
-  void WriteMidlOptions(Elem& e1, std::string const& config);
-  void WriteAntBuildOptions(Elem& e1, std::string const& config);
-  void OutputLinkIncremental(Elem& e1, std::string const& configName);
-  void WriteCustomRule(Elem& e0, cmSourceFile const* source,
-                       cmCustomCommand const& command);
-  void WriteCustomRuleCpp(Elem& e2, std::string const& config,
-                          std::string const& script,
-                          std::string const& additional_inputs,
-                          std::string const& outputs,
-                          std::string const& comment, bool symbolic);
-  void WriteCustomRuleCSharp(Elem& e0, std::string const& config,
-                             std::string const& commandName,
-                             std::string const& script,
-                             std::string const& inputs,
-                             std::string const& outputs,
-                             std::string const& comment);
-  void WriteCustomCommands(Elem& e0);
-  void WriteCustomCommand(Elem& e0, cmSourceFile const* sf);
-  void WriteGroups();
-  void WriteProjectReferences(Elem& e0);
-  void WriteApplicationTypeSettings(Elem& e1);
-  void OutputSourceSpecificFlags(Elem& e2, cmSourceFile const* source);
-  void AddLibraries(const cmComputeLinkInformation& cli,
-                    std::vector<std::string>& libVec,
-                    std::vector<std::string>& vsTargetVec,
-                    const std::string& config);
-  void AddTargetsFileAndConfigPair(std::string const& targetsFile,
-                                   std::string const& config);
-  void WriteLibOptions(Elem& e1, std::string const& config);
-  void WriteManifestOptions(Elem& e1, std::string const& config);
-  void WriteEvents(Elem& e1, std::string const& configName);
-  void WriteEvent(Elem& e1, std::string const& name,
-                  std::vector<cmCustomCommand> const& commands,
-                  std::string const& configName);
-  void WriteGroupSources(Elem& e0, std::string const& name,
-                         ToolSources const& sources,
-                         std::vector<cmSourceGroup>&);
-  void AddMissingSourceGroups(std::set<cmSourceGroup const*>& groupsUsed,
-                              const std::vector<cmSourceGroup>& allGroups);
-  bool IsResxHeader(const std::string& headerFile);
-  bool IsXamlHeader(const std::string& headerFile);
-  bool IsXamlSource(const std::string& headerFile);
-
-  bool ForceOld(const std::string& source) const;
-
-  void GetCSharpSourceProperties(cmSourceFile const* sf,
-                                 std::map<std::string, std::string>& tags);
-  void WriteCSharpSourceProperties(
-    Elem& e2, const std::map<std::string, std::string>& tags);
-  std::string GetCSharpSourceLink(cmSourceFile const* source);
-
-  void WriteStdOutEncodingUtf8(Elem& e1);
-
 private:
-  friend class cmVS10GeneratorOptions;
-  using Options = cmVS10GeneratorOptions;
-  using OptionsMap = std::map<std::string, std::unique_ptr<Options>>;
-  OptionsMap ClOptions;
-  OptionsMap LinkOptions;
-  std::string LangForClCompile;
-
-  enum As7ProjectType
-  {
-    cppproj,
-    cproj
-  } ProjectType;
-
+  AS7ProjectDescriptor projectDescriptor;
   bool InSourceBuild;
-  std::vector<std::string> Configurations;
-  std::vector<TargetsFileAndConfigs> TargetsFileAndConfigsVec;
-  cmGeneratorTarget* const GeneratorTarget;
-  cmMakefile* const Makefile;
-  std::string const Platform;
-  std::string const Name;
-  std::string const GUID;
-  std::set<std::string> IPOEnabledConfigurations;
-  std::map<std::string, std::string> SpectreMitigation;
+  std::vector<std::string> Configurations;  /**< Enabled build configurations collection                            */
+  cmGeneratorTarget* const GeneratorTarget; /**< */
+  cmMakefile* const Makefile;               /**< CMakeLists.txt target file which is used to describe this target   */
+  std::string const Platform;               /**< targeted Platform                                                  */
+  std::string const Name;                   /**< Target name                                                        */
+  std::string const GUID;                   /**< This target's unique ID                                            */
+
   cmGlobalAtmelStudio7Generator* const GlobalGenerator;
   cmLocalAtmelStudio7Generator* const LocalGenerator;
-  std::set<std::string> CSharpCustomCommandNames;
-  bool IsMissingFiles;
-  std::vector<std::string> AddedFiles;
-  std::string DefaultArtifactDir;
-  bool AddedDefaultCertificate = false;
 
   using UsingDirectories = std::set<std::string>;
   using UsingDirectoriesMap = std::map<std::string, UsingDirectories>;
   UsingDirectoriesMap AdditionalUsingDirectories;
 
-  using ToolSourceMap = std::map<std::string, ToolSources>;
-  ToolSourceMap Tools;
-
-  std::set<std::string> ExpectedResxHeaders;
-  std::set<std::string> ExpectedXamlHeaders;
-  std::set<std::string> ExpectedXamlSources;
-  std::vector<cmSourceFile const*> ResxObjs;
-  std::vector<cmSourceFile const*> XamlObjs;
   void ClassifyAllConfigSources();
   void ClassifyAllConfigSource(cmGeneratorTarget::AllConfigSource const& acs);
 
