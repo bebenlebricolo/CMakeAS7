@@ -4,6 +4,7 @@
 
 #include "cmConfigure.h" // IWYU pragma: keep
 
+#include <array>
 #include <iosfwd>
 #include <map>
 #include <memory>
@@ -31,11 +32,11 @@ class xml_doc;
 
 class AS7ProjectDescriptor
 {
-  public:
+public:
   /**
     * @brief Describes the available project types supported in AtmelStudio7
   */
-  enum Type : uint8_t
+  enum class Type : uint8_t
   {
     cppproj = 0, /**< Target needs CPP support       */
     cproj,       /**< Target needs C support         */
@@ -45,11 +46,21 @@ class AS7ProjectDescriptor
 
   struct Properties
   {
+    Properties() = default;
+    Properties(const std::string& _name,
+               Type _type,
+               const std::string& _language,
+               const std::string& _compiler_vs_targets)
+      : name(_name)
+      , type(_type)
+      , language(_language)
+      , compiler_vs_targets(_compiler_vs_targets)
+    {
+    }
     std::string name; /**< Embeds its own name     */
     Type type;        /**< Embeds its project type */
     std::string language;
     std::string compiler_vs_targets;
-    std::string default_output_file_extension;
   };
 
   /**
@@ -64,14 +75,20 @@ class AS7ProjectDescriptor
    * @param[in] name  : name of the targeted project type
    * @return As7ProjectProperties structure or nullptr if it does not exist
   */
-  static Properties* get_project_type_properties(Type type);
+  static Properties* get_project_type_properties(const Type type);
 
-  static inline std::string get_extension(Type type);
+  /**
+   * @brief Computes project file extension using its name.
+   * 
+   * @param type    :  Project type using the enumerated value
+   * @return computed extension string
+   */
+  static std::string get_extension(Type type);
 
 private:
   static std::array<Properties,
-                      static_cast<uint8_t>(Type::maxval)>
-      collection; /**< Stores an array of PropjectTypeProperties to link properties
+                    static_cast<uint8_t>(Type::maxval)>
+    collection; /**< Stores an array of PropjectTypeProperties to link properties
                             alongside with the right projet type name                    */
 };
 
@@ -134,4 +151,10 @@ private:
   void ParseSettingsProperty(const std::string& settingsPropertyValue,
                              ConfigToSettings& toolSettings);
   std::string GetCMakeFilePath(const char* name) const;
+
+  void AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value = "");
+  void BuildConfigurationXmlGroup(pugi::xml_node& parent, const std::string& build_type);
+  void BuildCompileItemGroup(pugi::xml_node& parent);
+  void BuildDevicePropertyGroup(pugi::xml_node& parent, const std::string& target_name);
+  void BuildSimulatorConfiguration(pugi::xml_node& parent, const std::string& device_signature = "0x1E930B", const std::string& stimuli_filepath = "");
 };
