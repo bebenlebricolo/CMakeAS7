@@ -449,6 +449,44 @@ void cmGlobalAtmelStudio7Generator::Generate()
   this->OutputATSLNFile();
 }
 
+std::vector<cmGlobalGenerator::GeneratedMakeCommand>
+cmGlobalAtmelStudio7Generator::GenerateBuildCommand(
+  const std::string& makeProgram, const std::string& projectName,
+  const std::string& projectDir, std::vector<std::string> const& targetNames,
+  const std::string& config, bool fast, int jobs, bool verbose,
+  std::vector<std::string> const& makeOptions)
+{
+  std::vector<GeneratedMakeCommand> makeCommands;
+  // Select the caller- or user-preferred make program, else MSBuild.
+  cmProp AtmelStudioPath = this->CMakeInstance->GetState()->GetCacheEntryValue("CMAKE_ATMEL_STUDIO_EXECUTABLE");
+  if (!AtmelStudioPath) {
+    GeneratedMakeCommand makeCommand;
+    makeCommand.Add("Could not find CMAKE_ATMEL_STUDIO_EXECUTABLE in cache !");
+    makeCommands.push_back(makeCommand);
+    return makeCommands;
+  }
+  
+  // "C:\Program Files (x86)\Atmel\Studio\7.0\AtmelStudio.exe" GETTING - STARTED14.atsln / build debug / out log.txt "
+  GeneratedMakeCommand pushD;
+  pushD.Add("cd");
+  pushD.Add(projectDir);
+  GeneratedMakeCommand popD;
+  popD.Add("cd -");
+  makeCommands.push_back(pushD);
+
+  GeneratedMakeCommand makeCommand;
+  makeCommand.Add(*AtmelStudioPath);
+  std::string atslnFile = projectDir + "/" + projectName + ".atsln";
+  makeCommand.Add(atslnFile);
+  makeCommand.Add("/build");
+  makeCommand.Add("debug");
+
+  makeCommands.push_back(makeCommand);
+  makeCommands.push_back(popD);
+
+  return makeCommands;
+}
+
 // Write a dsp file into the SLN file, Note, that dependencies from
 // executables to the libraries it uses are also done here
 void cmGlobalAtmelStudio7Generator::WriteExternalProject(

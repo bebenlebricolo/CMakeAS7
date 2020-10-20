@@ -109,7 +109,13 @@ public:
                       bool optional) override;
 
   void Generate() override;
-
+  
+  std::vector<cmGlobalGenerator::GeneratedMakeCommand> GenerateBuildCommand(
+    const std::string& makeProgram, const std::string& projectName,
+    const std::string& projectDir, std::vector<std::string> const& targetNames,
+    const std::string& config, bool fast, int jobs, bool verbose,
+    std::vector<std::string> const& makeOptions) override;
+  
   // bool SetGeneratorPlatform(std::string const& p, cmMakefile* mf) override;
 
   /** Return true if the generated build tree may contain multiple builds.
