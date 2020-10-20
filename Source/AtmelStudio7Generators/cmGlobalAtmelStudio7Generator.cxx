@@ -7,6 +7,7 @@
 #include "cmAlgorithms.h"
 #include "cmDocumentationEntry.h"
 #include "cmEncoding.h"
+#include "cmStringUtils.h"
 #include "cmGeneratedFileStream.h"
 #include "cmGeneratorExpression.h"
 #include "cmGeneratorTarget.h"
@@ -24,8 +25,12 @@ public:
   std::unique_ptr<cmGlobalGenerator> CreateGlobalGenerator(
     const std::string& name, cmake* cm) const override
   {
-    return std::unique_ptr<cmGlobalAtmelStudio7Generator>(
-      new cmGlobalAtmelStudio7Generator(cm, name));
+    if (name == cmGlobalAtmelStudio7Generator::TruncatedGeneratorName || 
+        name == cmGlobalAtmelStudio7Generator::GeneratorName) {
+        return std::unique_ptr<cmGlobalAtmelStudio7Generator>(
+          new cmGlobalAtmelStudio7Generator(cm, name));
+    }
+    return std::unique_ptr<cmGlobalGenerator>();
   }
 
   void GetDocumentation(cmDocumentationEntry& entry) const override
@@ -102,6 +107,87 @@ cmGlobalAtmelStudio7Generator::AvailablePlatforms
 cmGlobalAtmelStudio7Generator::GetCurrentPlatform() const
 {
   return CurrentPlatform;
+}
+
+bool cmGlobalAtmelStudio7Generator::SetGeneratorPlatform(std::string const& p, cmMakefile* mf)
+{
+  if (p.empty()) {
+    // Defaults to AVR8
+    CurrentPlatform = AvailablePlatforms::AVR8;
+    return true;
+  }
+
+  AvailablePlatforms platform = GetPlatform(p);
+  if (AvailablePlatforms::Unsupported == platform)
+  {
+      std::ostringstream e;
+      /* clang-format off */
+      e <<
+        "Generator\n"
+        "  " << this->GetName() << "\n"
+        "does not support platform specification, but platform\n"
+        "  " << p << "\n"
+        "was specified.";
+      /* clang-format on */
+      mf->IssueMessage(MessageType::FATAL_ERROR, e.str());
+      return false;
+  }
+  else
+  {
+    CurrentPlatform = platform;
+  }
+
+  return true;
+}
+
+std::string cmGlobalAtmelStudio7Generator::GetName() const
+{
+  return GeneratorName;
+}
+
+std::vector<cmGlobalAtmelStudio7Generator::LangProp> cmGlobalAtmelStudio7Generator::SupportedLanguagesList = {
+  { cmGlobalAtmelStudio7Generator::SupportedLanguages::C, { "C" }, { "H" } },
+  { cmGlobalAtmelStudio7Generator::SupportedLanguages::CPP, { "CPP", "CXX" }, { "HPP", "HXX", "H" }},
+  { cmGlobalAtmelStudio7Generator::SupportedLanguages::ASM, { "ASM" }, {} }
+};
+
+bool cmGlobalAtmelStudio7Generator::SupportsLanguage(const cmGlobalAtmelStudio7Generator::SupportedLanguages lang)
+{
+  auto found_item = std::find_if(SupportedLanguagesList.begin(), SupportedLanguagesList.end(), [lang](const LangProp& prop) {
+    return prop.lang == lang;
+  });
+  
+  return found_item != SupportedLanguagesList.end();
+}
+
+static bool langmatch(const std::string& lang, const std::vector<std::string>& reference)
+{
+  std::string lower_lang = cmutils::strings::to_lowercase(lang);
+  auto found_item = std::find_if(reference.begin(), reference.end(), [lower_lang](const std::string& str) {
+    return cmutils::strings::to_lowercase(str) == lower_lang;
+  });
+  return found_item != reference.end();
+}
+
+bool cmGlobalAtmelStudio7Generator::SupportsLanguage(const std::string& lang)
+{
+  auto found_item = std::find_if(SupportedLanguagesList.begin(), SupportedLanguagesList.end(), [lang](const LangProp& prop) {
+      return langmatch(lang, prop.lang_src_str);
+  });
+
+  return found_item != SupportedLanguagesList.end();
+}
+
+
+bool cmGlobalAtmelStudio7Generator::CheckLanguages(std::vector<std::string> const& languages, cmMakefile* mf) const
+{
+  (void)mf;
+  bool supports_all_languages = true;
+  for (const std::string& lang : languages) {
+    supports_all_languages &= SupportsLanguage(lang);
+  }
+
+  return supports_all_languages;
 }
 
 // Static map definition
@@ -205,6 +291,18 @@ std::string cmGlobalAtmelStudio7Generator::GetStartupProjectName(
 
   // default, if not specified
   return this->GetAllTargetName();
+}
+
+bool cmGlobalAtmelStudio7Generator::FindMakeProgram(cmMakefile*)
+{
+  // Visual Studio generators know how to lookup their build tool
+  // directly instead of needing a helper module to do it, so we
+  // do not actually need to put CMAKE_MAKE_PROGRAM into the cache.
+  
+  //if (cmIsOff(mf->GetDefinition("CMAKE_MAKE_PROGRAM"))) {
+  //  mf->AddDefinition("CMAKE_MAKE_PROGRAM", this->GetVSMakeProgram());
+  //}
+  return true;
 }
 
 std::string cmGlobalAtmelStudio7Generator::GetGUID(std::string const& name)

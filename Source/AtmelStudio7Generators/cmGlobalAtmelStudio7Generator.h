@@ -40,6 +40,7 @@ public:
    * @brief Collection of one-time definitions for AtmelStudio 7 IDE
    */
   static constexpr char* GeneratorName = "Atmel Studio 7.0";
+  static constexpr char* TruncatedGeneratorName = "Atmel Studio 7";
   static constexpr char* SolutionFileExtension = ".atsln";
   static constexpr char* ProjectsFileExtension = ".cproj";
   static constexpr char* MinimumVisualStudioVersion = "10.0.40219.1";
@@ -48,7 +49,7 @@ public:
   /**
     @brief Lists available platforms supported by AtmelStudio
   */
-  enum AvailablePlatforms
+  enum class AvailablePlatforms
   {
     Unsupported, /**< Default value */
     AVR8,        /**< 8 bit AVR cores   */
@@ -61,6 +62,42 @@ public:
   static AvailablePlatforms GetPlatform(const std::string& name);
 
   AvailablePlatforms GetCurrentPlatform() const;
+  bool SetGeneratorPlatform(std::string const& p, cmMakefile* mf) override;
+
+  /**
+   * @brief Lists all supported languages for this generator.
+   */
+  enum class SupportedLanguages
+  {
+    Unsupported, /**< Default value, unsupported language*/
+    C,           /**< C language */
+    CPP,         /**< C++ language*/
+    ASM          /**<Assembly language (specific to each architecture/processor)    */
+  };
+
+  struct LangProp
+  {
+    LangProp()
+      : lang(SupportedLanguages::Unsupported)
+    {
+    }
+    LangProp(SupportedLanguages _lang, const std::vector<std::string>& _lang_src_str,
+             const std::vector<std::string>& _lang_header_str)
+      : lang(_lang)
+      , lang_src_str(_lang_src_str)
+      , lang_header_str(_lang_header_str)
+    {
+    }
+    SupportedLanguages lang;                  /**< Enum value for the represented language */
+    std::vector<std::string> lang_src_str;    /**< String representation of languages      */
+    std::vector<std::string> lang_header_str; /**< String representation of languages      */
+  };
+
+  static bool SupportsLanguage(const SupportedLanguages lang);
+  static bool SupportsLanguage(const std::string& lang);
+  bool CheckLanguages(std::vector<std::string> const& languages, cmMakefile* mf) const override;
+
+  std::string GetName() const override;
 
   static std::unique_ptr<cmGlobalGeneratorFactory> NewFactory();
   bool MatchesGeneratorName(const std::string& name) const;
@@ -96,7 +133,7 @@ public:
     return codecvt::Encoding::UTF8;
   }
 
-  // bool FindMakeProgram(cmMakefile*) override;
+  bool FindMakeProgram(cmMakefile*) override;
 
   // void ComputeTargetObjectDirectory(cmGeneratorTarget* gt) const override;
 
@@ -126,6 +163,7 @@ protected:
   class Factory;
   friend class Factory;
 
+  static std::vector<LangProp> SupportedLanguagesList;
   static constexpr AvailablePlatforms DefaultPlatform = AvailablePlatforms::AVR8;
   static constexpr char* ProjectConfigurationSectionName = "ProjectConfiguration";
   AvailablePlatforms CurrentPlatform = DefaultPlatform;
