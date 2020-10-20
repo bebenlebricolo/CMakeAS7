@@ -30,6 +30,8 @@ if(NOT CMAKE_CXX_COMPILER_NAMES)
 endif()
 
 if(${CMAKE_GENERATOR} MATCHES "Visual Studio")
+elseif(${CMAKE_GENERATOR} MATCHES "Atmel Studio 7")
+# Do nothing, Atmel Studio resolves its own compiler
 elseif("${CMAKE_GENERATOR}" MATCHES "Green Hills MULTI")
 elseif("${CMAKE_GENERATOR}" MATCHES "Xcode")
   set(CMAKE_CXX_COMPILER_XCODE_TYPE sourcecode.cpp.cpp)
