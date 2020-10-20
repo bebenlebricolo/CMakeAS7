@@ -67,6 +67,19 @@ namespace strings
     */
     std::string trim(const std::string& input_str, char c = ' ', TransformLocation tran = TransformLocation::Start);
 
-}
+    /**
+     * @brief converts the input string to its lowercase version, char by char.
+     * @param input_str :   input string to be transformed
+     * @return transformed string
+     */
+    std::string to_lowercase(const std::string& input_str);
+
+    /**
+     * @brief converts the input string to its uppercase version, char by char.
+     * @param input_str :   input string to be transformed
+     * @return transformed string
+     */
+    std::string to_uppercase(const std::string& input_str);
+    }
 
 }

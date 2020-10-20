@@ -10,13 +10,12 @@ namespace strings {
 std::string strip(const std::string& input_str, char c)
 {
   std::string out;
-  for (auto character : input_str)
-  {
-    if (character != c){
+  for (auto character : input_str) {
+    if (character != c) {
       out += character;
     }
   }
-  
+
   return out;
 }
 
@@ -63,7 +62,7 @@ std::string trim(const std::string& input_str, char c, TransformLocation tran)
   size_t last_char = input_str.find_last_not_of(c);
   std::string out;
 
-  // If we cannot find any other character, then return an empty string because 
+  // If we cannot find any other character, then return an empty string because
   // trimming from any direction would given an empty string.
   if ((first_char == last_char) && (first_char == std::string::npos)) {
     out.clear();
@@ -86,6 +85,26 @@ std::string trim(const std::string& input_str, char c, TransformLocation tran)
       break;
   }
 
+  return out;
+}
+
+std::string to_lowercase(const std::string& input_str)
+{
+  std::string out;
+  out.reserve(input_str.size());
+  for (char c : input_str) {
+    out += std::tolower(c);
+  }
+  return out;
+}
+
+std::string to_uppercase(const std::string& input_str)
+{
+  std::string out;
+  out.reserve(input_str.size());
+  for (char c : input_str) {
+    out += std::toupper(c);
+  }
   return out;
 }
 

@@ -1534,7 +1534,7 @@ int cmake::ActualConfigure()
   }
 
   // no generator specified on the command line
-  if (!this->GlobalGenerator) {
+   if (!this->GlobalGenerator) {
     cmProp genName = this->State->GetInitializedCacheValue("CMAKE_GENERATOR");
     cmProp extraGenName =
       this->State->GetInitializedCacheValue("CMAKE_EXTRA_GENERATOR");

@@ -31,35 +31,44 @@ enum class Encoding
  */
 struct EncodingProperties
 {
-
+  static const uint8_t signatureMaxSize = 10U;
   union signature_t
   {
+    void clear()
+    {
+      memset(magic, 0, signatureMaxSize);
+      memset(big_endian, 0, signatureMaxSize);
+      memset(little_endian, 0, signatureMaxSize);
+    }
+
     signature_t(const std::string& _magic)
-      : magic(_magic)
     {
+      clear();
+      memcpy(magic, _magic.c_str(), signatureMaxSize);
     }
+
     signature_t(const std::string& _le, const std::string& _be)
-      : little_endian(_le)
-      , big_endian(_be)
     {
+      clear();
+      memcpy(little_endian, _le.c_str(), signatureMaxSize);
+      memcpy(big_endian, _be.c_str(), signatureMaxSize);
     }
+
     signature_t(const signature_t& other)
     {
-      magic = other.magic;
-      little_endian = other.little_endian;
-      big_endian = other.big_endian;
+      memcpy(magic, other.magic, signatureMaxSize);
+      memcpy(little_endian, other.little_endian, signatureMaxSize);
+      memcpy(little_endian, other.big_endian, signatureMaxSize);
     }
     ~signature_t()
     {
-      magic.clear();
-      little_endian.clear();
-      big_endian.clear();
+      clear();
     }
-    std::string magic; /**< Regular magic chain  */
+    char magic[10]; /**< Regular magic chain  */
     struct
     {
-      std::string little_endian; /**< Little endian specific magic chain */
-      std::string big_endian;    /**< Big endian specific magic chain    */
+      char little_endian[10]; /**< Little endian specific magic chain */
+      char big_endian[10];    /**< Big endian specific magic chain    */
     };
   };
 
@@ -73,7 +82,7 @@ struct EncodingProperties
   unsigned int max_frame_length; /**< Represents the size in bits of a
                                     particular encoding. for instance, UTF-8
                                     uses a maximum of 32 bits    */
-  signature_t signature; /**< Represents the encoding's signature and/or
+  signature_t signature;         /**< Represents the encoding's signature and/or
                                 Byte Order Mask (BOM) */
 };
 
@@ -104,8 +113,7 @@ CMUTILS_API EncodingProperties get_encoding_properties(Encoding encoding);
 CMUTILS_API EncodingProperties
 get_encoding_properties(const std::string& encoding_name);
 
-namespace compat
-{
+namespace compat {
 /**
  * @brief converts from codecvt encoding to cmutils::Encoding enum class
  * @param encoding  : codecvt encoding formalism
@@ -119,7 +127,7 @@ CMUTILS_API Encoding convert(const codecvt::Encoding encoding);
  * @return codecvt::Encoding formalism
 */
 CMUTILS_API codecvt::Encoding convert(Encoding encoding);
-}/* end of namespace compat */
+} /* end of namespace compat */
 
 };
 }
