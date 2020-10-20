@@ -111,6 +111,11 @@ private:
     cmSourceFile const* SourceFile;
     bool RelativePath;
   };
+  struct ToolSources : public std::vector<ToolSource>
+  {
+  };
+  using ToolSourceMap = std::map<std::string, ToolSources>;
+  ToolSourceMap Tools;
 
   std::string ConvertPath(std::string const& path, bool forceRelative);
   void WriteTargetGlobalProperties(pugi::xml_node& node);
@@ -139,8 +144,8 @@ private:
   using UsingDirectoriesMap = std::map<std::string, UsingDirectories>;
   UsingDirectoriesMap AdditionalUsingDirectories;
 
-  void ClassifyAllConfigSources();
-  void ClassifyAllConfigSource(cmGeneratorTarget::AllConfigSource const& acs);
+  //void ClassifyAllConfigSources();
+  //void ClassifyAllConfigSource(cmGeneratorTarget::AllConfigSource const& acs);
 
   using ConfigToSettings =
     std::unordered_map<std::string,

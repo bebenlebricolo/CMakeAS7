@@ -33,9 +33,12 @@ public:
   void ReadAndStoreExternalGUID(const std::string& name,
                                 const char* path);
 
-  std::set<cmSourceFile const*>& GetSourcesVisited(cmGeneratorTarget* target)
+  void WriteStampFiles();
+
+  std::set<cmSourceFile const*>& GetSourcesVisited(
+    cmGeneratorTarget const* target)
   {
-    return SourcesVisited[target];
+    return this->SourcesVisited[const_cast<cmGeneratorTarget*>(target)];
   };
 
 protected:

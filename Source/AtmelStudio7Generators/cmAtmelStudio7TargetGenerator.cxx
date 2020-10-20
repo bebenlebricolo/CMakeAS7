@@ -41,7 +41,7 @@ cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
   //  this->LocalGenerator->GetTargetDirectory(this->GeneratorTarget);
   this->InSourceBuild = (this->Makefile->GetCurrentSourceDirectory() ==
                          this->Makefile->GetCurrentBinaryDirectory());
-  this->ClassifyAllConfigSources();
+  //this->ClassifyAllConfigSources();
 }
 
 cmAtmelStudio7TargetGenerator::~cmAtmelStudio7TargetGenerator()
@@ -118,12 +118,52 @@ void cmAtmelStudio7TargetGenerator::Generate()
   pugi::xml_node import_projects_node = project_node.append_child("Import");
   import_projects_node.append_attribute("Project") = R"($(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets)";
 
-  doc.save_file(PathToProjectFile.c_str(), "  ", (pugi::format_indent | pugi::format_write_bom), pugi::xml_encoding::encoding_utf8);
+  //doc.save_file(PathToProjectFile.c_str(), "  ", (pugi::format_indent | pugi::format_write_bom), pugi::xml_encoding::encoding_utf8);
+  doc.save(BuildFileStream, "  ", (pugi::format_indent | pugi::format_write_bom), pugi::xml_encoding::encoding_utf8);
+  BuildFileStream.Close();
 }
 
 void cmAtmelStudio7TargetGenerator::WriteTargetGlobalProperties(pugi::xml_node& node)
 {
 }
+
+//void cmAtmelStudio7TargetGenerator::ClassifyAllConfigSources()
+//{
+//    for (cmGeneratorTarget::AllConfigSource const& source :
+//         this->GeneratorTarget->GetAllConfigSources()) {
+//      this->ClassifyAllConfigSource(source);
+//    }
+//}
+
+//void cmAtmelStudio7TargetGenerator::ClassifyAllConfigSource(cmGeneratorTarget::AllConfigSource const& acs)
+//{
+//  switch (acs.Kind) {
+//    case cmGeneratorTarget::SourceKindResx: {
+//      // Build and save the name of the corresponding .h file
+//      // This relationship will be used later when building the project files.
+//      // Both names would have been auto generated from Visual Studio
+//      // where the user supplied the file name and Visual Studio
+//      // appended the suffix.
+//      std::string resx = acs.Source->ResolveFullPath();
+//      std::string hFileName = resx.substr(0, resx.find_last_of('.')) + ".h";
+//      this->ExpectedResxHeaders.insert(hFileName);
+//    } break;
+//    case cmGeneratorTarget::SourceKindXaml: {
+//      // Build and save the name of the corresponding .h and .cpp file
+//      // This relationship will be used later when building the project files.
+//      // Both names would have been auto generated from Visual Studio
+//      // where the user supplied the file name and Visual Studio
+//      // appended the suffix.
+//      std::string xaml = acs.Source->ResolveFullPath();
+//      std::string hFileName = xaml + ".h";
+//      std::string cppFileName = xaml + ".cpp";
+//      this->ExpectedXamlHeaders.insert(hFileName);
+//      this->ExpectedXamlSources.insert(cppFileName);
+//    } break;
+//    default:
+//      break;
+//  }
+//}
 
 void cmAtmelStudio7TargetGenerator::AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value)
 {
@@ -181,125 +221,174 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
 
 void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent)
 {
+  // collect up group information
+  std::vector<cmSourceGroup> sourceGroups = this->Makefile->GetSourceGroups();
+  // TODO : add source files
+
+  std::vector<cmGeneratorTarget::AllConfigSource> const& sources =
+    this->GeneratorTarget->GetAllConfigSources();
+
   pugi::xml_node item_group_node = parent.append_child("ItemGroup");
-  pugi::xml_node compile_node = item_group_node.append_child("Compile");
-  compile_node.append_attribute("Include") = "main.c";
-  AppendInlinedNodeChildPcData(compile_node, "SubType", "compile");
-}
 
-void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& parent, const std::string& target_name)
-{
-  // @see http://www.gerald-fahrnholz.eu/sw/DocGenerated/HowToUse/html/group___grp_pugi_xml.html#pugi_xml_generated_file
-  pugi::xml_node property_group = parent.append_child("PropertyGroup");
-  AppendInlinedNodeChildPcData(property_group, "SchemaVersion", "2.0");
-  AppendInlinedNodeChildPcData(property_group, "ProjectVersion", "7.0");
-  AppendInlinedNodeChildPcData(property_group, "ToolchainName", "com.Atmel.AVRGCC8.C");
-  AppendInlinedNodeChildPcData(property_group, "ProjectGuid", "dce6c7e3-ee26-4d79-826b-08594b9ad897");
-  AppendInlinedNodeChildPcData(property_group, "avrdevice", "ATmega328P");
-  AppendInlinedNodeChildPcData(property_group, "avrdeviceseries", "none");
-  AppendInlinedNodeChildPcData(property_group, "OutputType", "Executable");
-  AppendInlinedNodeChildPcData(property_group, "Language", "C");
-  AppendInlinedNodeChildPcData(property_group, "OutputFileName", "$(MSBuildProjectName)");
-  AppendInlinedNodeChildPcData(property_group, "OutputFileExtension", ".elf");
-  AppendInlinedNodeChildPcData(property_group, "OutputDirectory", "$(MSBuildProjectDirectory)\\$(Configuration)");
-  AppendInlinedNodeChildPcData(property_group, "AssemblyName", target_name);
-  AppendInlinedNodeChildPcData(property_group, "Name", target_name);
-  AppendInlinedNodeChildPcData(property_group, "RootNamespace", target_name);
-  AppendInlinedNodeChildPcData(property_group, "ToolchainFlavour", "Native");
-  AppendInlinedNodeChildPcData(property_group, "KeepTimersRunning", "true");
-  AppendInlinedNodeChildPcData(property_group, "OverrideVtor", "false");
-  AppendInlinedNodeChildPcData(property_group, "CacheFlash", "true");
-  AppendInlinedNodeChildPcData(property_group, "ProgFlashFromRam", "true");
-  AppendInlinedNodeChildPcData(property_group, "RamSnippetAddress", "0x2000000");
-  AppendInlinedNodeChildPcData(property_group, "UncachedRange");
-  AppendInlinedNodeChildPcData(property_group, "preserveEEPROM", "true");
-  AppendInlinedNodeChildPcData(property_group, "OverrideVtorValue");
-  AppendInlinedNodeChildPcData(property_group, "BootSegment", "2");
-  AppendInlinedNodeChildPcData(property_group, "ResetRule", "0");
-  AppendInlinedNodeChildPcData(property_group, "eraseonlaunchrule", "0");
-  AppendInlinedNodeChildPcData(property_group, "EraseKey");
+  for (cmGeneratorTarget::AllConfigSource const& si : sources) {
+    const char* tool = nullptr;
+    switch (si.Kind) {
+      case cmGeneratorTarget::SourceKindObjectSource: {
+        const std::string& lang = si.Source->GetLanguage();
+        if (lang == "C" || lang == "CXX") {
+          tool = "Compile";
+          pugi::xml_node compile_node = item_group_node.append_child(tool);
+          std::string path = si.Source->GetFullPath().c_str();
+          // Convert regular slashes to Windows backslashes
+          std::replace(path.begin(), path.end(), '/', '\\');
+          compile_node.append_attribute("Include") = path.c_str();
+          AppendInlinedNodeChildPcData(compile_node, "SubType", "compile");
+        }
+      } break;
+      default:
+        tool = "None";
+        break;
+      case cmGeneratorTarget::SourceKindExternalObject:
+        tool = "Object";
+        if (this->LocalGenerator) {
+          std::vector<cmSourceFile*> const* d =
+            this->GeneratorTarget->GetSourceDepends(si.Source);
+          if (d && !d->empty()) {
+            tool = "None";
+          }
+        }
+        break;
+        //case cmGeneratorTarget::SourceKindExtra:
+        //  this->WriteExtraSource(e1, si.Source);
+        //  break;
+        //case cmGeneratorTarget::SourceKindHeader:
+        //  this->WriteHeaderSource(e1, si.Source);
+        //  break;
+    }
 
-  pugi::xml_node asf_framework_config = property_group.append_child("AsfFrameworkConfig");
-  pugi::xml_node framework_data_node = asf_framework_config.append_child("framework-data");
-  framework_data_node.append_attribute("xmlns").set_value("");
-  AppendInlinedNodeChildPcData(framework_data_node, "options");
-  AppendInlinedNodeChildPcData(framework_data_node, "configurations");
-  AppendInlinedNodeChildPcData(framework_data_node, "files");
-
-  pugi::xml_node documentation_node = framework_data_node.append_child("documentation");
-  documentation_node.append_attribute("help").set_value("");
-  pugi::xml_node offline_documentation_node = framework_data_node.append_child("offline-documentation");
-  offline_documentation_node.append_attribute("help").set_value("");
-
-  pugi::xml_node dependencies_node = framework_data_node.append_child("dependencies");
-  pugi::xml_node content_extension_node = dependencies_node.append_child("content-extension");
-  content_extension_node.append_attribute("eid").set_value("atmel.asf");
-  content_extension_node.append_attribute("uuidref").set_value("Atmel.ASF");
-  content_extension_node.append_attribute("version").set_value("3.40.0");
-
-  BuildSimulatorConfiguration(property_group);
-}
-
-void cmAtmelStudio7TargetGenerator::BuildSimulatorConfiguration(pugi::xml_node& parent, const std::string& device_signature, const std::string& stimuli_filepath)
-{
-  AppendInlinedNodeChildPcData(parent, "avrtool", "com.atmel.avrdbg.tool.simulator");
-  AppendInlinedNodeChildPcData(parent, "avrtoolserialnumber");
-  AppendInlinedNodeChildPcData(parent, "avrdeviceexpectedsignature", device_signature.c_str());
-  pugi::xml_node simulator_configuration_node = parent.append_child("com_atmel_avrdbg_tool_simulator");
-  pugi::xml_node tool_options_node = simulator_configuration_node.append_child("ToolOptions");
-  AppendInlinedNodeChildPcData(tool_options_node, "InterfaceProperties");
-  AppendInlinedNodeChildPcData(tool_options_node, "InterfaceName");
-
-  AppendInlinedNodeChildPcData(simulator_configuration_node, "ToolType", "com.atmel.avrdbg.tool.simulator");
-  AppendInlinedNodeChildPcData(simulator_configuration_node, "ToolNumber");
-  AppendInlinedNodeChildPcData(simulator_configuration_node, "ToolName", "Simulator");
-
-  if (!stimuli_filepath.empty()) {
-    AppendInlinedNodeChildPcData(parent, "StimuliFile", stimuli_filepath.c_str());
+    //cmSourceFile const* sf = s.SourceFile;
+    //std::string const& source = sf->GetFullPath();
+    //cmSourceGroup* sourceGroup =
+    //  this->Makefile->FindSourceGroup(source, sourceGroups);
+    //std::string const& filter = sourceGroup->GetFullName();
+    //std::string path = this->ConvertPath(source, s.RelativePath);
+    //ConvertToWindowsSlash(path);
   }
-  AppendInlinedNodeChildPcData(parent, "avrtoolinterface");
 }
 
-std::array<AS7ProjectDescriptor::Properties,
-           static_cast<uint8_t>(AS7ProjectDescriptor::Type::maxval)>
-  AS7ProjectDescriptor::collection = {
-    Properties("cppproj", Type::cppproj, "CXX", "$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets"),
-    Properties("cproj", Type::cproj, "C", "$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets"),
-    Properties("asmproj", Type::asmproj, "ASM", "$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets")
-  };
+  void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node & parent, const std::string& target_name)
+  {
+    // @see http://www.gerald-fahrnholz.eu/sw/DocGenerated/HowToUse/html/group___grp_pugi_xml.html#pugi_xml_generated_file
+    pugi::xml_node property_group = parent.append_child("PropertyGroup");
+    AppendInlinedNodeChildPcData(property_group, "SchemaVersion", "2.0");
+    AppendInlinedNodeChildPcData(property_group, "ProjectVersion", "7.0");
+    AppendInlinedNodeChildPcData(property_group, "ToolchainName", "com.Atmel.AVRGCC8.C");
+    AppendInlinedNodeChildPcData(property_group, "ProjectGuid", this->GUID);
+    AppendInlinedNodeChildPcData(property_group, "avrdevice", "ATmega328P");
+    AppendInlinedNodeChildPcData(property_group, "avrdeviceseries", "none");
+    AppendInlinedNodeChildPcData(property_group, "OutputType", "Executable");
+    AppendInlinedNodeChildPcData(property_group, "Language", "C");
+    AppendInlinedNodeChildPcData(property_group, "OutputFileName", "$(MSBuildProjectName)");
+    AppendInlinedNodeChildPcData(property_group, "OutputFileExtension", ".elf");
+    AppendInlinedNodeChildPcData(property_group, "OutputDirectory", "$(MSBuildProjectDirectory)\\$(Configuration)");
+    AppendInlinedNodeChildPcData(property_group, "AssemblyName", target_name);
+    AppendInlinedNodeChildPcData(property_group, "Name", target_name);
+    AppendInlinedNodeChildPcData(property_group, "RootNamespace", target_name);
+    AppendInlinedNodeChildPcData(property_group, "ToolchainFlavour", "Native");
+    AppendInlinedNodeChildPcData(property_group, "KeepTimersRunning", "true");
+    AppendInlinedNodeChildPcData(property_group, "OverrideVtor", "false");
+    AppendInlinedNodeChildPcData(property_group, "CacheFlash", "true");
+    AppendInlinedNodeChildPcData(property_group, "ProgFlashFromRam", "true");
+    AppendInlinedNodeChildPcData(property_group, "RamSnippetAddress", "0x2000000");
+    AppendInlinedNodeChildPcData(property_group, "UncachedRange");
+    AppendInlinedNodeChildPcData(property_group, "preserveEEPROM", "true");
+    AppendInlinedNodeChildPcData(property_group, "OverrideVtorValue");
+    AppendInlinedNodeChildPcData(property_group, "BootSegment", "2");
+    AppendInlinedNodeChildPcData(property_group, "ResetRule", "0");
+    AppendInlinedNodeChildPcData(property_group, "eraseonlaunchrule", "0");
+    AppendInlinedNodeChildPcData(property_group, "EraseKey");
 
-AS7ProjectDescriptor::Properties* AS7ProjectDescriptor::get_project_type_properties(const std::string& name)
-{
-  auto item = std::find_if(collection.begin(), collection.end(), [name](const Properties& prop) {
-    return name == prop.name;
-  });
-  
-  if (item != collection.end()) {
-    return &(*item);
-  }
+    pugi::xml_node asf_framework_config = property_group.append_child("AsfFrameworkConfig");
+    pugi::xml_node framework_data_node = asf_framework_config.append_child("framework-data");
+    framework_data_node.append_attribute("xmlns").set_value("");
+    AppendInlinedNodeChildPcData(framework_data_node, "options");
+    AppendInlinedNodeChildPcData(framework_data_node, "configurations");
+    AppendInlinedNodeChildPcData(framework_data_node, "files");
 
-  return nullptr;
-}
+    pugi::xml_node documentation_node = framework_data_node.append_child("documentation");
+    documentation_node.append_attribute("help").set_value("");
+    pugi::xml_node offline_documentation_node = framework_data_node.append_child("offline-documentation");
+    offline_documentation_node.append_attribute("help").set_value("");
 
-AS7ProjectDescriptor::Properties* AS7ProjectDescriptor::get_project_type_properties(const AS7ProjectDescriptor::Type type)
-{
-  auto item = std::find_if(collection.begin(), collection.end(), [type](const Properties& prop) {
-    return type == prop.type;
-  });
- 
-  if (item != collection.end()) {
-    return &(*item);
+    pugi::xml_node dependencies_node = framework_data_node.append_child("dependencies");
+    pugi::xml_node content_extension_node = dependencies_node.append_child("content-extension");
+    content_extension_node.append_attribute("eid").set_value("atmel.asf");
+    content_extension_node.append_attribute("uuidref").set_value("Atmel.ASF");
+    content_extension_node.append_attribute("version").set_value("3.40.0");
+
+    BuildSimulatorConfiguration(property_group);
   }
 
-  return nullptr;
-}
+  void cmAtmelStudio7TargetGenerator::BuildSimulatorConfiguration(pugi::xml_node & parent, const std::string& device_signature, const std::string& stimuli_filepath)
+  {
+    AppendInlinedNodeChildPcData(parent, "avrtool", "com.atmel.avrdbg.tool.simulator");
+    AppendInlinedNodeChildPcData(parent, "avrtoolserialnumber");
+    AppendInlinedNodeChildPcData(parent, "avrdeviceexpectedsignature", device_signature.c_str());
+    pugi::xml_node simulator_configuration_node = parent.append_child("com_atmel_avrdbg_tool_simulator");
+    pugi::xml_node tool_options_node = simulator_configuration_node.append_child("ToolOptions");
+    AppendInlinedNodeChildPcData(tool_options_node, "InterfaceProperties");
+    AppendInlinedNodeChildPcData(tool_options_node, "InterfaceName");
 
-std::string AS7ProjectDescriptor::get_extension(Type type)
-{
-  auto prop = get_project_type_properties(type);
-  if (nullptr != prop) {
-    return "." + prop->name;
+    AppendInlinedNodeChildPcData(simulator_configuration_node, "ToolType", "com.atmel.avrdbg.tool.simulator");
+    AppendInlinedNodeChildPcData(simulator_configuration_node, "ToolNumber");
+    AppendInlinedNodeChildPcData(simulator_configuration_node, "ToolName", "Simulator");
+
+    if (!stimuli_filepath.empty()) {
+      AppendInlinedNodeChildPcData(parent, "StimuliFile", stimuli_filepath.c_str());
+    }
+    AppendInlinedNodeChildPcData(parent, "avrtoolinterface");
   }
 
-  return "";
-}
+  std::array<AS7ProjectDescriptor::Properties,
+             static_cast<uint8_t>(AS7ProjectDescriptor::Type::maxval)>
+    AS7ProjectDescriptor::collection = {
+      Properties("cppproj", Type::cppproj, "CXX", "$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets"),
+      Properties("cproj", Type::cproj, "C", "$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets"),
+      Properties("asmproj", Type::asmproj, "ASM", "$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets")
+    };
+
+  AS7ProjectDescriptor::Properties* AS7ProjectDescriptor::get_project_type_properties(const std::string& name)
+  {
+    auto item = std::find_if(collection.begin(), collection.end(), [name](const Properties& prop) {
+      return name == prop.name;
+    });
+
+    if (item != collection.end()) {
+      return &(*item);
+    }
+
+    return nullptr;
+  }
+
+  AS7ProjectDescriptor::Properties* AS7ProjectDescriptor::get_project_type_properties(const AS7ProjectDescriptor::Type type)
+  {
+    auto item = std::find_if(collection.begin(), collection.end(), [type](const Properties& prop) {
+      return type == prop.type;
+    });
+
+    if (item != collection.end()) {
+      return &(*item);
+    }
+
+    return nullptr;
+  }
+
+  std::string AS7ProjectDescriptor::get_extension(Type type)
+  {
+    auto prop = get_project_type_properties(type);
+    if (nullptr != prop) {
+      return "." + prop->name;
+    }
+
+    return "";
+  }

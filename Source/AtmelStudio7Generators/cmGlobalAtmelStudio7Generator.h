@@ -103,6 +103,9 @@ public:
   bool MatchesGeneratorName(const std::string& name) const;
   bool IsAtmelStudioInstalled() const;
 
+  std::unique_ptr<cmLocalGenerator> CreateLocalGenerator(
+    cmMakefile* mf) override;
+
   virtual ~cmGlobalAtmelStudio7Generator();
 
   void EnableLanguage(std::vector<std::string> const& languages, cmMakefile*,

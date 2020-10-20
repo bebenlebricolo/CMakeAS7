@@ -24,6 +24,67 @@ cmLocalAtmelStudio7Generator::~cmLocalAtmelStudio7Generator()
 {
 }
 
+void cmLocalAtmelStudio7Generator::WriteStampFiles()
+{
+  // Touch a timestamp file used to determine when the project file is
+  // out of date.
+  std::string stampName =
+    cmStrCat(this->GetCurrentBinaryDirectory(), "/CMakeFiles");
+  cmSystemTools::MakeDirectory(stampName);
+  stampName += "/generate.stamp";
+  cmsys::ofstream stamp(stampName.c_str());
+  stamp << "# CMake generation timestamp file for this directory.\n";
+
+  // Create a helper file so CMake can determine when it is run
+  // through the rule created by CreateVCProjBuildRule whether it
+  // really needs to regenerate the project.  This file lists its own
+  // dependencies.  If any file listed in it is newer than itself then
+  // CMake must rerun.  Otherwise the project files are up to date and
+  // the stamp file can just be touched.
+  std::string depName = cmStrCat(stampName, ".depend");
+  cmsys::ofstream depFile(depName.c_str());
+  depFile << "# CMake generation dependency list for this directory.\n";
+
+  std::vector<std::string> listFiles(this->Makefile->GetListFiles());
+  cmake* cm = this->GlobalGenerator->GetCMakeInstance();
+  if (cm->DoWriteGlobVerifyTarget()) {
+    listFiles.push_back(cm->GetGlobVerifyStamp());
+  }
+
+  // Sort the list of input files and remove duplicates.
+  std::sort(listFiles.begin(), listFiles.end(), std::less<std::string>());
+  std::vector<std::string>::iterator new_end =
+    std::unique(listFiles.begin(), listFiles.end());
+  listFiles.erase(new_end, listFiles.end());
+
+  for (const std::string& lf : listFiles) {
+    depFile << lf << "\n";
+  }
+}
+
+void cmLocalAtmelStudio7Generator::Generate()
+{
+  // Create the project file for each target.
+  for (cmGeneratorTarget* gt :
+       this->GlobalGenerator->GetLocalGeneratorTargetsInOrder(this)) {
+    if (!gt->IsInBuildSystem() || gt->GetProperty("EXTERNAL_MSPROJECT")) {
+      continue;
+    }
+
+    auto& gtVisited = this->GetSourcesVisited(gt);
+    auto& deps = this->GlobalGenerator->GetTargetDirectDepends(gt);
+    for (auto& d : deps) {
+      // Take the union of visited source files of custom commands
+      auto depVisited = this->GetSourcesVisited(d);
+      gtVisited.insert(depVisited.begin(), depVisited.end());
+    }
+
+    this->GenerateTarget(gt);
+  }
+
+  this->WriteStampFiles();
+}
+
 void cmLocalAtmelStudio7Generator::GenerateTarget(cmGeneratorTarget* target)
 {
  cmAtmelStudio7TargetGenerator targetGenerator(

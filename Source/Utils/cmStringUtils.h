@@ -80,6 +80,7 @@ namespace strings
      * @return transformed string
      */
     std::string to_uppercase(const std::string& input_str);
+
     }
 
 }

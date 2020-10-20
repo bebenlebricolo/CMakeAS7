@@ -251,6 +251,13 @@ void cmGlobalAtmelStudio7Generator::OutputATSLNFile()
   }
 }
 
+std::unique_ptr<cmLocalGenerator> cmGlobalAtmelStudio7Generator::CreateLocalGenerator(
+  cmMakefile* mf)
+{
+  return std::unique_ptr<cmLocalGenerator>(
+    cm::make_unique<cmLocalAtmelStudio7Generator>(this, mf));
+}
+
 void cmGlobalAtmelStudio7Generator::OutputATSLNFile(
   cmLocalGenerator* root, std::vector<cmLocalGenerator*>& generators)
 {
@@ -467,22 +474,14 @@ cmGlobalAtmelStudio7Generator::GenerateBuildCommand(
   }
   
   // "C:\Program Files (x86)\Atmel\Studio\7.0\AtmelStudio.exe" GETTING - STARTED14.atsln / build debug / out log.txt "
-  GeneratedMakeCommand pushD;
-  pushD.Add("cd");
-  pushD.Add(projectDir);
-  GeneratedMakeCommand popD;
-  popD.Add("cd -");
-  makeCommands.push_back(pushD);
-
   GeneratedMakeCommand makeCommand;
   makeCommand.Add(*AtmelStudioPath);
   std::string atslnFile = projectDir + "/" + projectName + ".atsln";
   makeCommand.Add(atslnFile);
   makeCommand.Add("/build");
-  makeCommand.Add("debug");
+  makeCommand.Add(config);
 
   makeCommands.push_back(makeCommand);
-  makeCommands.push_back(popD);
 
   return makeCommands;
 }
