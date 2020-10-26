@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <deque>
 
 namespace cmutils {
 
@@ -105,6 +106,54 @@ std::string to_uppercase(const std::string& input_str)
   for (char c : input_str) {
     out += std::toupper(c);
   }
+  return out;
+}
+
+std::string replace(const std::string& input_str, const char orig, const char replacement)
+{
+  std::string out = input_str;
+  for (char& c : out) {
+    // a bit of branchless programming, just for fun
+    c = (c == orig) * replacement +
+        (c != orig) * c;
+  }
+  return out;
+}
+
+std::string replace(const std::string& input_str, const std::string& orig, const std::string& replacement)
+{
+  std::string out;
+  size_t local = 0;
+  std::deque<unsigned int> locations;
+  // Count occurrences first without touching to output string
+  while (local != std::string::npos) {
+    local = input_str.find(orig, local + 1);
+    if (local != std::string::npos) {
+      locations.push_back(local);
+    }
+  }
+  
+  // No more work to do if input sequence is not found
+  if (locations.empty()) {
+    return input_str;
+  }
+
+  out.reserve(input_str.size() + locations.size() * (replacement.size() - orig.size()));
+  local = 0;
+  while (local < input_str.size()) {
+    if (local != locations.front()) {
+      out += input_str[local];
+      // next character
+      ++local;
+    } else {
+      out += replacement;
+      // Fast forward
+      local += orig.size();
+      // drop first element of the queue
+      locations.pop_front();
+    }
+  }
+
   return out;
 }
 

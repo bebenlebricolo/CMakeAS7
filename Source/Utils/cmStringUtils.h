@@ -81,6 +81,9 @@ namespace strings
      */
     std::string to_uppercase(const std::string& input_str);
 
+    std::string replace(const std::string& input_str, const char orig, const char replacement);
+    std::string replace(const std::string& input_str, const std::string& orig, const std::string& replacement);
+
     }
 
 }
