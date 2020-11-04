@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace cmutils
 {
@@ -71,6 +72,14 @@ namespace strings
      * @return trimmed string
     */
     std::string trim(const std::string& input_str, char c = ' ', TransformLocation tran = TransformLocation::Start);
+
+    /**
+     * @brief breaks an input string into a vector of substrings, using the given delimiter.
+     * @param[in] input_str : input string to be transformed
+     * @param[in] delim     : delimiter character
+     * @return a vector of substrings (a.k.a tokens)
+     */
+    std::vector<std::string> split(const std::string& input_str, const char delim = ' ');
 
     /**
      * @brief converts the input string to its lowercase version, char by char.

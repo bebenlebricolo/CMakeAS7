@@ -89,6 +89,44 @@ std::string trim(const std::string& input_str, char c, TransformLocation tran)
   return out;
 }
 
+std::vector<std::string> split(const std::string& input_str, const char delim)
+{
+  std::vector<std::string> vec;
+
+  //Copy string content as we don't want to modify the input string content
+  std::string cleaned_string = input_str;
+  
+  // remove contiguous duplicates which matches the delimiter character only
+  auto it = std::unique(cleaned_string.begin(), cleaned_string.end(), [delim](const char a, const char b) {
+      return (a == b && a == delim);
+  });
+  
+  // Extract the useful part of cleaned string
+  cleaned_string = std::string(cleaned_string.begin(), it);
+
+  // Remove leading and trailing delimiter if any exist
+  cleaned_string = trim(cleaned_string, delim, TransformLocation::Both);
+
+  // Loop over the cleaned string to isolate substrings
+  std::string substring;
+  for (const char c : cleaned_string) {
+    if (c != delim) {
+      substring += c;
+    } else {
+      vec.push_back(substring);
+      substring.clear();
+    }
+  }
+ 
+  // Last substring is not pushed to vector when the last character is not a delimiter, 
+  // So check if something remains in the substring object and add this to the output vector
+  if (!substring.empty()) {
+    vec.push_back(substring);
+  }
+
+  return vec;
+}
+
 std::string to_lowercase(const std::string& input_str)
 {
   std::string out;

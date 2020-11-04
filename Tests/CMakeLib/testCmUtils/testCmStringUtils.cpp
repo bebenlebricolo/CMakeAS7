@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <string>
+#include <vector>
 #include "cmStringUtils.h"
 
 namespace cmutilstests
@@ -66,7 +67,7 @@ TEST(StringUtils, test_string_replace_single_char)
   std::string out = cmutils::strings::replace(input_str, '/', '\\');
 
   ASSERT_EQ(out, "This\\is\\a\\path\\to\\nowhere");
-  
+
   out = cmutils::strings::replace(out, '\\', '/');
   ASSERT_EQ(out, input_str);
 
@@ -92,6 +93,15 @@ TEST(StringUtils, test_string_replace_full_strings)
   ASSERT_EQ(out, "This is my 123456 age 123456 and 123456IWantTo123456Put123456it%Deverywhere");
 }
 
+TEST(StringUtils, test_split_string)
+{
+  const std::string input_str1 = "  -g  -O2  -fpedantic -Wall -Wextra -Werror  ";
+  const std::vector<std::string> ref_vec = { "-g", "-O2", "-fpedantic", "-Wall", "-Wextra", "-Werror" };
+  std::vector<std::string> out = cmutils::strings::split(input_str1, ' ');
+  ASSERT_EQ(out.size(), 6U);
+  ASSERT_EQ(out, ref_vec);
+
+}
 
 } /* end of namespace cmutilstests*/
 
