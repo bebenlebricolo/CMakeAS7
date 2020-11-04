@@ -27,7 +27,12 @@ namespace strings
     std::string strip(const std::string& input_str, const std::string& charset);
 
     /**
-     * @brief Removes duplicates in place (unoptimized implementation, not suitable for heavy manipulations)
+     * @brief Removes duplicates (unoptimized implementation, not suitable for heavy manipulations)
+     *        This function removes all duplicates from a string, which does not mimic the behavior of
+     *        std:unique (this one removes contiguous duplicates so that an input like { 1, 1, 2, 3, 4, 4, 5} will
+     *        be transformed into { 1, 2, 3, 4, 5} by std::unique).
+     *        Instead, this function will transform this { 1, 2, 3, 3, 4, 5, 3, 2, 1} into
+     *                                                   { 1, 2, 3, 4, 5 }
      * @param input_str     :   input string to be transformed
      * @param keep_first    :   algorithm keeps the first unique character (reads the string from begining to end) if set to true
      *                          if set to false, the algorithm does the same but starting from the end of the string instead (keeps right-most character)
@@ -81,7 +86,20 @@ namespace strings
      */
     std::string to_uppercase(const std::string& input_str);
 
+    /**
+     * @brief replaces an original character in the input string with the replacement character.
+     * @param[in] orig          : original character to be replaced
+     * @param[in] replacement   : replacement character replacing the original one
+     * @return transformed string
+     */
     std::string replace(const std::string& input_str, const char orig, const char replacement);
+
+    /**
+     * @brief replaces an original substring in the input string with the replacement string.
+     * @param[in] orig          : original substring to be replaced
+     * @param[in] replacement   : replacement substring replacing the original one
+     * @return transformed string
+     */
     std::string replace(const std::string& input_str, const std::string& orig, const std::string& replacement);
 
     }
