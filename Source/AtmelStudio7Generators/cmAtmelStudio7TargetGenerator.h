@@ -79,7 +79,7 @@ public:
 
   /**
    * @brief Computes project file extension using its name.
-   * 
+   *
    * @param type    :  Project type using the enumerated value
    * @return computed extension string
    */
