@@ -22,12 +22,13 @@ endif()
 
 
 target_include_directories(testAtmelStudioTools PUBLIC
+    ${CMAKE_SOURCE_DIR}/Source/Utils
     ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler
     ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/Flags
     ${GTEST_INCLUDE_DIRS}
 )
 
-target_link_libraries(testAtmelStudioTools ${GTEST_LIBRARIES})
+target_link_libraries(testAtmelStudioTools cmutils ${GTEST_LIBRARIES})
 
 set_target_properties(testAtmelStudioTools
     PROPERTIES

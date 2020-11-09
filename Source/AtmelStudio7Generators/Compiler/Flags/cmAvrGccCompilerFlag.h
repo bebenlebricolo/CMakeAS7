@@ -13,9 +13,10 @@ struct CompilerFlag
   {
     Generic,
     Optimization,
+    Debug,
     Warning,
     Linker,
-    Feature,
+
     Definition
   };
 
@@ -48,7 +49,13 @@ struct CompilerFlag
      * @param[in]   atmel_studio_compat :   generates a AtmelStudio-compatible version of this flag
      * @return generated string. Default value is the token value.
     */
-  virtual std::string Generate(const bool atmel_studio_compat = true) = 0;
+  virtual std::string Generate(const bool atmel_studio_compat = true)
+  {
+    if (atmel_studio_compat) {
+      return description;
+    }
+    return token;
+  }
 
   /**
      * @brief returns the underlying type of this compiler flag, when polymorphism is used
@@ -69,7 +76,7 @@ protected:
 // A simple namespace will do it, no need for any object instantiation
 namespace CompilerFlagFactory {
 bool is_valid(const std::string& token);
-std::shared_ptr<CompilerFlag*> create(const std::string& token);
+std::shared_ptr<CompilerFlag> create(const std::string& token);
 };
 
 }

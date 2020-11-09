@@ -8,14 +8,13 @@
 namespace cmatmelstudiotests
 {
 
-//
-//TEST(AvrGccCompilerFlagsParsing, test_avr_gcc_representation)
-//{
-//    GTEST_SKIP() << "Not implemented yet" << std::endl;
-//    const std::string test_str1 = " -O3 -Og -Wall -Wextra -Wl,gc-sections -fpack-struct -DTEST_DEF=33 ";
-//    compiler::cmAvrGccCompiler avrGcc;
-//    avrGcc.parse_flags(test_str1);
-//}
+
+TEST(AvrGccCompilerFlagsParsing, test_avr_gcc_representation)
+{
+    const std::string test_str1 = " -O3 -Og -Wall -Wextra -Wl,gc-sections -fpack-struct -DTEST_DEF=33 ";
+    compiler::cmAvrGccCompiler avrGcc;
+    avrGcc.parse_flags(test_str1);
+}
 
 TEST(AvrGccCompilerFlagsParsing, test_optimization_flags)
 {
@@ -44,7 +43,18 @@ TEST(AvrGccCompilerFlagsParsing, test_optimization_flags)
     {
       EXPECT_FALSE(compiler::OptimizationFlag::can_create(f));
     }
+}
 
+TEST(AvrGccCompilerFlagsParsing, test_compiler_flags_factory_optimization_flags)
+{
+  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra", "-fpedantic", "-O2" };
+  for (auto& f : flags) {
+    EXPECT_TRUE(compiler::CompilerFlagFactory::is_valid(f));
+  }
+
+  std::shared_ptr<compiler::CompilerFlag> built_flag = compiler::CompilerFlagFactory::create("-O2");
+  ASSERT_NE(nullptr, built_flag);
+  ASSERT_EQ(built_flag->GetType(), compiler::CompilerFlag::Type::Optimization);
 }
 
 } /* end of namespace cmutilstests*/

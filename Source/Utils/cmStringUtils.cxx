@@ -1,8 +1,8 @@
 #include "cmStringUtils.h"
 
 #include <algorithm>
-#include <vector>
 #include <deque>
+#include <vector>
 
 namespace cmutils {
 
@@ -95,12 +95,12 @@ std::vector<std::string> split(const std::string& input_str, const char delim)
 
   //Copy string content as we don't want to modify the input string content
   std::string cleaned_string = input_str;
-  
+
   // remove contiguous duplicates which matches the delimiter character only
   auto it = std::unique(cleaned_string.begin(), cleaned_string.end(), [delim](const char a, const char b) {
-      return (a == b && a == delim);
+    return (a == b && a == delim);
   });
-  
+
   // Extract the useful part of cleaned string
   cleaned_string = std::string(cleaned_string.begin(), it);
 
@@ -117,8 +117,8 @@ std::vector<std::string> split(const std::string& input_str, const char delim)
       substring.clear();
     }
   }
- 
-  // Last substring is not pushed to vector when the last character is not a delimiter, 
+
+  // Last substring is not pushed to vector when the last character is not a delimiter,
   // So check if something remains in the substring object and add this to the output vector
   if (!substring.empty()) {
     vec.push_back(substring);
@@ -153,7 +153,7 @@ std::string replace(const std::string& input_str, const char orig, const char re
   for (char& c : out) {
     // a bit of branchless programming, just for fun
     c = (c == orig) * replacement +
-        (c != orig) * c;
+      (c != orig) * c;
   }
   return out;
 }
@@ -170,7 +170,7 @@ std::string replace(const std::string& input_str, const std::string& orig, const
       locations.push_back(local);
     }
   }
-  
+
   // No more work to do if input sequence is not found
   if (locations.empty()) {
     return input_str;
