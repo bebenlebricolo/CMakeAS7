@@ -12,6 +12,7 @@ class cmAvrGccCompiler
 {
 public:
     void parse_flags(const std::vector<std::string>& tokens);
+    void parse_flags(const std::string& flags);
 private:
     std::vector<std::shared_ptr<CompilerFlag*>> optimization_flags;
     std::vector<std::shared_ptr<CompilerFlag*>> debug_flags;

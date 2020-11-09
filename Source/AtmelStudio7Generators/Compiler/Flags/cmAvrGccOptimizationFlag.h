@@ -42,7 +42,10 @@ struct OptimizationFlag : public CompilerFlag
     bool operator==(const OptimizationFlag& other) const;
     bool operator!=(const OptimizationFlag& other) const;
 
-private:
+    Level get_level() const;
+    std::string Generate(const bool atmel_studio_compat = true) override;
+
+  private:
     struct FullDescription
     {
         FullDescription(const std::string& _flag, const std::string& _desc) : flag(_flag), atmel_studio_description(_desc) {}
@@ -51,7 +54,7 @@ private:
     };
 
     static std::unordered_map<Level, FullDescription> available_opt;
-    FullDescription* resolve(const std::string& flag) const;
+    std::pair<Level, FullDescription*> resolve(const std::string& flag) const;
     Level optLevel = Level::O0;
 };
 
