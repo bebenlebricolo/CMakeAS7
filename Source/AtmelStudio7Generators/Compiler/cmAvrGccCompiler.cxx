@@ -17,9 +17,9 @@ bool CompilerFlagFactory::is_valid(const std::string& token)
   return (prefixes.find(token[1]) != std::string::npos);
 }
 
-std::shared_ptr<CompilerFlag> CompilerFlagFactory::create(const std::string& token)
+std::shared_ptr<CompilerOption> CompilerFlagFactory::create(const std::string& token)
 {
-  std::shared_ptr<CompilerFlag> out;
+  std::shared_ptr<CompilerOption> out;
   if (!is_valid(token)) {
     return out;
   }
@@ -33,23 +33,26 @@ std::shared_ptr<CompilerFlag> CompilerFlagFactory::create(const std::string& tok
 
     // Compile definitions
     case 'D':
-      out = std::make_shared<CompilerFlag>(CompilerFlag::Type::Definition, token);
+      out = std::make_shared<CompilerOption>(CompilerOption::Type::Definition, token);
       break;
 
     // Debug flags
     case 'g':
-      out = std::make_shared<CompilerFlag>(CompilerFlag::Type::Debug, token);
+      out = std::make_shared<CompilerOption>(CompilerOption::Type::Debug, token);
       break;
 
     // Generic, normal flags
     case 'f':
-      out = std::make_shared<CompilerFlag>(CompilerFlag::Type::Generic, token);
+      out = std::make_shared<CompilerOption>(CompilerOption::Type::Generic, token);
       break;
 
     // Warning flags or linker flags (this is resolved with the help of the next character)
     // TODO : implement linker flag vs warning flag resolution
     case 'W':
-      out = std::make_shared<WarningFlag>(token);
+      if (token[2] == 'l') {
+        out = std::make_shared<LinkerOption>(token)
+      }
+      out = std::make_shared<WarningOption>(token);
       break;
 
     default:
@@ -65,11 +68,45 @@ void cmAvrGccCompiler::parse_flags(const std::string& flags)
   parse_flags(tokens);
 }
 
+#ifdef UNIT_TESTING
+
+const std::vector<cmAvrGccCompiler::FlagContainer>& cmAvrGccCompiler::get_optimization_flags() const
+{
+  return optimization_flags;
+}
+
+const std::vector<cmAvrGccCompiler::FlagContainer>& cmAvrGccCompiler::get_debug_flags() const
+{
+  return debug_flags;
+}
+
+const std::vector<cmAvrGccCompiler::FlagContainer>& cmAvrGccCompiler::get_warning_flags() const
+{
+  return warning_flags;
+}
+
+const std::vector<cmAvrGccCompiler::FlagContainer>& cmAvrGccCompiler::get_linker_flags() const
+{
+  return linker_flags;
+}
+
+const std::vector<cmAvrGccCompiler::FlagContainer>& cmAvrGccCompiler::get_normal_flags() const
+{
+  return normal_flags;
+}
+
+const std::vector<cmAvrGccCompiler::FlagContainer>& cmAvrGccCompiler::get_definitions() const
+{
+  return definitions;
+}
+
+#endif
+
 void cmAvrGccCompiler::parse_flags(const std::vector<std::string>& tokens)
 {
   for (const auto& token : tokens) {
     if (compiler::CompilerFlagFactory::is_valid(token)) {
-      std::shared_ptr<compiler::CompilerFlag> flag = compiler::CompilerFlagFactory::create(token);
+      std::shared_ptr<compiler::CompilerOption> flag = compiler::CompilerFlagFactory::create(token);
       accept_flag(flag);
     }
   }
@@ -82,21 +119,21 @@ void cmAvrGccCompiler::accept_flag(const FlagContainer& flag)
   }
 
   switch (flag->GetType()) {
-    case compiler::CompilerFlag::Type::Optimization:
+    case compiler::CompilerOption::Type::Optimization:
       if (std::find(optimization_flags.begin(), optimization_flags.end(), flag) == optimization_flags.end()) {
         optimization_flags.push_back(flag);
       }
       break;
 
-    case compiler::CompilerFlag::Type::Warning:
+    case compiler::CompilerOption::Type::Warning:
       warning_flags.push_back(flag);
       break;
 
-    case compiler::CompilerFlag::Type::Debug:
+    case compiler::CompilerOption::Type::Debug:
       debug_flags.push_back(flag);
       break;
 
-    case compiler::CompilerFlag::Type::Definition:
+    case compiler::CompilerOption::Type::Definition:
       definitions.push_back(flag);
       break;
 

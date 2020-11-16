@@ -9,7 +9,7 @@
 
 namespace compiler {
 
-struct WarningFlag : public CompilerFlag
+struct DebugOption : public CompilerFlag
 {
   /**
      * @brief determines whether the given token is part of the static map of available optimizations flags or not
@@ -18,11 +18,11 @@ struct WarningFlag : public CompilerFlag
     */
   static bool can_create(const std::string& _token) { return true; }
 
-  WarningFlag()
-    : CompilerFlag(Type::Warning)
+  DebugOption()
+    : CompilerFlag(Type::Linker)
   {
   }
-  WarningFlag(const std::string& _token)
+  DebugOption(const std::string& _token)
     : CompilerFlag(Type::Warning, _token)
   {
   }

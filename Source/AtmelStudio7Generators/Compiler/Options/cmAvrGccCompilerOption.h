@@ -7,7 +7,7 @@
 
 namespace compiler {
 
-struct CompilerFlag
+struct CompilerOption
 {
   enum class Type
   {
@@ -22,20 +22,20 @@ struct CompilerFlag
 
   static bool can_create(const std::string& _token) { return false; }
 
-  CompilerFlag(const Type _type)
+  CompilerOption(const Type _type)
     : type(_type)
   {
   }
-  CompilerFlag(const std::string& _token)
+  CompilerOption(const std::string& _token)
     : token(_token)
   {
   }
-  CompilerFlag(const Type _type, const std::string& _token)
+  CompilerOption(const Type _type, const std::string& _token)
     : type(_type)
     , token(_token)
   {
   }
-  CompilerFlag(const std::string& _token, const std::string& _description)
+  CompilerOption(const std::string& _token, const std::string& _description)
     : token(_token)
     , description(_description)
   {
@@ -67,6 +67,11 @@ struct CompilerFlag
     */
   Type GetType() const { return type; }
 
+  #ifdef UNIT_TESTING
+    std::string get_token() const { return token; }
+    std::string get_description() const { return description; }
+  #endif
+
 protected:
   Type type = Type::Generic;
   std::string token;       /**< String representation of this flag (a.k.a flag token, e.g. "-Wall")        */
@@ -74,9 +79,9 @@ protected:
 };
 
 // A simple namespace will do it, no need for any object instantiation
-namespace CompilerFlagFactory {
+namespace CompilerOptionFactory {
 bool is_valid(const std::string& token);
-std::shared_ptr<CompilerFlag> create(const std::string& token);
+std::shared_ptr<CompilerOption> create(const std::string& token);
 };
 
 }

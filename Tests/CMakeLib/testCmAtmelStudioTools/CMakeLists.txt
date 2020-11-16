@@ -6,12 +6,11 @@ enable_testing()
 
 add_executable(testAtmelStudioTools
     testCmAvrGccCompiler.cpp
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/Flags/cmAvrGccOptimizationFlag.cxx
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/Flags/cmAvrGccOptimizationFlag.h
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/Flags/cmAvrGccCompilerFlag.h
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/Flags/cmAvrGccWarningFlag.h
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/cmAvrGccCompiler.cxx
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/cmAvrGccCompiler.h
+)
+
+# Enable unit testing features in codebase
+target_compile_definitions(testAtmelStudioTools
+    PUBLIC -DUNIT_TESTING
 )
 
 if(MSVC)
@@ -24,11 +23,11 @@ endif()
 target_include_directories(testAtmelStudioTools PUBLIC
     ${CMAKE_SOURCE_DIR}/Source/Utils
     ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/Flags
+    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/Options
     ${GTEST_INCLUDE_DIRS}
 )
 
-target_link_libraries(testAtmelStudioTools cmutils ${GTEST_LIBRARIES})
+target_link_libraries(testAtmelStudioTools atmelstudio7generators cmutils ${GTEST_LIBRARIES})
 
 set_target_properties(testAtmelStudioTools
     PROPERTIES

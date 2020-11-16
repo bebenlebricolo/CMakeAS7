@@ -4,12 +4,12 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
-#include "cmAvrGccCompilerFlag.h"
+#include "cmAvrGccCompilerOption.h"
 
 namespace compiler
 {
 
-struct OptimizationFlag : public CompilerFlag
+struct OptimizationFlag : public CompilerOption
 {
     enum class Level : uint8_t
     {
@@ -30,7 +30,7 @@ struct OptimizationFlag : public CompilerFlag
     */
     static bool can_create(const std::string& _token);
 
-    OptimizationFlag() : CompilerFlag(Type::Optimization){}
+    OptimizationFlag() : CompilerOption(Type::Optimization){}
     OptimizationFlag(const std::string& _token);
 
     // Operators used to compare optimization levels, in order to resolve
