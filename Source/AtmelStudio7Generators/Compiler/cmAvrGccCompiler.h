@@ -16,14 +16,12 @@ public:
 
     using ShrdCompilerOption = std::shared_ptr<CompilerOption>;
 
-#ifdef UNIT_TESTING
     const std::vector<ShrdCompilerOption>& get_optimization_flags() const;
     const std::vector<ShrdCompilerOption>& get_debug_flags() const;
     const std::vector<ShrdCompilerOption>& get_warning_flags() const;
     const std::vector<ShrdCompilerOption>& get_linker_flags() const;
     const std::vector<ShrdCompilerOption>& get_normal_flags() const;
     const std::vector<ShrdCompilerOption>& get_definitions() const;
-#endif
 
 private:
     std::vector<ShrdCompilerOption> optimization_flags;

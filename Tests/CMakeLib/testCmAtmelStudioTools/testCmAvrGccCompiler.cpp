@@ -1,6 +1,6 @@
+#include <algorithm>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 #include <gtest/gtest.h>
 
@@ -10,29 +10,28 @@
 
 namespace cmatmelstudiotests {
 
-
 static bool check_flag_uniqueness(const std::vector<std::string>& target, const std::vector<std::shared_ptr<compiler::CompilerOption>>& reference)
 {
   // Test that each input flag is unique inside selected flag vector from avr gcc compiler abstraction
-    for (auto& flag : target) {
-      auto nb_matches = std::count_if(reference.begin(), reference.end(), [flag](const std::shared_ptr<compiler::CompilerOption>& ref) {
-        return flag == ref->get_token();
-      });
+  for (auto& flag : target) {
+    auto nb_matches = std::count_if(reference.begin(), reference.end(), [flag](const std::shared_ptr<compiler::CompilerOption>& ref) {
+      return flag == ref->get_token();
+    });
 
-      if (1 != nb_matches) {
-        return false;
-      }
-
+    if (1 != nb_matches) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
-  TEST(AvrGccCompilerFlagsParsing, test_avr_gcc_representation)
+
+TEST(AvrGccCompilerFlagsParsing, test_avr_gcc_representation)
 {
-  const std::string test_str1 = " -O3 -Og -Wall -Wextra -g1 -Wl,--gc-sections -gdwarf -fpack-struct -ggdb -DTEST_DEF=33 -g3 ";
+  const std::string test_str1 = " -O3 -Og -Wall -Wextra -g2 -Wl,--gc-sections -gdwarf -fpack-struct -ggdb -DTEST_DEF=33 -g3 ";
   const std::vector<std::string> optimization_options = { "-O3", "-Og" };
   const std::vector<std::string> warning_options = { "-Wall", "-Wextra" };
   const std::vector<std::string> generic_options = { "-fpack-struct" };
-  const std::vector<std::string> linker_options= { "-Wl,--gc-sections " };
+  const std::vector<std::string> linker_options = { "-Wl,--gc-sections" };
   const std::vector<std::string> definition_options = { "-DTEST_DEF=33" };
 
   // https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html
@@ -47,32 +46,31 @@ static bool check_flag_uniqueness(const std::vector<std::string>& target, const 
   ASSERT_TRUE(check_flag_uniqueness(linker_options, avrGcc.get_linker_flags()));
   ASSERT_TRUE(check_flag_uniqueness(definition_options, avrGcc.get_definitions()));
   ASSERT_TRUE(check_flag_uniqueness(debug_options, avrGcc.get_debug_flags()));
-
 }
 
 TEST(AvrGccCompilerFlagsParsing, test_optimization_flags)
 {
-  const std::vector<std::pair<std::string, compiler::OptimizationFlag::Level>> valid_flags = {
-    { "-O0", compiler::OptimizationFlag::Level::O0 },
-    { "-O", compiler::OptimizationFlag::Level::O },
-    { "-O1", compiler::OptimizationFlag::Level::O1 },
-    { "-O2", compiler::OptimizationFlag::Level::O2 },
-    { "-O3", compiler::OptimizationFlag::Level::O3 },
-    { "-Og", compiler::OptimizationFlag::Level::Og },
-    { "-Os", compiler::OptimizationFlag::Level::Os },
-    { "-Ofast", compiler::OptimizationFlag::Level::Ofast },
+  const std::vector<std::pair<std::string, compiler::OptimizationOption::Level>> valid_flags = {
+    { "-O0", compiler::OptimizationOption::Level::O0 },
+    { "-O", compiler::OptimizationOption::Level::O },
+    { "-O1", compiler::OptimizationOption::Level::O1 },
+    { "-O2", compiler::OptimizationOption::Level::O2 },
+    { "-O3", compiler::OptimizationOption::Level::O3 },
+    { "-Og", compiler::OptimizationOption::Level::Og },
+    { "-Os", compiler::OptimizationOption::Level::Os },
+    { "-Ofast", compiler::OptimizationOption::Level::Ofast },
   };
   const std::vector<std::string> invalid_flags = { "-ftoto", "-Wall", "-Wextra", "-Werror", "-pedantic", "-fpack-struct", "-ffunction-sections", "-DTEST_DEFINITION=33" };
 
   for (auto& f : valid_flags) {
-    EXPECT_TRUE(compiler::OptimizationFlag::can_create(f.first));
-    compiler::OptimizationFlag opt(f.first);
+    EXPECT_TRUE(compiler::OptimizationOption::can_create(f.first));
+    compiler::OptimizationOption opt(f.first);
     EXPECT_EQ(opt.get_level(), f.second);
   }
 
   // Should not be able to create flags with invalid inputs
   for (auto& f : invalid_flags) {
-    EXPECT_FALSE(compiler::OptimizationFlag::can_create(f));
+    EXPECT_FALSE(compiler::OptimizationOption::can_create(f));
   }
 }
 

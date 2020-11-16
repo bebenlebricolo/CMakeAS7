@@ -1,56 +1,56 @@
 #pragma once
 
-#include "cmAvrGccOptimizationFlag.h"
+#include "cmAvrGccOptimizationOption.h"
 
 namespace compiler {
 
-std::unordered_map<OptimizationFlag::Level, OptimizationFlag::FullDescription> OptimizationFlag::available_opt = {
-  { OptimizationFlag::Level::O0, { "-O0", "None (-O0)" } },
-  { OptimizationFlag::Level::O1, { "-O1", "Optimize(-O1)" } },
-  { OptimizationFlag::Level::O, { "-O", "Optimize(-O1)" } },
-  { OptimizationFlag::Level::O2, { "-O2", "Optimize more (-O2)" } },
-  { OptimizationFlag::Level::O3, { "-O3", "Optimize more (-O3)" } },
-  { OptimizationFlag::Level::Ofast, { "-Ofast", "Optimize more (-O3)" } },
-  { OptimizationFlag::Level::Og, { "-Og", "Optimize debugging experience (-Og)" } },
-  { OptimizationFlag::Level::Os, { "-Os", "Optimize for size (-Os)" } }
+std::unordered_map<OptimizationOption::Level, OptimizationOption::FullDescription> OptimizationOption::available_opt = {
+  { OptimizationOption::Level::O0, { "-O0", "None (-O0)" } },
+  { OptimizationOption::Level::O1, { "-O1", "Optimize(-O1)" } },
+  { OptimizationOption::Level::O, { "-O", "Optimize(-O1)" } },
+  { OptimizationOption::Level::O2, { "-O2", "Optimize more (-O2)" } },
+  { OptimizationOption::Level::O3, { "-O3", "Optimize more (-O3)" } },
+  { OptimizationOption::Level::Ofast, { "-Ofast", "Optimize more (-O3)" } },
+  { OptimizationOption::Level::Og, { "-Og", "Optimize debugging experience (-Og)" } },
+  { OptimizationOption::Level::Os, { "-Os", "Optimize for size (-Os)" } }
 };
 
-bool OptimizationFlag::operator>(const OptimizationFlag& other) const
+bool OptimizationOption::operator>(const OptimizationOption& other) const
 {
   return static_cast<uint8_t>(optLevel) > static_cast<uint8_t>(other.optLevel);
 }
 
-bool OptimizationFlag::operator<(const OptimizationFlag& other) const
+bool OptimizationOption::operator<(const OptimizationOption& other) const
 {
   return static_cast<uint8_t>(optLevel) < static_cast<uint8_t>(other.optLevel);
 }
 
-bool OptimizationFlag::operator<=(const OptimizationFlag& other) const
+bool OptimizationOption::operator<=(const OptimizationOption& other) const
 {
   return static_cast<uint8_t>(optLevel) <= static_cast<uint8_t>(other.optLevel);
 }
 
-bool OptimizationFlag::operator>=(const OptimizationFlag& other) const
+bool OptimizationOption::operator>=(const OptimizationOption& other) const
 {
   return static_cast<uint8_t>(optLevel) >= static_cast<uint8_t>(other.optLevel);
 }
 
-bool OptimizationFlag::operator==(const OptimizationFlag& other) const
+bool OptimizationOption::operator==(const OptimizationOption& other) const
 {
   return static_cast<uint8_t>(optLevel) == static_cast<uint8_t>(other.optLevel);
 }
 
-bool OptimizationFlag::operator!=(const OptimizationFlag& other) const
+bool OptimizationOption::operator!=(const OptimizationOption& other) const
 {
   return static_cast<uint8_t>(optLevel) != static_cast<uint8_t>(other.optLevel);
 }
 
-OptimizationFlag::Level OptimizationFlag::get_level() const
+OptimizationOption::Level OptimizationOption::get_level() const
 {
   return optLevel;
 }
 
-bool OptimizationFlag::can_create(const std::string& _token)
+bool OptimizationOption::can_create(const std::string& _token)
 {
   auto found_element = std::find_if(available_opt.begin(), available_opt.end(), [_token](const std::pair<Level, FullDescription>& element) {
     return _token == element.second.flag;
@@ -58,7 +58,7 @@ bool OptimizationFlag::can_create(const std::string& _token)
   return (found_element != available_opt.end());
 }
 
-std::pair<OptimizationFlag::Level, OptimizationFlag::FullDescription*> OptimizationFlag::resolve(const std::string& flag) const
+std::pair<OptimizationOption::Level, OptimizationOption::FullDescription*> OptimizationOption::resolve(const std::string& flag) const
 {
   std::pair<Level, FullDescription*> out = { Level::O0, nullptr };
   const auto found_element = std::find_if(available_opt.begin(), available_opt.end(), [flag](const std::pair<Level, FullDescription>& element) {
@@ -73,19 +73,19 @@ std::pair<OptimizationFlag::Level, OptimizationFlag::FullDescription*> Optimizat
   return out;
 }
 
-OptimizationFlag::OptimizationFlag(const std::string& _token)
-  : CompilerFlag(Type::Optimization, _token)
+OptimizationOption::OptimizationOption(const std::string& _token)
+  : CompilerOption(Type::Optimization, _token)
 {
   auto resolved_pair = resolve(_token);
   if (resolved_pair.second != nullptr) {
-    CompilerFlag::description = resolved_pair.second->atmel_studio_description;
+    CompilerOption::description = resolved_pair.second->atmel_studio_description;
     optLevel = resolved_pair.first;
   } else {
-    CompilerFlag::description = _token;
+    CompilerOption::description = _token;
   }
 }
 
-std::string OptimizationFlag::Generate(const bool atmel_studio_compat)
+std::string OptimizationOption::Generate(const bool atmel_studio_compat)
 {
   if (atmel_studio_compat) {
     return description;

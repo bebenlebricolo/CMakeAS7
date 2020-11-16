@@ -27,6 +27,8 @@ add_library(atmelstudio7generators
 
 target_include_directories(atmelstudio7generators PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/
+    ${CMAKE_CURRENT_SOURCE_DIR}/Compiler
+    ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options
 )
 
 target_link_libraries(atmelstudio7generators PUBLIC

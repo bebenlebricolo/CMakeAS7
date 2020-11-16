@@ -67,10 +67,8 @@ struct CompilerOption
     */
   Type GetType() const { return type; }
 
-  #ifdef UNIT_TESTING
-    std::string get_token() const { return token; }
-    std::string get_description() const { return description; }
-  #endif
+  std::string get_token() const { return token; }
+  std::string get_description() const { return description; }
 
 protected:
   Type type = Type::Generic;

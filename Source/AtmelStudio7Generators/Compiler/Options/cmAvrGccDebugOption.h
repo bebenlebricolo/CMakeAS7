@@ -5,11 +5,11 @@
 #include <unordered_set>
 #include <vector>
 
-#include "cmAvrGccCompilerFlag.h"
+#include "cmAvrGccCompilerOption.h"
 
 namespace compiler {
 
-struct DebugOption : public CompilerFlag
+struct DebugOption : public CompilerOption
 {
   /**
      * @brief determines whether the given token is part of the static map of available optimizations flags or not
@@ -19,11 +19,11 @@ struct DebugOption : public CompilerFlag
   static bool can_create(const std::string& _token) { return true; }
 
   DebugOption()
-    : CompilerFlag(Type::Linker)
+    : CompilerOption(Type::Debug)
   {
   }
   DebugOption(const std::string& _token)
-    : CompilerFlag(Type::Warning, _token)
+    : CompilerOption(Type::Debug, _token)
   {
   }
 

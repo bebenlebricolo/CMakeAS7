@@ -9,7 +9,7 @@
 namespace compiler
 {
 
-struct OptimizationFlag : public CompilerOption
+struct OptimizationOption : public CompilerOption
 {
     enum class Level : uint8_t
     {
@@ -30,17 +30,17 @@ struct OptimizationFlag : public CompilerOption
     */
     static bool can_create(const std::string& _token);
 
-    OptimizationFlag() : CompilerOption(Type::Optimization){}
-    OptimizationFlag(const std::string& _token);
+    OptimizationOption() : CompilerOption(Type::Optimization){}
+    OptimizationOption(const std::string& _token);
 
     // Operators used to compare optimization levels, in order to resolve
     // the most important one when several are mistakenly passed to Cmake
-    bool operator>(const OptimizationFlag& other) const;
-    bool operator<(const OptimizationFlag& other) const;
-    bool operator<=(const OptimizationFlag& other) const;
-    bool operator>=(const OptimizationFlag& other) const;
-    bool operator==(const OptimizationFlag& other) const;
-    bool operator!=(const OptimizationFlag& other) const;
+    bool operator>(const OptimizationOption& other) const;
+    bool operator<(const OptimizationOption& other) const;
+    bool operator<=(const OptimizationOption& other) const;
+    bool operator>=(const OptimizationOption& other) const;
+    bool operator==(const OptimizationOption& other) const;
+    bool operator!=(const OptimizationOption& other) const;
 
     Level get_level() const;
     std::string Generate(const bool atmel_studio_compat = true) override;
