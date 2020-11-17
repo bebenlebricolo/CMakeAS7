@@ -3,11 +3,13 @@
 #include <string>
 #include <vector>
 
+namespace compiler
+{
+    struct AvrGccCompiler;
+}
+
 namespace AvrToolchain
 {
-
-struct ToolchainParser;
-
 namespace pugixml
 {
     class xml_node;
@@ -142,7 +144,7 @@ struct AS7AvrGCC8
     AS7AvrGCC8Assembler assembler;
     std::string archiver_flags = "-r";
 
-    void convert_from(ToolchainParser& parser);
+    void convert_from(const compiler::AvrGccCompiler& parser);
     void generate_xml(pugixml::xml_node& parent);
     pugixml::xml_node generate_xml();
 };

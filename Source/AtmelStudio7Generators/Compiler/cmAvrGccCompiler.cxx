@@ -1,5 +1,7 @@
 #include "cmAvrGccCompiler.h"
 
+#include <algorithm>
+
 #include "cmStringUtils.h"
 #include "cmAvrGccWarningOption.h"
 #include "cmAvrGccOptimizationOption.h"
@@ -72,34 +74,24 @@ void cmAvrGccCompiler::parse_flags(const std::string& flags)
   parse_flags(tokens);
 }
 
-const std::vector<cmAvrGccCompiler::ShrdCompilerOption>& cmAvrGccCompiler::get_optimization_flags() const
+const std::vector<cmAvrGccCompiler::ShrdCompilerOption>& cmAvrGccCompiler::get_options(const CompilerOption::Type type) const
 {
-  return optimization_flags;
-}
-
-const std::vector<cmAvrGccCompiler::ShrdCompilerOption>& cmAvrGccCompiler::get_debug_flags() const
-{
-  return debug_flags;
-}
-
-const std::vector<cmAvrGccCompiler::ShrdCompilerOption>& cmAvrGccCompiler::get_warning_flags() const
-{
-  return warning_flags;
-}
-
-const std::vector<cmAvrGccCompiler::ShrdCompilerOption>& cmAvrGccCompiler::get_linker_flags() const
-{
-  return linker_flags;
-}
-
-const std::vector<cmAvrGccCompiler::ShrdCompilerOption>& cmAvrGccCompiler::get_normal_flags() const
-{
-  return normal_flags;
-}
-
-const std::vector<cmAvrGccCompiler::ShrdCompilerOption>& cmAvrGccCompiler::get_definitions() const
-{
-  return definitions;
+  switch(type)
+  {
+    case CompilerOption::Type::Debug:
+      return debug;
+    case CompilerOption::Type::Definition:
+      return definitions;
+    case CompilerOption::Type::Linker:
+      return linker;
+    case CompilerOption::Type::Optimization:
+      return optimizations;
+    case CompilerOption::Type::Warning:
+      return warnings;
+    case CompilerOption::Type::Generic:
+    default:
+      return normal;
+  }
 }
 
 void cmAvrGccCompiler::parse_flags(const std::vector<std::string>& tokens)
@@ -120,21 +112,21 @@ void cmAvrGccCompiler::accept_flag(const ShrdCompilerOption& flag)
 
   switch (flag->GetType()) {
     case compiler::CompilerOption::Type::Optimization:
-      if (std::find(optimization_flags.begin(), optimization_flags.end(), flag) == optimization_flags.end()) {
-        optimization_flags.push_back(flag);
+      if (is_unique(flag, optimizations)) {
+        optimizations.push_back(flag);
       }
       break;
 
     case compiler::CompilerOption::Type::Warning:
-      warning_flags.push_back(flag);
+      warnings.push_back(flag);
       break;
 
     case compiler::CompilerOption::Type::Linker:
-      linker_flags.push_back(flag);
+      linker.push_back(flag);
       break;
 
     case compiler::CompilerOption::Type::Debug:
-      debug_flags.push_back(flag);
+      debug.push_back(flag);
       break;
 
     case compiler::CompilerOption::Type::Definition:
@@ -142,9 +134,41 @@ void cmAvrGccCompiler::accept_flag(const ShrdCompilerOption& flag)
       break;
 
     default:
-      normal_flags.push_back(flag);
+      normal.push_back(flag);
       break;
   }
+}
+
+bool cmAvrGccCompiler::contains(const std::string& token, const std::vector<ShrdCompilerOption>& reference) const
+{
+  auto found_item = std::find_if(reference.begin(), reference.end(), [token](const ShrdCompilerOption& target)
+  {
+    return token == target->get_token();
+  });
+
+  return (found_item != reference.end());
+}
+
+bool cmAvrGccCompiler::is_unique(const std::string& token, const std::vector<ShrdCompilerOption>& reference) const
+{
+
+  unsigned int count = std::count_if(reference.begin(), reference.end(), [token](const ShrdCompilerOption& target)
+  {
+    return token == target->get_token();
+  });
+
+  return (count == 1);
+}
+
+bool cmAvrGccCompiler::is_unique(const ShrdCompilerOption& option, const std::vector<ShrdCompilerOption>& reference) const
+{
+
+  unsigned int count = std::count_if(reference.begin(), reference.end(), [option](const ShrdCompilerOption& target)
+  {
+    return option == target;
+  });
+
+  return (count == 1);
 }
 
 }

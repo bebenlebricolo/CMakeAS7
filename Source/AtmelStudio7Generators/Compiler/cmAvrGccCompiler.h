@@ -16,24 +16,23 @@ public:
 
     using ShrdCompilerOption = std::shared_ptr<CompilerOption>;
 
-    const std::vector<ShrdCompilerOption>& get_optimization_flags() const;
-    const std::vector<ShrdCompilerOption>& get_debug_flags() const;
-    const std::vector<ShrdCompilerOption>& get_warning_flags() const;
-    const std::vector<ShrdCompilerOption>& get_linker_flags() const;
-    const std::vector<ShrdCompilerOption>& get_normal_flags() const;
-    const std::vector<ShrdCompilerOption>& get_definitions() const;
+    const std::vector<ShrdCompilerOption>& get_options(const CompilerOption::Type type) const;
 
 private:
-    std::vector<ShrdCompilerOption> optimization_flags;
-    std::vector<ShrdCompilerOption> debug_flags;
-    std::vector<ShrdCompilerOption> warning_flags;
-    std::vector<ShrdCompilerOption> linker_flags;
-    std::vector<ShrdCompilerOption> normal_flags;
+    void accept_flag(const ShrdCompilerOption& flag);
+    bool contains(const std::string& token, const std::vector<ShrdCompilerOption>& reference) const;
+    bool is_unique(const std::string& token, const std::vector<ShrdCompilerOption>& reference) const;
+    bool is_unique(const ShrdCompilerOption& flag, const std::vector<ShrdCompilerOption>& reference) const;
+
+    std::vector<ShrdCompilerOption> optimizations;
+    std::vector<ShrdCompilerOption> debug;
+    std::vector<ShrdCompilerOption> warnings;
+    std::vector<ShrdCompilerOption> linker;
+    std::vector<ShrdCompilerOption> normal;
 
     // This is not the "standard" for cmake, but compiler can still interprete -D flags
     std::vector<ShrdCompilerOption> definitions;
 
-    void accept_flag(const ShrdCompilerOption& flag);
 };
 
 }

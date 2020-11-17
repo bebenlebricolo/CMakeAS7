@@ -1,9 +1,10 @@
 #include "AvrGCC8Toolchain.h"
+#include "cmAvrGccCompiler.h"
 
 namespace AvrToolchain
 {
 
-AS7AvrGCC8::convert_from(const ToolchainParser& parser)
+void AS7AvrGCC8::convert_from(const compiler::AvrGccCompiler& parser)
 {
 
 }
