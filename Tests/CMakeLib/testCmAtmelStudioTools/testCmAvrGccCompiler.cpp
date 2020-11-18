@@ -12,7 +12,41 @@
 
 #include "pugixml.hpp"
 
-namespace cmatmelstudiotests {
+namespace cmAtmelStudioToolsTests {
+
+class FlagParsingFixture : public ::testing::Test
+{
+public:
+  void SetUp() override
+  {
+
+    std::vector<std::string> cflags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
+                                    "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
+                                    "-fpendantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
+                                    "-nostdinc", "-fpack-struct", "-mshort-calls" };
+
+    std::vector<std::string> cppflags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
+                                          "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
+                                          "-fpendantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
+                                          "-nostdinc", "-fpack-struct", "-mshort-calls" , "-flto", "-fno-exceptions", "-fno-rtti"};
+
+    comp.parse_flags(cflags);
+    comp.parse_flags(cppflags);
+    as7rep.convert_from(comp, "C");
+    as7rep.convert_from(comp, "Cpp");
+
+  }
+
+  void TearDown() override
+  {
+    comp.clear();
+    as7rep.clear();
+  }
+
+protected:
+  compiler::cmAvrGccCompiler comp;
+  AvrToolchain::AS7AvrGCC8 as7rep;
+};
 
 static bool check_flag_uniqueness(const std::vector<std::string>& target, const std::vector<std::shared_ptr<compiler::CompilerOption>>& reference)
 {
@@ -122,7 +156,6 @@ TEST(AvrGcc8Representation, test_AvrGcc8Representation_convert_from_compiler_abs
   AvrToolchain::AS7AvrGCC8 toolchain;
   pugi::xml_node node;
   toolchain.convert_from(compiler_abstraction);
-  toolchain.generate_xml(node);
   ASSERT_TRUE(toolchain.avrgcc.general.change_default_chartype_unsigned);
   ASSERT_TRUE(toolchain.avrgcc.general.change_stack_pointer_without_disabling_interrupt);
   ASSERT_TRUE(toolchain.avrgcc.general.subroutine_function_prologue);
@@ -131,6 +164,17 @@ TEST(AvrGcc8Representation, test_AvrGcc8Representation_convert_from_compiler_abs
   ASSERT_FALSE(toolchain.avrgcc.optimizations.prepare_data_for_garbage_collection);
   ASSERT_TRUE(toolchain.avrgcc.optimizations.prepare_function_for_garbage_collection);
 }
+
+TEST_F(FlagParsingFixture, test_generate_xml)
+{
+  pugi::xml_document doc;
+  // Prepend delcaration node will look like this : <?xml version="1.0" encoding="utf-8"?>
+  pugi::xml_node project_node = doc.append_child(pugi::node_element);
+  as7rep.generate_xml(project_node, "Cpp");
+  doc.save_file(R"(C:\temp\testfile.xml)", "  ");
+
+}
+
 
 }
 

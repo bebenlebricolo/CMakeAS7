@@ -151,6 +151,16 @@ bool cmAvrGccCompiler::has_option(const std::string& option) const
   return options.contains(option);
 }
 
+void cmAvrGccCompiler::clear()
+{
+  options.debug.clear();
+  options.definitions.clear();
+  options.warnings.clear();
+  options.optimizations.clear();
+  options.normal.clear();
+  options.linker.clear();
+}
+
 bool cmAvrGccCompiler::Options::contains(const std::string& token) const
 {
   if (contains(token, debug)) {

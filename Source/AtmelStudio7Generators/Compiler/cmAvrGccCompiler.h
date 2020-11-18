@@ -19,6 +19,7 @@ public:
 
     const OptionsVec& get_options(const CompilerOption::Type type) const;
     bool has_option(const std::string& option) const;
+    void clear();
 
 private:
 

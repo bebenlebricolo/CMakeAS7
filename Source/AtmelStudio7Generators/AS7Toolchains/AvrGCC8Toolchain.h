@@ -19,15 +19,17 @@ struct Common
 {
     std::string Device;
     bool relax_branches = false;        /**< -mrelax    */
-    bool ExternalRamOvflw = false;
+    bool external_ram_mem_ovflw = false;
     struct
     {
         bool hex = true;
         bool lss = true;
         bool eep = true;
         bool srec = true;
-        bool usersignature = false;
+        bool usersignatures = false;
     } outputfiles;
+
+    void clear();
 };
 
 struct AS7AvrGcc8_Base
@@ -90,6 +92,8 @@ struct AS7AvrGcc8_Base
         bool support_ansi_programs = false;             /**< -ansi       */
         bool do_not_delete_temporary_files = false;     /**< -save-temps */
     } miscellaneous;
+
+    void clear();
 };
 
 struct AS7AvrGCC8Linker
@@ -108,6 +112,7 @@ struct AS7AvrGCC8Linker
     struct
     {
         std::vector<std::string> libraries;
+        std::vector<std::string> search_path;
     } libraries;
 
     struct
@@ -120,6 +125,8 @@ struct AS7AvrGCC8Linker
     {
         std::string linker_flags;
     } miscellaneous;
+
+    void clear();
 };
 
 struct AS7AvrGCC8Assembler
@@ -127,12 +134,15 @@ struct AS7AvrGCC8Assembler
     struct
     {
         std::vector<std::string> include_path;
+        bool anounce_version = false;
     } general;
 
     struct
     {
         std::string debug_level;
     } debugging;
+
+    void clear();
 };
 
 struct AS7AvrGCC8
@@ -145,7 +155,9 @@ struct AS7AvrGCC8
     std::string archiver_flags = "-r";
 
     void convert_from(const compiler::cmAvrGccCompiler& parser, const std::string& lang = "C");
-    void generate_xml(pugi::xml_node& parent);
+    void generate_xml(pugi::xml_node& parent, const std::string& lang = "C") const;
+    void generate_xml_per_language(pugi::xml_node& parent, const std::string& toolname, const AS7AvrGcc8_Base& target) const;
+    void clear();
     //pugixml::xml_node generate_xml();
 };
 
