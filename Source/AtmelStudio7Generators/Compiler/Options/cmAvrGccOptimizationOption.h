@@ -35,7 +35,7 @@ struct OptimizationOption : public CompilerOption
     */
     static bool can_create(const std::string& _token);
 
-    OptimizationOption() : CompilerOption(Type::Optimization){}
+    OptimizationOption();
     OptimizationOption(const std::string& _token);
 
     // Operators used to compare optimization levels, in order to resolve

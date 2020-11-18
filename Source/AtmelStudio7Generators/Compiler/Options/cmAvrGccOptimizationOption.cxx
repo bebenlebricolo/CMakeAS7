@@ -79,6 +79,9 @@ std::pair<OptimizationOption::Level, AS7OptionRepresentation*> OptimizationOptio
   return out;
 }
 
+OptimizationOption::OptimizationOption() : CompilerOption(Type::Optimization)
+{}
+
 OptimizationOption::OptimizationOption(const std::string& _token)
   : CompilerOption(Type::Optimization, _token)
 {

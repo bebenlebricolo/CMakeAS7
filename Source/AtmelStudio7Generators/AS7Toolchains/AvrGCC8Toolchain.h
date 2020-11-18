@@ -5,16 +5,16 @@
 
 namespace compiler
 {
-    struct cmAvrGccCompiler;
+    class cmAvrGccCompiler;
 }
 
-namespace AvrToolchain
-{
-namespace pugixml
+namespace pugi
 {
     class xml_node;
 }
 
+namespace AvrToolchain
+{
 struct Common
 {
     std::string Device;
@@ -145,8 +145,8 @@ struct AS7AvrGCC8
     std::string archiver_flags = "-r";
 
     void convert_from(const compiler::cmAvrGccCompiler& parser, const std::string& lang = "C");
-    void generate_xml(pugixml::xml_node& parent);
-    pugixml::xml_node generate_xml();
+    void generate_xml(pugi::xml_node& parent);
+    //pugixml::xml_node generate_xml();
 };
 
 }

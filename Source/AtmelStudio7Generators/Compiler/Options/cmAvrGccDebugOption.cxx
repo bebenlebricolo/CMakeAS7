@@ -61,14 +61,43 @@ std::string DebugOption::generate(const bool atmel_studio_compat)
   return token;
 }
 
+std::pair<DebugOption::Level, AS7OptionRepresentation*> DebugOption::resolve(const std::string& flag) const
+{
+  std::pair<Level, AS7OptionRepresentation*> out = { Level::None, nullptr };
+  const auto found_element = std::find_if(available_options.begin(), available_options.end(), [flag](const std::pair<Level, AS7OptionRepresentation>& element) {
+    return flag == element.second.option;
+  });
+
+  if (found_element != available_options.end()) {
+    out.first = found_element->first;
+    out.second = &found_element->second;
+  }
+
+  return out;
+}
+
 std::pair<DebugOption::Level, AS7OptionRepresentation> DebugOption::get_default()
 {
   auto& default_opt = available_options[Level::None];
   return {Level::None, default_opt};
 }
 
+DebugOption::DebugOption()
+  : CompilerOption(Type::Debug)
+{
+}
 
-
+DebugOption::DebugOption(const std::string& _token)
+  : CompilerOption(Type::Debug, _token)
+{
+  auto resolved_pair = resolve(_token);
+  if (resolved_pair.second != nullptr) {
+    CompilerOption::description = resolved_pair.second->atmel_studio_description;
+    optLevel = resolved_pair.first;
+  } else {
+    CompilerOption::description = _token;
+  }
+}
 
 
 }

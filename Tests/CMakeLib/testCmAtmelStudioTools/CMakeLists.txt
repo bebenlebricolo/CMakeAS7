@@ -6,17 +6,13 @@ enable_testing()
 
 add_executable(testAtmelStudioTools
     testCmAvrGccCompiler.cpp
-)
-
-# Enable unit testing features in codebase
-target_compile_definitions(testAtmelStudioTools
-    PUBLIC -DUNIT_TESTING
+    #${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/AS7Toolchains/AvrGCC8Toolchain.cxx
 )
 
 if(MSVC)
     # Handles both debug and Release modes using the generator expression
     set_property(TARGET testAtmelStudioTools PROPERTY
-             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+             MSVC_RUNTIME_LIBRARY "MultiThreaded")
 endif()
 
 
@@ -24,6 +20,7 @@ target_include_directories(testAtmelStudioTools PUBLIC
     ${CMAKE_SOURCE_DIR}/Source/Utils
     ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler
     ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/Options
+    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/AS7Toolchains
     ${GTEST_INCLUDE_DIRS}
 )
 

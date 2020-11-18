@@ -8,7 +8,6 @@
 #include <algorithm>
 namespace AvrToolchain
 {
-
 void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const std::string& lang)
 {
     //parser.get_options(compiler::CompilerOption::Type::Optimization)
@@ -107,7 +106,7 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
     //assembler.debugging.debug_level
 }
 
-void AS7AvrGCC8::generate_xml(pugixml::xml_node& parent)
+void AS7AvrGCC8::generate_xml(pugi::xml_node& parent)
 {
 
 }

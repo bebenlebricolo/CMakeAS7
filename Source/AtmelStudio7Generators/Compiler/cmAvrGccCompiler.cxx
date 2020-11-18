@@ -16,7 +16,7 @@ bool CompilerOptionFactory::is_valid(const std::string& token)
     return false;
   }
 
-  const std::string prefixes = "WfODg";
+  const std::string prefixes = "WfODgwEnm";
   // Check if second character of token is part of the above characters list
   return (prefixes.find(token[1]) != std::string::npos);
 }
@@ -42,13 +42,11 @@ std::shared_ptr<CompilerOption> CompilerOptionFactory::create(const std::string&
 
     // Debug flags
     case 'g':
-      out = std::make_shared<DebugOption>(token);
+      if (DebugOption::can_create(token)) {
+        out = std::make_shared<DebugOption>(token);
+      }
       break;
 
-    // Generic, normal flags
-    case 'f':
-      out = std::make_shared<CompilerOption>(CompilerOption::Type::Generic, token);
-      break;
 
     // Warning flags or linker flags (this is resolved with the help of the next character)
     case 'W':
@@ -61,8 +59,15 @@ std::shared_ptr<CompilerOption> CompilerOptionFactory::create(const std::string&
       }
       break;
 
+    // Generic, normal flags
+    case 'f':
+    case 'm':
+    case 'w':
+    case 'n':
     default:
+      out = std::make_shared<CompilerOption>(CompilerOption::Type::Generic, token);
       break;
+
   }
 
   return out;
@@ -112,7 +117,7 @@ void cmAvrGccCompiler::Options::accept_flag(const ShrdOption& flag)
 
   switch (flag->get_type()) {
     case compiler::CompilerOption::Type::Optimization:
-      if (is_unique(flag, optimizations)) {
+      if (!contains(flag->get_token(), optimizations)) {
         optimizations.push_back(flag);
       }
       break;
@@ -126,7 +131,9 @@ void cmAvrGccCompiler::Options::accept_flag(const ShrdOption& flag)
       break;
 
     case compiler::CompilerOption::Type::Debug:
-      debug.push_back(flag);
+      if (!contains(flag->get_token(), debug)) {
+        debug.push_back(flag);
+      }
       break;
 
     case compiler::CompilerOption::Type::Definition:

@@ -36,15 +36,8 @@ struct DebugOption : public CompilerOption
   */
   static std::pair<Level, AS7OptionRepresentation> get_default();
 
-  DebugOption()
-    : CompilerOption(Type::Debug)
-  {
-  }
-
-  DebugOption(const std::string& _token)
-    : CompilerOption(Type::Debug, _token)
-  {
-  }
+  DebugOption();
+  DebugOption(const std::string& _token);
 
   bool operator==(const DebugOption& other) const;
   bool operator>=(const DebugOption& other) const;

@@ -7,6 +7,10 @@
 #include "cmAvrGccCompiler.h"
 #include "cmAvrGccCompilerOption.h"
 #include "cmAvrGccOptimizationOption.h"
+#include "cmAvrGccDebugOption.h"
+#include "AvrGCC8Toolchain.h"
+
+#include "pugixml.hpp"
 
 namespace cmatmelstudiotests {
 
@@ -74,6 +78,22 @@ TEST(AvrGccCompilerFlagsParsing, test_optimization_flags)
   }
 }
 
+TEST(AvrGccCompilerFlagsParsing, test_optimization_default_flags)
+{
+  auto default_opt = compiler::OptimizationOption::get_default();
+  ASSERT_EQ(default_opt.first, compiler::OptimizationOption::Level::Os);
+  ASSERT_EQ(default_opt.second.atmel_studio_description, "Optimize for size (-Os)");
+  ASSERT_EQ(default_opt.second.option, "-Os");
+}
+
+TEST(AvrGccCompilerFlagsParsing, test_debug_default_flags)
+{
+  auto default_opt = compiler::DebugOption::get_default();
+  ASSERT_EQ(default_opt.first, compiler::DebugOption::Level::None);
+  ASSERT_EQ(default_opt.second.atmel_studio_description, "None");
+  ASSERT_EQ(default_opt.second.option, "");
+}
+
 TEST(AvrGccCompilerFlagsParsing, test_compiler_flags_factory_optimization_flags)
 {
   const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra", "-fpedantic", "-O2" };
@@ -86,7 +106,33 @@ TEST(AvrGccCompilerFlagsParsing, test_compiler_flags_factory_optimization_flags)
   ASSERT_EQ(built_flag->get_type(), compiler::CompilerOption::Type::Optimization);
 }
 
-} /* end of namespace cmutilstests*/
+TEST(AvrGcc8Representation, test_AvrGcc8Representation_convert_from_compiler_abstraction)
+{
+  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
+                                           "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
+                                           "-fpendantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
+                                           "-nostdinc", "-fpack-struct", "-mshort-calls" };
+  for (auto& f : flags) {
+    EXPECT_TRUE(compiler::CompilerOptionFactory::is_valid(f));
+  }
+
+  compiler::cmAvrGccCompiler compiler_abstraction;
+  compiler_abstraction.parse_flags(flags);
+
+  AvrToolchain::AS7AvrGCC8 toolchain;
+  pugi::xml_node node;
+  toolchain.convert_from(compiler_abstraction);
+  toolchain.generate_xml(node);
+  ASSERT_TRUE(toolchain.avrgcc.general.change_default_chartype_unsigned);
+  ASSERT_TRUE(toolchain.avrgcc.general.change_stack_pointer_without_disabling_interrupt);
+  ASSERT_TRUE(toolchain.avrgcc.general.subroutine_function_prologue);
+  ASSERT_EQ(toolchain.avrgcc.optimizations.level, "None (-O0)");
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.pack_structure_members);
+  ASSERT_FALSE(toolchain.avrgcc.optimizations.prepare_data_for_garbage_collection);
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.prepare_function_for_garbage_collection);
+}
+
+}
 
 int main(int argc, char** argv)
 {

@@ -13,6 +13,7 @@ namespace compiler {
 */
 struct AS7OptionRepresentation
 {
+  AS7OptionRepresentation() = default;
   AS7OptionRepresentation(const std::string& _opt,
                           const std::string& _desc);
   std::string option;                    /**< Basic option string (the one used by the compiler). e.g : option = "-ggdb" */
