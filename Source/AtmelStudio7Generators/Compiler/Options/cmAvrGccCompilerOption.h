@@ -7,6 +7,18 @@
 
 namespace compiler {
 
+
+/**
+ * @brief this structure packs data concerning atmel studio representation of an option
+*/
+struct AS7OptionRepresentation
+{
+  AS7OptionRepresentation(const std::string& _opt,
+                          const std::string& _desc);
+  std::string option;                    /**< Basic option string (the one used by the compiler). e.g : option = "-ggdb" */
+  std::string atmel_studio_description;  /**< atmel studio 7 description of this option, if any                          */
+};
+
 struct CompilerOption
 {
   enum class Type
@@ -16,30 +28,22 @@ struct CompilerOption
     Debug,
     Warning,
     Linker,
-
     Definition
   };
 
-  static bool can_create(const std::string& _token) { return false; }
+  CompilerOption(const Type _type);
+  CompilerOption(const std::string& _token);
+  CompilerOption(const Type _type, const std::string& _token);
+  CompilerOption(const std::string& _token, const std::string& _description);
 
-  CompilerOption(const Type _type)
-    : type(_type)
-  {
-  }
-  CompilerOption(const std::string& _token)
-    : token(_token)
-  {
-  }
-  CompilerOption(const Type _type, const std::string& _token)
-    : type(_type)
-    , token(_token)
-  {
-  }
-  CompilerOption(const std::string& _token, const std::string& _description)
-    : token(_token)
-    , description(_description)
-  {
-  }
+  /**
+   * @brief tells whether the given token is supported by the actual compiler model or not
+   * @param _token  : input option/flag passed to the compiler as a command-line input
+   * @return
+   *    true  : option is supported and a representation can be created for it
+   *    false : option is not supported, no representation can be created for it
+  */
+  static bool can_create(const std::string& _token);
 
   /**
      * @brief generates a string representation for this flag, which in the simplest cases is simply
@@ -49,13 +53,7 @@ struct CompilerOption
      * @param[in]   atmel_studio_compat :   generates a AtmelStudio-compatible version of this flag
      * @return generated string. Default value is the token value.
     */
-  virtual std::string Generate(const bool atmel_studio_compat = true)
-  {
-    if (atmel_studio_compat) {
-      return description;
-    }
-    return token;
-  }
+  virtual std::string generate(const bool atmel_studio_compat = true);
 
   /**
      * @brief returns the underlying type of this compiler flag, when polymorphism is used
@@ -65,21 +63,30 @@ struct CompilerOption
      *        appropriately be stored in a vector of optimization flags)
      * @return type.
     */
-  Type GetType() const { return type; }
+  Type get_type() const;
 
-  std::string get_token() const { return token; }
-  std::string get_description() const { return description; }
+  /**
+   * @brief returns the underlying constant token (copy of input option/flag)
+   * @return underlying token
+  */
+  std::string get_token() const;
+
+  /**
+   * @brief returns the underlying constant description
+   * @return underlying description
+  */
+  std::string get_description() const;
 
 protected:
-  Type type = Type::Generic;
-  std::string token;       /**< String representation of this flag (a.k.a flag token, e.g. "-Wall")        */
-  std::string description; /**< Textual description of the flag                                            */
+  Type type = Type::Generic;  /**< Keeps the type information to be used later on                       */
+  std::string token;          /**< String representation of this flag (a.k.a flag token, e.g. "-Wall")  */
+  std::string description;    /**< Textual description of the flag                                      */
 };
 
 // A simple namespace will do it, no need for any object instantiation
 namespace CompilerOptionFactory {
-bool is_valid(const std::string& token);
-std::shared_ptr<CompilerOption> create(const std::string& token);
+  bool is_valid(const std::string& token);
+  std::shared_ptr<CompilerOption> create(const std::string& token);
 };
 
 }
