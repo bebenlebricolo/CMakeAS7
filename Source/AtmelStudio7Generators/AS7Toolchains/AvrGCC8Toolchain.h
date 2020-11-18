@@ -5,7 +5,7 @@
 
 namespace compiler
 {
-    struct AvrGccCompiler;
+    struct cmAvrGccCompiler;
 }
 
 namespace AvrToolchain
@@ -20,14 +20,14 @@ struct Common
     std::string Device;
     bool relax_branches = false;        /**< -mrelax    */
     bool ExternalRamOvflw = false;
-    struct outputfiles
+    struct
     {
         bool hex = true;
         bool lss = true;
         bool eep = true;
         bool srec = true;
         bool usersignature = false;
-    };
+    } outputfiles;
 };
 
 struct AS7AvrGcc8_Base
@@ -144,7 +144,7 @@ struct AS7AvrGCC8
     AS7AvrGCC8Assembler assembler;
     std::string archiver_flags = "-r";
 
-    void convert_from(const compiler::AvrGccCompiler& parser);
+    void convert_from(const compiler::cmAvrGccCompiler& parser, const std::string& lang = "C");
     void generate_xml(pugixml::xml_node& parent);
     pugixml::xml_node generate_xml();
 };
