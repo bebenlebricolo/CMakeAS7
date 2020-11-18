@@ -4,7 +4,7 @@
 
 namespace compiler {
 
-std::unordered_map<OptimizationOption::Level, OptimizationOption::FullDescription> OptimizationOption::available_opt = {
+std::unordered_map<OptimizationOption::Level, AS7OptionRepresentation> OptimizationOption::available_opt = {
   { OptimizationOption::Level::O0, { "-O0", "None (-O0)" } },
   { OptimizationOption::Level::O1, { "-O1", "Optimize(-O1)" } },
   { OptimizationOption::Level::O, { "-O", "Optimize(-O1)" } },
@@ -50,19 +50,25 @@ OptimizationOption::Level OptimizationOption::get_level() const
   return optLevel;
 }
 
+std::pair<OptimizationOption::Level, AS7OptionRepresentation> OptimizationOption::get_default()
+{
+  auto& default_opt = available_opt[Level::Os];
+  return {Level::Os, default_opt};
+}
+
 bool OptimizationOption::can_create(const std::string& _token)
 {
-  auto found_element = std::find_if(available_opt.begin(), available_opt.end(), [_token](const std::pair<Level, FullDescription>& element) {
-    return _token == element.second.flag;
+  auto found_element = std::find_if(available_opt.begin(), available_opt.end(), [_token](const std::pair<Level, AS7OptionRepresentation>& element) {
+    return _token == element.second.option;
   });
   return (found_element != available_opt.end());
 }
 
-std::pair<OptimizationOption::Level, OptimizationOption::FullDescription*> OptimizationOption::resolve(const std::string& flag) const
+std::pair<OptimizationOption::Level, AS7OptionRepresentation*> OptimizationOption::resolve(const std::string& flag) const
 {
-  std::pair<Level, FullDescription*> out = { Level::O0, nullptr };
-  const auto found_element = std::find_if(available_opt.begin(), available_opt.end(), [flag](const std::pair<Level, FullDescription>& element) {
-    return flag == element.second.flag;
+  std::pair<Level, AS7OptionRepresentation*> out = { Level::O0, nullptr };
+  const auto found_element = std::find_if(available_opt.begin(), available_opt.end(), [flag](const std::pair<Level, AS7OptionRepresentation>& element) {
+    return flag == element.second.option;
   });
 
   if (found_element != available_opt.end()) {
@@ -85,7 +91,7 @@ OptimizationOption::OptimizationOption(const std::string& _token)
   }
 }
 
-std::string OptimizationOption::Generate(const bool atmel_studio_compat)
+std::string OptimizationOption::generate(const bool atmel_studio_compat)
 {
   if (atmel_studio_compat) {
     return description;

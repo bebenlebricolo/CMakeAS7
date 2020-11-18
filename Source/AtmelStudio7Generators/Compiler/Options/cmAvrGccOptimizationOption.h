@@ -24,6 +24,11 @@ struct OptimizationOption : public CompilerOption
     };
 
     /**
+     * @brief Returns the default optimization settings for atmelstudio
+    */
+    static std::pair<Level, AS7OptionRepresentation> get_default();
+
+    /**
      * @brief determines whether the given token is part of the static map of available optimizations flags or not
      * @param[in]   _token : string representation of current flag being parsed
      * @return true : token exist in collection ; false : token is not part of the collection, thus it is not part of the available set of optimizations.
@@ -43,18 +48,12 @@ struct OptimizationOption : public CompilerOption
     bool operator!=(const OptimizationOption& other) const;
 
     Level get_level() const;
-    std::string Generate(const bool atmel_studio_compat = true) override;
+    std::string generate(const bool atmel_studio_compat = true) override;
 
   private:
-    struct FullDescription
-    {
-        FullDescription(const std::string& _flag, const std::string& _desc) : flag(_flag), atmel_studio_description(_desc) {}
-        std::string flag;
-        std::string atmel_studio_description;
-    };
 
-    static std::unordered_map<Level, FullDescription> available_opt;
-    std::pair<Level, FullDescription*> resolve(const std::string& flag) const;
+    static std::unordered_map<Level, AS7OptionRepresentation> available_opt;
+    std::pair<Level, AS7OptionRepresentation*> resolve(const std::string& flag) const;
     Level optLevel = Level::O0;
 };
 
