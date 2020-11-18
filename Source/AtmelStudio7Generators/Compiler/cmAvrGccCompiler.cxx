@@ -74,23 +74,23 @@ void cmAvrGccCompiler::parse_flags(const std::string& flags)
   parse_flags(tokens);
 }
 
-const std::vector<cmAvrGccCompiler::ShrdCompilerOption>& cmAvrGccCompiler::get_options(const CompilerOption::Type type) const
+const std::vector<cmAvrGccCompiler::ShrdOption>& cmAvrGccCompiler::get_options(const CompilerOption::Type type) const
 {
   switch(type)
   {
     case CompilerOption::Type::Debug:
-      return debug;
+      return options.debug;
     case CompilerOption::Type::Definition:
-      return definitions;
+      return options.definitions;
     case CompilerOption::Type::Linker:
-      return linker;
+      return options.linker;
     case CompilerOption::Type::Optimization:
-      return optimizations;
+      return options.optimizations;
     case CompilerOption::Type::Warning:
-      return warnings;
+      return options.warnings;
     case CompilerOption::Type::Generic:
     default:
-      return normal;
+      return options.normal;
   }
 }
 
@@ -98,19 +98,19 @@ void cmAvrGccCompiler::parse_flags(const std::vector<std::string>& tokens)
 {
   for (const auto& token : tokens) {
     if (compiler::CompilerOptionFactory::is_valid(token)) {
-      std::shared_ptr<compiler::CompilerOption> flag = compiler::CompilerOptionFactory::create(token);
-      accept_flag(flag);
+      ShrdOption flag = compiler::CompilerOptionFactory::create(token);
+      options.accept_flag(flag);
     }
   }
 }
 
-void cmAvrGccCompiler::accept_flag(const ShrdCompilerOption& flag)
+void cmAvrGccCompiler::Options::accept_flag(const ShrdOption& flag)
 {
   if (flag == nullptr) {
     return;
   }
 
-  switch (flag->GetType()) {
+  switch (flag->get_type()) {
     case compiler::CompilerOption::Type::Optimization:
       if (is_unique(flag, optimizations)) {
         optimizations.push_back(flag);
@@ -139,9 +139,37 @@ void cmAvrGccCompiler::accept_flag(const ShrdCompilerOption& flag)
   }
 }
 
-bool cmAvrGccCompiler::contains(const std::string& token, const std::vector<ShrdCompilerOption>& reference) const
+bool cmAvrGccCompiler::has_option(const std::string& option) const
 {
-  auto found_item = std::find_if(reference.begin(), reference.end(), [token](const ShrdCompilerOption& target)
+  return options.contains(option);
+}
+
+bool cmAvrGccCompiler::Options::contains(const std::string& token) const
+{
+  if (contains(token, debug)) {
+    return true;
+  }
+  if (contains(token, normal)) {
+    return true;
+  }
+  if (contains(token, optimizations)) {
+    return true;
+  }
+  if (contains(token, warnings)) {
+    return true;
+  }
+  if (contains(token, linker)) {
+    return true;
+  }
+  if (contains(token, definitions)) {
+    return true;
+  }
+  return false;
+}
+
+bool cmAvrGccCompiler::Options::contains(const std::string& token, const OptionsVec& reference) const
+{
+  auto found_item = std::find_if(reference.begin(), reference.end(), [token](const ShrdOption& target)
   {
     return token == target->get_token();
   });
@@ -149,10 +177,10 @@ bool cmAvrGccCompiler::contains(const std::string& token, const std::vector<Shrd
   return (found_item != reference.end());
 }
 
-bool cmAvrGccCompiler::is_unique(const std::string& token, const std::vector<ShrdCompilerOption>& reference) const
+bool cmAvrGccCompiler::Options::is_unique(const std::string& token, const OptionsVec& reference) const
 {
 
-  unsigned int count = std::count_if(reference.begin(), reference.end(), [token](const ShrdCompilerOption& target)
+  unsigned int count = std::count_if(reference.begin(), reference.end(), [token](const ShrdOption& target)
   {
     return token == target->get_token();
   });
@@ -160,10 +188,10 @@ bool cmAvrGccCompiler::is_unique(const std::string& token, const std::vector<Shr
   return (count == 1);
 }
 
-bool cmAvrGccCompiler::is_unique(const ShrdCompilerOption& option, const std::vector<ShrdCompilerOption>& reference) const
+bool cmAvrGccCompiler::Options::is_unique(const ShrdOption& option, const OptionsVec& reference) const
 {
 
-  unsigned int count = std::count_if(reference.begin(), reference.end(), [option](const ShrdCompilerOption& target)
+  unsigned int count = std::count_if(reference.begin(), reference.end(), [option](const ShrdOption& target)
   {
     return option == target;
   });

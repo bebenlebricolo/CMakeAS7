@@ -40,12 +40,12 @@ TEST(AvrGccCompilerFlagsParsing, test_avr_gcc_representation)
   compiler::cmAvrGccCompiler avrGcc;
   avrGcc.parse_flags(test_str1);
 
-  ASSERT_TRUE(check_flag_uniqueness(optimization_options, avrGcc.get_optimization_flags()));
-  ASSERT_TRUE(check_flag_uniqueness(warning_options, avrGcc.get_warning_flags()));
-  ASSERT_TRUE(check_flag_uniqueness(generic_options, avrGcc.get_normal_flags()));
-  ASSERT_TRUE(check_flag_uniqueness(linker_options, avrGcc.get_linker_flags()));
-  ASSERT_TRUE(check_flag_uniqueness(definition_options, avrGcc.get_definitions()));
-  ASSERT_TRUE(check_flag_uniqueness(debug_options, avrGcc.get_debug_flags()));
+  ASSERT_TRUE(check_flag_uniqueness(optimization_options, avrGcc.get_options(compiler::CompilerOption::Type::Optimization)));
+  ASSERT_TRUE(check_flag_uniqueness(warning_options, avrGcc.get_options(compiler::CompilerOption::Type::Warning)));
+  ASSERT_TRUE(check_flag_uniqueness(generic_options, avrGcc.get_options(compiler::CompilerOption::Type::Generic)));
+  ASSERT_TRUE(check_flag_uniqueness(linker_options, avrGcc.get_options(compiler::CompilerOption::Type::Linker)));
+  ASSERT_TRUE(check_flag_uniqueness(definition_options, avrGcc.get_options(compiler::CompilerOption::Type::Definition)));
+  ASSERT_TRUE(check_flag_uniqueness(debug_options, avrGcc.get_options(compiler::CompilerOption::Type::Debug)));
 }
 
 TEST(AvrGccCompilerFlagsParsing, test_optimization_flags)
@@ -83,7 +83,7 @@ TEST(AvrGccCompilerFlagsParsing, test_compiler_flags_factory_optimization_flags)
 
   std::shared_ptr<compiler::CompilerOption> built_flag = compiler::CompilerOptionFactory::create("-O2");
   ASSERT_NE(nullptr, built_flag);
-  ASSERT_EQ(built_flag->GetType(), compiler::CompilerOption::Type::Optimization);
+  ASSERT_EQ(built_flag->get_type(), compiler::CompilerOption::Type::Optimization);
 }
 
 } /* end of namespace cmutilstests*/

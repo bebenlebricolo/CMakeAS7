@@ -14,25 +14,30 @@ public:
     void parse_flags(const std::vector<std::string>& tokens);
     void parse_flags(const std::string& flags);
 
-    using ShrdCompilerOption = std::shared_ptr<CompilerOption>;
+    using ShrdOption = std::shared_ptr<CompilerOption>;
+    using OptionsVec = std::vector<std::shared_ptr<CompilerOption>>;
 
-    const std::vector<ShrdCompilerOption>& get_options(const CompilerOption::Type type) const;
+    const OptionsVec& get_options(const CompilerOption::Type type) const;
+    bool has_option(const std::string& option) const;
 
 private:
-    void accept_flag(const ShrdCompilerOption& flag);
-    bool contains(const std::string& token, const std::vector<ShrdCompilerOption>& reference) const;
-    bool is_unique(const std::string& token, const std::vector<ShrdCompilerOption>& reference) const;
-    bool is_unique(const ShrdCompilerOption& flag, const std::vector<ShrdCompilerOption>& reference) const;
 
-    std::vector<ShrdCompilerOption> optimizations;
-    std::vector<ShrdCompilerOption> debug;
-    std::vector<ShrdCompilerOption> warnings;
-    std::vector<ShrdCompilerOption> linker;
-    std::vector<ShrdCompilerOption> normal;
+    struct Options
+    {
+        bool contains(const std::string& token) const;
+        bool contains(const std::string& token, const OptionsVec& reference) const;
+        bool is_unique(const std::string& token, const OptionsVec& reference) const;
+        bool is_unique(const ShrdOption& option, const OptionsVec& reference) const;
+        void accept_flag(const ShrdOption& flag);
 
-    // This is not the "standard" for cmake, but compiler can still interprete -D flags
-    std::vector<ShrdCompilerOption> definitions;
-
+        OptionsVec optimizations;
+        OptionsVec debug;
+        OptionsVec warnings;
+        OptionsVec linker;
+        OptionsVec normal;
+        // This is not the "standard" for cmake, but compiler can still interprete -D flags
+        OptionsVec definitions;
+    } options;
 };
 
 }
