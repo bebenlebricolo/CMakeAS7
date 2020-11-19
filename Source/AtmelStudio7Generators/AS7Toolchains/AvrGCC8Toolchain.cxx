@@ -5,6 +5,7 @@
 #include "cmAvrGccCompiler.h"
 #include "cmAvrGccDebugOption.h"
 #include "cmAvrGccOptimizationOption.h"
+#include "cmAvrGccMachineOption.h"
 
 #include "pugixml.hpp"
 namespace AvrToolchain {
@@ -93,6 +94,17 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
     tool = &avrgcccpp;
   }
 
+  // This option is a bit special and requires dedicated handling
+  if(parser.has_option("-mmcu"))
+  {
+    compiler::CompilerOption * opt = parser.get_option("-mmcu");
+    auto option = dynamic_cast<compiler::MachineOption*>(opt);
+    common.Device = "-mmcu=" + option->value; // TODO : add parsed value (e.g. atmega328p) relevant DFP
+    // TODO2 : e.g. -mmcu=atmega328p -B "%24(PackRepoDir)\atmel\ATmega_DFP\1.2.209\gcc\dev\atmega328p"
+    // <InstalledLocation>AtmelStudio7\7.0\packs\atmel\ATmega_DFP\1.2.209\gcc\dev
+  }
+  common.relax_branches = parser.has_option("-mrelax");
+
   tool->general.subroutine_function_prologue = parser.has_option("-mcall-prologues");
   tool->general.change_stack_pointer_without_disabling_interrupt = parser.has_option("-mno-interrupts");
   tool->general.change_default_chartype_unsigned = parser.has_option("-funsigned-char");
@@ -168,7 +180,7 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
 
   // TODO : resolve other linker flags that weren't consumed already
 
-  //assembler.debugging.debug_level
+  assembler.debugging.debug_level = parser.has_option("-Wa,-g") ? "-Wa,-g": "";
 }
 
 void xml_append_inline(pugi::xml_node& parent, const std::string& node_name, const std::string& value = "")
@@ -231,7 +243,12 @@ void AS7AvrGCC8::generate_xml_per_language(pugi::xml_node& parent, const std::st
 
   // Warnings
   xml_append_inline(parent, toolname + ".compiler.warnings.AllWarnings", target.warnings.all_warnings ? "True" : "False");
-  xml_append_inline(parent, toolname + ".compiler.warnings.ExtraWarnings", target.warnings.extra_warnings ? "True" : "False");
+
+  // Note : only avrgcc supports -Wextra in AtmelStudio7 ...
+  if (toolname == "avrgcc")
+  {
+    xml_append_inline(parent, toolname + ".compiler.warnings.ExtraWarnings", target.warnings.extra_warnings ? "True" : "False");
+  }
   xml_append_inline(parent, toolname + ".compiler.warnings.Undefined", target.warnings.undefined ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.warnings.WarningsAsErrors", target.warnings.warnings_as_error ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.warnings.CheckSyntaxOnly", target.warnings.check_syntax_only ? "True" : "False");

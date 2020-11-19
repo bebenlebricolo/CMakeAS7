@@ -7,6 +7,7 @@
 #include "cmAvrGccCompiler.h"
 #include "cmAvrGccCompilerOption.h"
 #include "cmAvrGccOptimizationOption.h"
+#include "cmAvrGccMachineOption.h"
 #include "cmAvrGccDebugOption.h"
 #include "AvrGCC8Toolchain.h"
 
@@ -23,28 +24,30 @@ public:
     std::vector<std::string> cflags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
                                     "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
                                     "-fpendantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
-                                    "-nostdinc", "-fpack-struct", "-mshort-calls" };
+                                    "-nostdinc", "-fpack-struct", "-mshort-calls", "-mmcu=atmega328p" };
 
-    std::vector<std::string> cppflags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
-                                          "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
+    std::vector<std::string> cppflags = { "-Wall", "-DTEST_C++=148", "-Wextra",
+                                          "-fpedantic", "-O2", "-g1", "-g3", "-ffunction-sections",
                                           "-fpendantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
-                                          "-nostdinc", "-fpack-struct", "-mshort-calls" , "-flto", "-fno-exceptions", "-fno-rtti"};
+                                          "-nostdinc", "-fpack-struct", "-mshort-calls" , "-flto", "-fno-exceptions", "-fno-rtti", "-Wa,-g"};
 
-    comp.parse_flags(cflags);
-    comp.parse_flags(cppflags);
-    as7rep.convert_from(comp, "C");
-    as7rep.convert_from(comp, "Cpp");
+    c_comp.parse_flags(cflags);
+    cpp_comp.parse_flags(cppflags);
+    as7rep.convert_from(c_comp, "C");
+    as7rep.convert_from(cpp_comp, "Cpp");
 
   }
 
   void TearDown() override
   {
-    comp.clear();
+    c_comp.clear();
+    cpp_comp.clear();
     as7rep.clear();
   }
 
 protected:
-  compiler::cmAvrGccCompiler comp;
+  compiler::cmAvrGccCompiler c_comp;
+  compiler::cmAvrGccCompiler cpp_comp;
   AvrToolchain::AS7AvrGCC8 as7rep;
 };
 
@@ -105,6 +108,25 @@ TEST(AvrGccCompilerFlagsParsing, test_optimization_flags)
     compiler::OptimizationOption opt(f.first);
     EXPECT_EQ(opt.get_level(), f.second);
   }
+
+  // Should not be able to create flags with invalid inputs
+  for (auto& f : invalid_flags) {
+    EXPECT_FALSE(compiler::OptimizationOption::can_create(f));
+  }
+}
+
+TEST(AvrGccCompilerFlagsParsing, test_machine_options)
+{
+
+  const std::vector<std::string> valid_flags = { "-mmcu", "-mcall-prologues", "-mint8", "-mno-interrupts", "-mtiny-stack"};
+  const std::vector<std::string> invalid_flags = { "-ftoto", "-Wall", "-Wextra", "-Werror", "-pedantic", "-fpack-struct", "-ffunction-sections", "-DTEST_DEFINITION=33" };
+
+  for (auto& f : valid_flags) {
+    EXPECT_TRUE(compiler::MachineOption::can_create(f));
+  }
+
+  compiler::MachineOption opt("-mmcu=atmega328p");
+  ASSERT_EQ(opt.value, "atmega328p");
 
   // Should not be able to create flags with invalid inputs
   for (auto& f : invalid_flags) {

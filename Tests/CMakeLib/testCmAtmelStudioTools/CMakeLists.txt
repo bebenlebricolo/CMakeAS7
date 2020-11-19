@@ -10,9 +10,10 @@ add_executable(testAtmelStudioTools
 )
 
 if(MSVC)
-    # Handles both debug and Release modes using the generator expression
-    set_property(TARGET testAtmelStudioTools PROPERTY
-             MSVC_RUNTIME_LIBRARY "MultiThreaded")
+#    # Handles both debug and Release modes using the generator expression
+#    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+#    set_property(TARGET testAtmelStudioTools PROPERTY
+#             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
 

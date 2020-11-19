@@ -6,6 +6,8 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options/cmAvrGccOptimizationOption.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options/cmAvrGccDebugOption.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options/cmAvrGccCompilerOption.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options/cmAvrGccMachineOption.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options/cmAvrGccDefinitionOption.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/AS7Toolchains/AvrGCC8Toolchain.cxx
 )
 
@@ -19,6 +21,8 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options/cmAvrGccWarningOption.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options/cmAvrGccLinkerOption.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options/cmAvrGccDebugOption.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options/cmAvrGccMachineOption.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options/cmAvrGccDefinitionOption.h
     ${CMAKE_CURRENT_SOURCE_DIR}/AS7Toolchains/AvrGCC8Toolchain.h
 )
 
