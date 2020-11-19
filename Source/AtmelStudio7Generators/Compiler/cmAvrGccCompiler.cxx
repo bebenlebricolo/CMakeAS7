@@ -85,59 +85,20 @@ void cmAvrGccCompiler::parse_flags(const std::string& flags)
   parse_flags(tokens);
 }
 
-const std::vector<cmAvrGccCompiler::ShrdOption>& cmAvrGccCompiler::get_options(const CompilerOption::Type type) const
+std::vector<cmAvrGccCompiler::ShrdOption> cmAvrGccCompiler::get_options(const CompilerOption::Type type) const
 {
-  switch(type)
+  auto vec = options.storage.find(type);
+  if (vec == options.storage.end())
   {
-    case CompilerOption::Type::Debug:
-      return options.debug;
-    case CompilerOption::Type::Definition:
-      return options.definitions;
-    case CompilerOption::Type::Linker:
-      return options.linker;
-    case CompilerOption::Type::Optimization:
-      return options.optimizations;
-    case CompilerOption::Type::Warning:
-      return options.warnings;
-    case CompilerOption::Type::Machine:
-      return options.machine;
-    case CompilerOption::Type::Generic:
-    default:
-      return options.normal;
+    return {};
   }
+  return (*vec).second;
 }
 
 CompilerOption * cmAvrGccCompiler::get_option(const std::string& token) const
 {
-  ShrdOption opt = options.get_option(token, options.warnings);
-  if (nullptr != opt) {
-    return opt.get();
-  }
-  opt = options.get_option(token, options.debug);
-  if (nullptr != opt) {
-    return opt.get();
-  }
-  opt = options.get_option(token, options.definitions);
-  if (nullptr != opt) {
-    return opt.get();
-  }
-  opt = options.get_option(token, options.machine);
-  if (nullptr != opt) {
-    return opt.get();
-  }
-  opt = options.get_option(token, options.normal);
-  if (nullptr != opt) {
-    return opt.get();
-  }
-  opt = options.get_option(token, options.optimizations);
-  if (nullptr != opt) {
-    return opt.get();
-  }
-  opt = options.get_option(token, options.linker);
-  if (nullptr != opt) {
-    return opt.get();
-  }
-  return nullptr;
+  ShrdOption opt = options.get_option(token);
+  return opt.get();
 }
 
 
@@ -164,36 +125,7 @@ void cmAvrGccCompiler::Options::accept_flag(const ShrdOption& flag)
   if (flag == nullptr) {
     return;
   }
-
-  switch (flag->get_type()) {
-    case compiler::CompilerOption::Type::Optimization:
-      push_flag(flag, optimizations);
-      break;
-
-    case compiler::CompilerOption::Type::Warning:
-      push_flag(flag, warnings);
-      break;
-
-    case compiler::CompilerOption::Type::Linker:
-      push_flag(flag, linker);
-      break;
-
-    case compiler::CompilerOption::Type::Debug:
-      push_flag(flag, debug);
-      break;
-
-    case compiler::CompilerOption::Type::Definition:
-      push_flag(flag, definitions);
-      break;
-
-    case compiler::CompilerOption::Type::Machine:
-      push_flag(flag, machine);
-      break;
-
-    default:
-      push_flag(flag, normal);
-      break;
-  }
+  push_flag(flag, storage[flag->get_type()]);
 }
 
 bool cmAvrGccCompiler::has_option(const std::string& option) const
@@ -201,39 +133,35 @@ bool cmAvrGccCompiler::has_option(const std::string& option) const
   return options.contains(option);
 }
 
+void cmAvrGccCompiler::Options::clear()
+{
+  storage.clear();
+}
+
 void cmAvrGccCompiler::clear()
 {
-  options.debug.clear();
-  options.definitions.clear();
-  options.warnings.clear();
-  options.optimizations.clear();
-  options.normal.clear();
-  options.linker.clear();
-  options.machine.clear();
+  options.clear();
+}
+
+cmAvrGccCompiler::Options::Options()
+{
+  // Registering options
+  storage[CompilerOption::Type::Debug] = {};
+  storage[CompilerOption::Type::Definition] = {};
+  storage[CompilerOption::Type::Generic] = {};
+  storage[CompilerOption::Type::Machine] = {};
+  storage[CompilerOption::Type::Linker] = {};
+  storage[CompilerOption::Type::Optimization] = {};
+  storage[CompilerOption::Type::Warning] = {};
 }
 
 bool cmAvrGccCompiler::Options::contains(const std::string& token) const
 {
-  if (contains(token, debug)) {
-    return true;
-  }
-  if (contains(token, normal)) {
-    return true;
-  }
-  if (contains(token, optimizations)) {
-    return true;
-  }
-  if (contains(token, warnings)) {
-    return true;
-  }
-  if (contains(token, linker)) {
-    return true;
-  }
-  if (contains(token, machine)) {
-    return true;
-  }
-  if (contains(token, definitions)) {
-    return true;
+  for (const auto& vec : storage )
+  {
+    if (contains(token, vec.second)){
+      return true;
+    }
   }
   return false;
 }
@@ -246,6 +174,21 @@ bool cmAvrGccCompiler::Options::contains(const std::string& token, const Options
   });
 
   return (found_item != reference.end());
+}
+
+
+cmAvrGccCompiler::ShrdOption cmAvrGccCompiler::Options::get_option(const std::string& token) const
+{
+  ShrdOption out;
+  for (const auto& vect : storage)
+  {
+    out = get_option(token, vect.second);
+    if (out != nullptr)
+    {
+      break;
+    }
+  }
+  return out;
 }
 
 cmAvrGccCompiler::ShrdOption cmAvrGccCompiler::Options::get_option(const std::string& token, const OptionsVec& vect) const
