@@ -109,6 +109,14 @@ void cmAvrGccCompiler::parse_flags(const std::vector<std::string>& tokens)
   }
 }
 
+void cmAvrGccCompiler::Options::push_flag(const ShrdOption& flag, OptionsVec& vec)
+{
+  if (!contains(flag->get_token(), vec)) {
+    vec.push_back(flag);
+  }
+}
+
+
 void cmAvrGccCompiler::Options::accept_flag(const ShrdOption& flag)
 {
   if (flag == nullptr) {
@@ -117,31 +125,27 @@ void cmAvrGccCompiler::Options::accept_flag(const ShrdOption& flag)
 
   switch (flag->get_type()) {
     case compiler::CompilerOption::Type::Optimization:
-      if (!contains(flag->get_token(), optimizations)) {
-        optimizations.push_back(flag);
-      }
+      push_flag(flag, optimizations);
       break;
 
     case compiler::CompilerOption::Type::Warning:
-      warnings.push_back(flag);
+      push_flag(flag, warnings);
       break;
 
     case compiler::CompilerOption::Type::Linker:
-      linker.push_back(flag);
+      push_flag(flag, linker);
       break;
 
     case compiler::CompilerOption::Type::Debug:
-      if (!contains(flag->get_token(), debug)) {
-        debug.push_back(flag);
-      }
+      push_flag(flag, debug);
       break;
 
     case compiler::CompilerOption::Type::Definition:
-      definitions.push_back(flag);
+      push_flag(flag, definitions);
       break;
 
     default:
-      normal.push_back(flag);
+      push_flag(flag, normal);
       break;
   }
 }

@@ -30,6 +30,7 @@ private:
         bool is_unique(const std::string& token, const OptionsVec& reference) const;
         bool is_unique(const ShrdOption& option, const OptionsVec& reference) const;
         void accept_flag(const ShrdOption& flag);
+        void push_flag(const ShrdOption& flag, OptionsVec& vec);
 
         OptionsVec optimizations;
         OptionsVec debug;

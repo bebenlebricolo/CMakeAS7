@@ -65,7 +65,7 @@ static bool check_flag_uniqueness(const std::vector<std::string>& target, const 
 
 TEST(AvrGccCompilerFlagsParsing, test_avr_gcc_representation)
 {
-  const std::string test_str1 = " -O3 -Og -Wall -Wextra -g2 -Wl,--gc-sections -gdwarf -fpack-struct -ggdb -DTEST_DEF=33 -g3 ";
+  const std::string test_str1 = " -O3 -Og -Wall -Wall -Wextra -Wextra -g2 -g2 -Wl,--gc-sections -Wl,--gc-sections -gdwarf -gdwarf -fpack-struct -fpack-struct -ggdb -DTEST_DEF=33 -DTEST_DEF=33 -DTEST_DEF=33 -g3 ";
   const std::vector<std::string> optimization_options = { "-O3", "-Og" };
   const std::vector<std::string> warning_options = { "-Wall", "-Wextra" };
   const std::vector<std::string> generic_options = { "-fpack-struct" };
