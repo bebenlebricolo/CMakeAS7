@@ -29,7 +29,8 @@ struct CompilerOption
     Debug,
     Warning,
     Linker,
-    Definition
+    Definition,
+    Machine
   };
 
   CompilerOption(const Type _type);
