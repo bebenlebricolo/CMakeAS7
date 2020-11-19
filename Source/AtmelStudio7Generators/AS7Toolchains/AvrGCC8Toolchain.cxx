@@ -190,11 +190,9 @@ void AS7AvrGCC8::generate_xml_per_language(pugi::xml_node& parent, const std::st
   xml_append_inline(parent, toolname + ".compiler.preprocessor.DoNotSearchSystemDirectories", target.preprocessor.do_not_search_system_directories ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.preprocessor.PreprocessOnly", target.preprocessor.preprocess_only ? "True" : "False");
 
-  xml_append_inline(parent, toolname + ".compiler.preprocessor.PreprocessOnly", target.preprocessor.preprocess_only ? "True" : "False");
-
   // Symbols definition
+  if (!target.symbols.def_symbols.empty())
   {
-
     pugi::xml_node defsymbols_node = parent.append_child((toolname + ".compiler.symbols.DefSymbols").c_str());
     pugi::xml_node list_values_node = defsymbols_node.append_child("ListValues");
     for (const auto& symbol : target.symbols.def_symbols) {
@@ -203,8 +201,8 @@ void AS7AvrGCC8::generate_xml_per_language(pugi::xml_node& parent, const std::st
   }
 
   // Include directories definition
+  if (!target.directories.include_paths.empty())
   {
-
     pugi::xml_node include_path_node = parent.append_child((toolname + ".compiler.directories.IncludePaths").c_str());
     pugi::xml_node list_values_node = include_path_node.append_child("ListValues");
     for (const auto& include : target.directories.include_paths) {
@@ -214,14 +212,22 @@ void AS7AvrGCC8::generate_xml_per_language(pugi::xml_node& parent, const std::st
 
   // Optimizations and debug flags
   xml_append_inline(parent, toolname + ".compiler.optimization.level", target.optimizations.level);
-  xml_append_inline(parent, toolname + ".compiler.optimization.OtherFlags", target.optimizations.other_flags);
+  if (!target.optimizations.other_flags.empty())
+  {
+    xml_append_inline(parent, toolname + ".compiler.optimization.OtherFlags", target.optimizations.other_flags);
+  }
+
   xml_append_inline(parent, toolname + ".compiler.optimization.PrepareFunctionsForGarbageCollection", target.optimizations.prepare_function_for_garbage_collection ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.optimization.PrepareDataForGarbageCollection", target.optimizations.prepare_data_for_garbage_collection ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.optimization.PackStructureMembers", target.optimizations.pack_structure_members ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.optimization.AllocateBytesNeededForEnum", target.optimizations.allocate_bytes_needed_for_enum ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.optimization.UseShortCalls", target.optimizations.use_short_calls ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.optimization.DebugLevel", target.optimizations.debug_level);
-  xml_append_inline(parent, toolname + ".compiler.optimization.OtherDebuggingFlags", target.optimizations.other_debugging_flags);
+
+  if (!target.optimizations.other_debugging_flags.empty())
+  {
+    xml_append_inline(parent, toolname + ".compiler.optimization.OtherDebuggingFlags", target.optimizations.other_debugging_flags);
+  }
 
   // Warnings
   xml_append_inline(parent, toolname + ".compiler.warnings.AllWarnings", target.warnings.all_warnings ? "True" : "False");
@@ -234,7 +240,11 @@ void AS7AvrGCC8::generate_xml_per_language(pugi::xml_node& parent, const std::st
   xml_append_inline(parent, toolname + ".compiler.warnings.InhibitAllWarnings", target.warnings.inhibit_all_warnings ? "True" : "False");
 
   // Miscellaneous flags
-  xml_append_inline(parent, toolname + ".compiler.miscellaneous.OtherFlags", target.miscellaneous.other_flags);
+  if (!target.miscellaneous.other_flags.empty())
+  {
+    xml_append_inline(parent, toolname + ".compiler.miscellaneous.OtherFlags", target.miscellaneous.other_flags);
+  }
+
   xml_append_inline(parent, toolname + ".compiler.miscellaneous.Verbose", target.miscellaneous.verbose ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.miscellaneous.SupportAnsiPrograms", target.miscellaneous.support_ansi_programs ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.miscellaneous.DoNotDeleteTemporaryFiles", target.miscellaneous.do_not_delete_temporary_files ? "True" : "False");
@@ -273,6 +283,7 @@ void AS7AvrGCC8::generate_xml(pugi::xml_node& parent, const std::string& lang) c
   xml_append_inline(parent, linker_ref + ".linker.general.UseVprintfLibrary", linker.general.use_vprintf_library ? "True" : "False");
 
   // Link libraries
+  if (!linker.libraries.libraries.empty())
   {
     pugi::xml_node link_libraries_node = parent.append_child((linker_ref + ".linker.libraries.Libraries").c_str());
     pugi::xml_node list_values_node = link_libraries_node.append_child("ListValues");
@@ -282,6 +293,7 @@ void AS7AvrGCC8::generate_xml(pugi::xml_node& parent, const std::string& lang) c
   }
 
   // Link libraries search path
+  if(!linker.libraries.search_path.empty())
   {
     pugi::xml_node link_libraries_search_path_node = parent.append_child((linker_ref + ".linker.libraries.LibrarySearchPaths").c_str());
     pugi::xml_node list_values_node = link_libraries_search_path_node.append_child("ListValues");
@@ -292,10 +304,15 @@ void AS7AvrGCC8::generate_xml(pugi::xml_node& parent, const std::string& lang) c
 
   xml_append_inline(parent, linker_ref + ".linker.optimization.GarbageCollectUnusedSections", linker.optimizations.garbage_collect_unused_sections ? "True" : "False");
   xml_append_inline(parent, linker_ref + ".linker.optimization.PutReadOnlyDataInWritableDataSection", linker.optimizations.put_read_only_data_in_writable_data_section ? "True" : "False");
-  xml_append_inline(parent, linker_ref + ".linker.miscellaneous.LinkerFlags", linker.miscellaneous.linker_flags);
+
+  if (!linker.miscellaneous.linker_flags.empty())
+  {
+    xml_append_inline(parent, linker_ref + ".linker.miscellaneous.LinkerFlags", linker.miscellaneous.linker_flags);
+  }
 
   ////////////////////////////// Assembler //////////////////////////////
   // Assembler include path
+  if (!assembler.general.include_path.empty())
   {
     pugi::xml_node assembler_include_path_node = parent.append_child((linker_ref + ".assembler.general.IncludePaths").c_str());
     pugi::xml_node list_values_node = assembler_include_path_node.append_child("ListValues");
@@ -304,10 +321,17 @@ void AS7AvrGCC8::generate_xml(pugi::xml_node& parent, const std::string& lang) c
     }
   }
   xml_append_inline(parent, linker_ref + ".assembler.general.AnounceVersion", assembler.general.anounce_version ? " True" : "False");
-  xml_append_inline(parent, linker_ref + ".assembler.debugging.DebugLevel", assembler.debugging.debug_level);
+
+  if (!assembler.debugging.debug_level.empty())
+  {
+    xml_append_inline(parent, linker_ref + ".assembler.debugging.DebugLevel", assembler.debugging.debug_level);
+  }
 
   // Archiver parameters
-  xml_append_inline(parent, linker_ref + ".archiver.general.ArchiverFlags", archiver_flags);
+  if (archiver_flags != "-r")
+  {
+    xml_append_inline(parent, linker_ref + ".archiver.general.ArchiverFlags", archiver_flags);
+  }
 }
 
 void Common::clear()
