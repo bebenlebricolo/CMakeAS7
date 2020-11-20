@@ -26,19 +26,19 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/AS7Toolchains/AvrGCC8Toolchain.h
 )
 
-add_library(atmelstudio7generators
+add_library(AtmelStudio7Generators
     ${HEADERS}
     ${SOURCES}
 )
 
-target_include_directories(atmelstudio7generators PUBLIC
+target_include_directories(AtmelStudio7Generators PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_SOURCE_DIR}/Compiler
     ${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Options
     ${CMAKE_CURRENT_SOURCE_DIR}/AS7Toolchains
 )
 
-target_link_libraries(atmelstudio7generators PUBLIC
+target_link_libraries(AtmelStudio7Generators PUBLIC
     pugixml
     cmutils
 )

@@ -894,7 +894,7 @@ target_link_libraries(CMakeLib cmsys
   ${CMAKE_LIBRHASH_LIBRARIES}
   ${CMake_KWIML_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
-  atmelstudio7generators
+  AtmelStudio7Generators
   )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "sparc")

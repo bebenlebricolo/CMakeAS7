@@ -25,7 +25,7 @@ target_include_directories(testAtmelStudioTools PUBLIC
     ${GTEST_INCLUDE_DIRS}
 )
 
-target_link_libraries(testAtmelStudioTools atmelstudio7generators cmutils ${GTEST_LIBRARIES})
+target_link_libraries(testAtmelStudioTools AtmelStudio7Generators cmutils ${GTEST_LIBRARIES})
 
 set_target_properties(testAtmelStudioTools
     PROPERTIES
