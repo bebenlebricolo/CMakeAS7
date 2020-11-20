@@ -16,19 +16,10 @@ struct LinkerOption : public CompilerOption
      * @param[in]   _token : string representation of current flag being parsed
      * @return true : token exist in collection ; false : token is not part of the collection, thus it is not part of the available set of optimizations.
     */
-  static bool can_create(const std::string& _token) { return true; }
+  static bool can_create(const std::string& _token);
 
-  LinkerOption()
-    : CompilerOption(Type::Linker)
-  {
-  }
-  LinkerOption(const std::string& _token)
-    : CompilerOption(Type::Linker, _token)
-  {
-  }
-
-private:
-  static std::unordered_set<std::string> available_flags;
+  LinkerOption();
+  LinkerOption(const std::string& _token);
 };
 
 }

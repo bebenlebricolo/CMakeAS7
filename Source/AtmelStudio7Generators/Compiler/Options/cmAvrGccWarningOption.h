@@ -1,9 +1,6 @@
 #pragma once
 
-#include <memory>
 #include <string>
-#include <unordered_set>
-#include <vector>
 
 #include "cmAvrGccCompilerOption.h"
 
@@ -16,19 +13,10 @@ struct WarningOption : public CompilerOption
      * @param[in]   _token : string representation of current flag being parsed
      * @return true : token exist in collection ; false : token is not part of the collection, thus it is not part of the available set of optimizations.
     */
-  static bool can_create(const std::string& _token) { return true; }
+  static bool can_create(const std::string& _token);
 
-  WarningOption()
-    : CompilerOption(Type::Warning)
-  {
-  }
-  WarningOption(const std::string& _token)
-    : CompilerOption(Type::Warning, _token)
-  {
-  }
-
-private:
-  static std::unordered_set<std::string> available_flags;
+  WarningOption();
+  WarningOption(const std::string& _token);
 };
 
 }
