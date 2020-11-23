@@ -198,25 +198,12 @@ std::vector<std::string> cmAtmelStudio7TargetGenerator::GetIncludes(const std::s
   return includes;
 }
 
-void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& parent, const std::string& build_type)
+std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGenerator::RetrieveCmakeFlags(const std::vector<std::string>& languages,
+                                                                        const std::string& upConfig)
 {
-  AvrToolchain::AS7ToolchainTranslator translator;
-
-  pugi::xml_node property_group_node = parent.append_child("PropertyGroup");
-  std::string conditionnal_str = " '$(Configuration)' == '" + build_type + "' ";
-  property_group_node.append_attribute("Condition").set_value(conditionnal_str.c_str());
-
-  // Get languages
-  std::vector<std::string> enabledLanguages;
-  this->GlobalGenerator->GetEnabledLanguages(enabledLanguages);
-
-  // Parse flags
-  const std::string upConfig = cmutils::strings::to_uppercase(build_type);
-  //auto CMAKE_CXX_FLAGS = this->Makefile->GetDefinition("CMAKE_CXX_FLAGS");
-
-  // Extract all flags for this config : CMAKE_${LANG}_FLAGS  + CMAKE_${LANG}_FLAGS_${CONFIG}
-  std::vector<std::string> all_flags;
-  for (auto& lang : enabledLanguages) {
+  std::unordered_map<std::string, std::vector<std::string>> out;
+  for (auto& lang : languages) {
+    std::vector<std::string> all_flags;
     std::string flag_variable_name = "CMAKE_" + lang + "_FLAGS";
     std::string flag_variable_config_name = flag_variable_name + "_" + upConfig;
     cmProp lang_flags_base = this->Makefile->GetDefinition(flag_variable_name);
@@ -238,8 +225,35 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
     auto last_elem = std::unique(all_flags.begin(), all_flags.end());
     all_flags.resize(std::distance(all_flags.begin(), last_elem));
 
+    out[lang] = all_flags;
+  }
+  return out;
+}
+
+void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& parent, const std::string& build_type)
+{
+  AvrToolchain::AS7ToolchainTranslator translator;
+
+  pugi::xml_node property_group_node = parent.append_child("PropertyGroup");
+  std::string conditionnal_str = " '$(Configuration)' == '" + build_type + "' ";
+  property_group_node.append_attribute("Condition").set_value(conditionnal_str.c_str());
+
+  // Get languages
+  std::vector<std::string> enabledLanguages;
+  this->GlobalGenerator->GetEnabledLanguages(enabledLanguages);
+
+  // Parse flags
+  const std::string upConfig = cmutils::strings::to_uppercase(build_type);
+  //auto CMAKE_CXX_FLAGS = this->Makefile->GetDefinition("CMAKE_CXX_FLAGS");
+
+  // Extract all flags for this config : CMAKE_${LANG}_FLAGS  + CMAKE_${LANG}_FLAGS_${CONFIG}
+  // Works for multiple languages {C,CXX}
+  std::unordered_map<std::string, std::vector<std::string>> all_flags = RetrieveCmakeFlags(enabledLanguages, upConfig);
+
+  // Parse flags for all languages
+  for (auto& flags : all_flags) {
     // Parse incoming flags
-    translator.parse(all_flags, lang);
+    translator.parse(flags.second, flags.first);
   }
 
   // Open the Toolchain Settings node
@@ -256,6 +270,7 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
   }
 
   // Handle include paths
+  // TODO : use parsed device representation to compute the right DFP for this device. Default for now
   translator.toolchain.avrgcc.directories.include_paths.push_back("%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
   translator.toolchain.avrgcccpp.directories.include_paths.push_back("%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
   for (const auto& lang : enabledLanguages) {
