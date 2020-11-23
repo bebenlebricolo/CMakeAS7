@@ -34,6 +34,11 @@ struct Common
 
 struct AS7AvrGcc8_Base
 {
+    AS7AvrGcc8_Base() = default;
+    AS7AvrGcc8_Base(const AS7AvrGcc8_Base& other);
+
+    void copy_from(const AS7AvrGcc8_Base& other);
+
     struct
     {
         bool subroutine_function_prologue = false;                      /**< -mcall-prologues       */

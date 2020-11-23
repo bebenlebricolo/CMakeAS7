@@ -84,6 +84,22 @@ void AS7AvrGCC8Assembler::clear()
     debugging.debug_level.clear();
 }
 
+AS7AvrGcc8_Base::AS7AvrGcc8_Base(const AS7AvrGcc8_Base& other)
+{
+  copy_from(other);
+}
+
+void AS7AvrGcc8_Base::copy_from(const AS7AvrGcc8_Base& other)
+{
+  general = other.general;
+  preprocessor = other.preprocessor;
+  symbols = other.symbols;
+  directories.include_paths = other.directories.include_paths;
+  optimizations = other.optimizations;
+  warnings = other.warnings;
+  miscellaneous = other.miscellaneous;
+}
+
 void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const std::string& lang)
 {
   //parser.get_options(compiler::CompilerOption::Type::Optimization)

@@ -10,6 +10,7 @@
 #include "cmAvrGccMachineOption.h"
 #include "cmAvrGccDebugOption.h"
 #include "AvrGCC8Toolchain.h"
+#include "AS7ToolchainTranslator.h"
 
 #include "pugixml.hpp"
 
@@ -31,24 +32,17 @@ public:
                                           "-fpendantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
                                           "-nostdinc", "-fpack-struct", "-mshort-calls" , "-flto", "-fno-exceptions", "-fno-rtti", "-Wa,-g"};
 
-    c_comp.parse_flags(cflags);
-    cpp_comp.parse_flags(cppflags);
-    as7rep.convert_from(c_comp, "C");
-    as7rep.convert_from(cpp_comp, "Cpp");
-
+    toolchain_translator.parse(cflags, "C");
+    toolchain_translator.parse(cppflags, "CXX");
   }
 
   void TearDown() override
   {
-    c_comp.clear();
-    cpp_comp.clear();
-    as7rep.clear();
+    toolchain_translator.clear();
   }
 
 protected:
-  compiler::cmAvrGccCompiler c_comp;
-  compiler::cmAvrGccCompiler cpp_comp;
-  AvrToolchain::AS7AvrGCC8 as7rep;
+  AvrToolchain::AS7ToolchainTranslator toolchain_translator;
 };
 
 static bool check_flag_uniqueness(const std::vector<std::string>& target, const std::vector<std::shared_ptr<compiler::CompilerOption>>& reference)
@@ -192,7 +186,7 @@ TEST_F(FlagParsingFixture, test_generate_xml)
   pugi::xml_document doc;
   // Prepend delcaration node will look like this : <?xml version="1.0" encoding="utf-8"?>
   pugi::xml_node project_node = doc.append_child(pugi::node_element);
-  as7rep.generate_xml(project_node, "Cpp");
+  toolchain_translator.generate_xml(project_node);
   doc.save_file(R"(C:\temp\testfile.xml)", "  ");
 
 }
