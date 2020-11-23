@@ -64,9 +64,9 @@ void cmLocalAtmelStudio7Generator::WriteStampFiles()
 
 void cmLocalAtmelStudio7Generator::Generate()
 {
+  auto target_list = this->GlobalGenerator->GetLocalGeneratorTargetsInOrder(this);
   // Create the project file for each target.
-  for (cmGeneratorTarget* gt :
-       this->GlobalGenerator->GetLocalGeneratorTargetsInOrder(this)) {
+  for (cmGeneratorTarget* gt : target_list) {
     if (!gt->IsInBuildSystem() || gt->GetProperty("EXTERNAL_MSPROJECT")) {
       continue;
     }
@@ -87,10 +87,10 @@ void cmLocalAtmelStudio7Generator::Generate()
 
 void cmLocalAtmelStudio7Generator::GenerateTarget(cmGeneratorTarget* target)
 {
- cmAtmelStudio7TargetGenerator targetGenerator(
-   target,
-   static_cast<cmGlobalAtmelStudio7Generator*>(this->GetGlobalGenerator()));
- targetGenerator.Generate();
+  cmAtmelStudio7TargetGenerator targetGenerator(
+    target,
+    static_cast<cmGlobalAtmelStudio7Generator*>(this->GetGlobalGenerator()));
+  targetGenerator.Generate();
 }
 
 void cmLocalAtmelStudio7Generator::ReadAndStoreExternalGUID(

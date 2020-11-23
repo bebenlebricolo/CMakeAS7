@@ -15,6 +15,7 @@
 
 #include "cmGeneratorTarget.h"
 
+
 class cmComputeLinkInformation;
 class cmCustomCommand;
 class cmGeneratedFileStream;
@@ -123,6 +124,7 @@ private:
   void WriteCompileGroup(pugi::xml_node& node);
   void WriteProjectReferenceGroup(pugi::xml_node& node);
   void WriteAS7CompilerTargetsProp(pugi::xml_node& node);
+  void ParseCmakeFlags();
 
   std::vector<std::string> GetIncludes(std::string const& config,
                                        std::string const& lang) const;
@@ -130,12 +132,12 @@ private:
 private:
   AS7ProjectDescriptor projectDescriptor;
   bool InSourceBuild;
-  std::vector<std::string> Configurations;  /**< Enabled build configurations collection                            */
-  cmGeneratorTarget* const GeneratorTarget; /**< */
-  cmMakefile* const Makefile;               /**< CMakeLists.txt target file which is used to describe this target   */
-  std::string const Platform;               /**< targeted Platform                                                  */
-  std::string const Name;                   /**< Target name                                                        */
-  std::string const GUID;                   /**< This target's unique ID                                            */
+  std::vector<std::string> Configurations;         /**< Enabled build configurations collection                                                     */
+  cmGeneratorTarget* const GeneratorTarget;        /**< */
+  cmMakefile* const Makefile;                      /**< CMakeLists.txt target file which is used to describe this target                            */
+  std::string const Platform;                      /**< targeted Platform                                                                           */
+  std::string const Name;                          /**< Target name                                                                                 */
+  std::string const GUID;                          /**< This target's unique ID                                                                     */
 
   cmGlobalAtmelStudio7Generator* const GlobalGenerator;
   cmLocalAtmelStudio7Generator* const LocalGenerator;

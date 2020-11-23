@@ -21,10 +21,11 @@
 #include "cmMakefile.h"
 #include "cmSourceFile.h"
 #include "cmStringAlgorithms.h"
+#include "cmStringUtils.h"
 #include "cmSystemTools.h"
 
+#include "AS7ToolchainTranslator.h"
 #include "pugixml.hpp"
-#include "cmStringUtils.h"
 
 cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
   cmGeneratorTarget* target, cmGlobalAtmelStudio7Generator* gg)
@@ -113,15 +114,15 @@ void cmAtmelStudio7TargetGenerator::Generate()
   std::vector<cmGeneratorTarget::AllConfigSource> const& sources =
     this->GeneratorTarget->GetAllConfigSources();
 
-  for (const auto& sf : sources) {
-    auto compileDefs = sf.Source->GetCompileDefinitions();
-
-    for (std::string const& config : this->Configurations) {
-      std::string configUpper = cmSystemTools::UpperCase(config);
-      std::string defPropName = cmStrCat("COMPILE_DEFINITIONS_", configUpper);
-      BuildConfigurationXmlGroup(project_node, config);
-    }
+  for (std::string const& config : this->Configurations) {
+    std::string configUpper = cmSystemTools::UpperCase(config);
+    std::string defPropName = cmStrCat("COMPILE_DEFINITIONS_", configUpper);
+    BuildConfigurationXmlGroup(project_node, config);
   }
+
+  //for (const auto& sf : sources) {
+  //  auto compileDefs = sf.Source->GetCompileDefinitions();
+  //}
 
   // Compile item group which lists sources to be built as part of this target
   BuildCompileItemGroup(project_node);
@@ -199,64 +200,79 @@ std::vector<std::string> cmAtmelStudio7TargetGenerator::GetIncludes(const std::s
 
 void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& parent, const std::string& build_type)
 {
+  AvrToolchain::AS7ToolchainTranslator translator;
+
   pugi::xml_node property_group_node = parent.append_child("PropertyGroup");
   std::string conditionnal_str = " '$(Configuration)' == '" + build_type + "' ";
   property_group_node.append_attribute("Condition").set_value(conditionnal_str.c_str());
-
-  pugi::xml_node toolchain_settings_node = property_group_node.append_child("ToolchainSettings");
-  pugi::xml_node avr_gcc_node = toolchain_settings_node.append_child("AvrGcc");
 
   // Get languages
   std::vector<std::string> enabledLanguages;
   this->GlobalGenerator->GetEnabledLanguages(enabledLanguages);
 
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.common.Device", "-mmcu=atmega328p -B \"%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\gcc\\dev\\atmega328p\"");
+  // Parse flags
+  const std::string upConfig = cmutils::strings::to_uppercase(build_type);
+  //auto CMAKE_CXX_FLAGS = this->Makefile->GetDefinition("CMAKE_CXX_FLAGS");
 
-  // TODO : if extra avr targets are written, then use them to tell if we need to output hex files and other files
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.common.outputfiles.hex", "True");
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.common.outputfiles.lss", "True");
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.common.outputfiles.eep", "True");
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.common.outputfiles.srec", "True");
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.common.outputfiles.usersignatures", "False");
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.compiler.general.ChangeDefaultCharTypeUnsigned", "True");
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.compiler.general.ChangeDefaultBitFieldUnsigned", "True");
+  // Extract all flags for this config : CMAKE_${LANG}_FLAGS  + CMAKE_${LANG}_FLAGS_${CONFIG}
+  std::vector<std::string> all_flags;
+  for (auto& lang : enabledLanguages) {
+    std::string flag_variable_name = "CMAKE_" + lang + "_FLAGS";
+    std::string flag_variable_config_name = flag_variable_name + "_" + upConfig;
+    cmProp lang_flags_base = this->Makefile->GetDefinition(flag_variable_name);
+    cmProp lang_flags_config = this->Makefile->GetDefinition(flag_variable_config_name);
 
-  // Preprocessor definitions
-  pugi::xml_node avr_gcc_defsymbols_node = avr_gcc_node.append_child("avrgcc.compiler.symbols.DefSymbols");
-  pugi::xml_node list_values_node = avr_gcc_defsymbols_node.append_child("ListValues");
-  AppendInlinedNodeChildPcData(list_values_node, "Value", "NDEBUG");
+    std::vector<std::string> base_flags;
+    std::vector<std::string> config_flags;
 
-  // include directories
-  pugi::xml_node include_directories_node = avr_gcc_node.append_child("avrgcc.compiler.directories.IncludePaths");
-  list_values_node = include_directories_node.append_child("ListValues");
-  AppendInlinedNodeChildPcData(list_values_node, "Value", "%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
+    if (lang_flags_base != nullptr) {
+      base_flags = cmutils::strings::split(*lang_flags_base);
+    }
+
+    if (lang_flags_config != nullptr) {
+      config_flags = cmutils::strings::split(*lang_flags_config);
+    }
+
+    all_flags.insert(all_flags.end(), base_flags.begin(), base_flags.end());
+    all_flags.insert(all_flags.end(), config_flags.begin(), config_flags.end());
+    auto last_elem = std::unique(all_flags.begin(), all_flags.end());
+    all_flags.resize(std::distance(all_flags.begin(), last_elem));
+
+    // Parse incoming flags
+    translator.parse(all_flags, lang);
+  }
+
+  // Open the Toolchain Settings node
+  pugi::xml_node toolchain_settings_node = property_group_node.append_child("ToolchainSettings");
+  std::string avr_gcc_node_name = "AvrGcc";
+  if (std::find(enabledLanguages.begin(), enabledLanguages.end(), "CXX") != enabledLanguages.end()) {
+    avr_gcc_node_name = "AvrGccCpp";
+  }
+  pugi::xml_node avr_gcc_node = toolchain_settings_node.append_child(avr_gcc_node_name.c_str());
+
+  if (build_type != "Release") {
+    translator.toolchain.avrgcc.symbols.def_symbols.push_back("NDEBUG");
+    translator.toolchain.avrgcccpp.symbols.def_symbols.push_back("NDEBUG");
+  }
+
+  // Handle include paths
+  translator.toolchain.avrgcc.directories.include_paths.push_back("%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
+  translator.toolchain.avrgcccpp.directories.include_paths.push_back("%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
   for (const auto& lang : enabledLanguages) {
     auto includesList = this->GetIncludes(build_type, lang);
     for (const auto& singleInclude : includesList) {
-        AppendInlinedNodeChildPcData(list_values_node, "Value", singleInclude);
+      if (lang == "CXX") {
+        translator.toolchain.avrgcccpp.directories.include_paths.push_back(singleInclude);
+      } else if (lang == "C") {
+        translator.toolchain.avrgcc.directories.include_paths.push_back(singleInclude);
+      }
     }
   }
 
-  const std::string upConfig = cmutils::strings::to_uppercase(build_type);
-  //auto CMAKE_CXX_FLAGS = this->Makefile->GetDefinition("CMAKE_CXX_FLAGS");
-  auto config_CMAKE_CXX_FLAGS = this->Makefile->GetDefinition("CMAKE_CXX_FLAGS_" + upConfig);
+  translator.toolchain.linker.libraries.libraries.push_back("libm");
+  translator.toolchain.assembler.general.include_path.push_back("%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
 
-  // Optimizations
-  // TODO : parse compile definitions flags here
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.compiler.optimization.level", "Optimize for size (-Os)");
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.compiler.optimization.PackStructureMembers", "True");
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.compiler.optimization.AllocateBytesNeededForEnum", "True");
-  AppendInlinedNodeChildPcData(avr_gcc_node, "avrgcc.compiler.warnings.AllWarnings", "True");
-
-  // Configure linker link libraries
-  pugi::xml_node linker_libraries_node = avr_gcc_node.append_child("avrgcc.linker.libraries.Libraries");
-  list_values_node = linker_libraries_node.append_child("ListValues");
-  AppendInlinedNodeChildPcData(list_values_node, "Value", "libm");
-
-  // Assembler include directories
-  pugi::xml_node assembler_includes_node = avr_gcc_node.append_child("avrgcc.assembler.general.IncludePaths");
-  list_values_node = assembler_includes_node.append_child("ListValues");
-  AppendInlinedNodeChildPcData(list_values_node, "Value", "%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
+  translator.generate_xml(avr_gcc_node);
 }
 
 void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent)

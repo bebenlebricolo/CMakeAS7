@@ -9,8 +9,8 @@ std::unordered_map<OptimizationOption::Level, AS7OptionRepresentation> Optimizat
   { OptimizationOption::Level::O1, { "-O1", "Optimize(-O1)" } },
   { OptimizationOption::Level::O, { "-O", "Optimize(-O1)" } },
   { OptimizationOption::Level::O2, { "-O2", "Optimize more (-O2)" } },
-  { OptimizationOption::Level::O3, { "-O3", "Optimize more (-O3)" } },
-  { OptimizationOption::Level::Ofast, { "-Ofast", "Optimize more (-O3)" } },
+  { OptimizationOption::Level::O3, { "-O3", "Optimize most (-O3)" } },
+  { OptimizationOption::Level::Ofast, { "-Ofast", "Optimize most (-O3)" } },
   { OptimizationOption::Level::Og, { "-Og", "Optimize debugging experience (-Og)" } },
   { OptimizationOption::Level::Os, { "-Os", "Optimize for size (-Os)" } }
 };
