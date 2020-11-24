@@ -52,7 +52,6 @@ cmAtmelStudio7TargetGenerator::~cmAtmelStudio7TargetGenerator()
 
 static AS7ProjectDescriptor::Type computeProjectFileExtension(cmGeneratorTarget const* t)
 {
-  AS7ProjectDescriptor::Type returnedType;
   std::set<std::string> languages;
   std::string config;
   t->GetLanguages(languages, config);
@@ -116,16 +115,14 @@ void cmAtmelStudio7TargetGenerator::Generate()
 
   for (std::string const& config : this->Configurations) {
     std::string configUpper = cmSystemTools::UpperCase(config);
-    std::string defPropName = cmStrCat("COMPILE_DEFINITIONS_", configUpper);
     BuildConfigurationXmlGroup(project_node, config);
   }
 
-  //for (const auto& sf : sources) {
-  //  auto compileDefs = sf.Source->GetCompileDefinitions();
-  //}
-
   // Compile item group which lists sources to be built as part of this target
   BuildCompileItemGroup(project_node);
+
+  // Add projects references
+  BuildProjectReferenceItemGroup(project_node);
 
   // Last node is dedicated to atmelstudio specific targets
   pugi::xml_node import_projects_node = project_node.append_child("Import");
@@ -198,16 +195,30 @@ std::vector<std::string> cmAtmelStudio7TargetGenerator::GetIncludes(const std::s
   return includes;
 }
 
+std::vector<std::string> cmAtmelStudio7TargetGenerator::ConvertStringRange(const cmStringRange& range) const
+{
+  std::vector<std::string> out;
+  for (auto& val : range) {
+    out.push_back(val);
+  }
+  return out;
+}
+
 std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGenerator::RetrieveCmakeFlags(const std::vector<std::string>& languages,
-                                                                        const std::string& upConfig)
+                                                                                                            const std::string& upConfig)
 {
   std::unordered_map<std::string, std::vector<std::string>> out;
+  std::string linker_variable_name = "CMAKE_EXE_LINKER_FLAGS";
+
   for (auto& lang : languages) {
     std::vector<std::string> all_flags;
     std::string flag_variable_name = "CMAKE_" + lang + "_FLAGS";
     std::string flag_variable_config_name = flag_variable_name + "_" + upConfig;
+
     cmProp lang_flags_base = this->Makefile->GetDefinition(flag_variable_name);
     cmProp lang_flags_config = this->Makefile->GetDefinition(flag_variable_config_name);
+    auto compile_definitions = ConvertStringRange(this->Makefile->GetCompileDefinitionsEntries());
+    auto compile_options = ConvertStringRange(this->Makefile->GetCompileOptionsEntries());
 
     std::vector<std::string> base_flags;
     std::vector<std::string> config_flags;
@@ -220,8 +231,12 @@ std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGe
       config_flags = cmutils::strings::split(*lang_flags_config);
     }
 
+    // Merge all flags within one big vector
     all_flags.insert(all_flags.end(), base_flags.begin(), base_flags.end());
     all_flags.insert(all_flags.end(), config_flags.begin(), config_flags.end());
+    all_flags.insert(all_flags.end(), compile_definitions.begin(), compile_definitions.end());
+    all_flags.insert(all_flags.end(), compile_options.begin(), compile_options.end());
+
     auto last_elem = std::unique(all_flags.begin(), all_flags.end());
     all_flags.resize(std::distance(all_flags.begin(), last_elem));
 
@@ -284,7 +299,21 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
     }
   }
 
+  // Configure linker
   translator.toolchain.linker.libraries.libraries.push_back("libm");
+  cmGlobalVisualStudioGenerator::OrderedTargetDependSet target_dependencies = GetTargetDependencies();
+
+  for (cmGeneratorTarget const* dependent_target : target_dependencies) {
+    if (!dependent_target->IsInBuildSystem()) {
+      continue;
+    }
+    cmLocalGenerator* lg = dependent_target->GetLocalGenerator();
+    translator.toolchain.linker.libraries.libraries.push_back(dependent_target->GetName());
+    if (lg != nullptr) {
+      std::string build_directory = lg->GetCurrentBinaryDirectory() + "/" + build_type;
+      translator.toolchain.linker.libraries.search_path.push_back(cmutils::strings::replace(build_directory, "/", "\\"));
+    }
+  }
   translator.toolchain.assembler.general.include_path.push_back("%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
 
   translator.generate_xml(avr_gcc_node);
@@ -315,10 +344,9 @@ void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent
           compile_node.append_attribute("Include") = path.c_str();
           AppendInlinedNodeChildPcData(compile_node, "SubType", "compile");
         }
-      } break;
-      default:
-        tool = "None";
-        break;
+      }
+      break;
+
       case cmGeneratorTarget::SourceKindExternalObject:
         tool = "Object";
         if (this->LocalGenerator) {
@@ -329,21 +357,11 @@ void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent
           }
         }
         break;
-        //case cmGeneratorTarget::SourceKindExtra:
-        //  this->WriteExtraSource(e1, si.Source);
-        //  break;
-        //case cmGeneratorTarget::SourceKindHeader:
-        //  this->WriteHeaderSource(e1, si.Source);
-        //  break;
-    }
 
-    //cmSourceFile const* sf = s.SourceFile;
-    //std::string const& source = sf->GetFullPath();
-    //cmSourceGroup* sourceGroup =
-    //  this->Makefile->FindSourceGroup(source, sourceGroups);
-    //std::string const& filter = sourceGroup->GetFullName();
-    //std::string path = this->ConvertPath(source, s.RelativePath);
-    //ConvertToWindowsSlash(path);
+      default:
+        tool = "None";
+        break;
+    }
   }
 }
 
@@ -357,10 +375,22 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
   AppendInlinedNodeChildPcData(property_group, "ProjectGuid", this->GUID);
   AppendInlinedNodeChildPcData(property_group, "avrdevice", "ATmega328P");
   AppendInlinedNodeChildPcData(property_group, "avrdeviceseries", "none");
-  AppendInlinedNodeChildPcData(property_group, "OutputType", "Executable");
+
+  if (this->GeneratorTarget->GetType() == cmStateEnums::TargetType::EXECUTABLE) {
+    AppendInlinedNodeChildPcData(property_group, "OutputType", "Executable");
+  } else {
+    AppendInlinedNodeChildPcData(property_group, "OutputType", "StaticLibrary");
+  }
+
   AppendInlinedNodeChildPcData(property_group, "Language", "C");
-  AppendInlinedNodeChildPcData(property_group, "OutputFileName", "$(MSBuildProjectName)");
-  AppendInlinedNodeChildPcData(property_group, "OutputFileExtension", ".elf");
+
+  if (this->GeneratorTarget->GetType() == cmStateEnums::TargetType::EXECUTABLE) {
+    AppendInlinedNodeChildPcData(property_group, "OutputFileName", "$(MSBuildProjectName)");
+    AppendInlinedNodeChildPcData(property_group, "OutputFileExtension", ".elf");
+  } else {
+    AppendInlinedNodeChildPcData(property_group, "OutputFileName", "lib$(MSBuildProjectName)");
+    AppendInlinedNodeChildPcData(property_group, "OutputFileExtension", ".a");
+  }
   AppendInlinedNodeChildPcData(property_group, "OutputDirectory", "$(MSBuildProjectDirectory)\\$(Configuration)");
   AppendInlinedNodeChildPcData(property_group, "AssemblyName", target_name);
   AppendInlinedNodeChildPcData(property_group, "Name", target_name);
@@ -370,10 +400,10 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
   AppendInlinedNodeChildPcData(property_group, "OverrideVtor", "false");
   AppendInlinedNodeChildPcData(property_group, "CacheFlash", "true");
   AppendInlinedNodeChildPcData(property_group, "ProgFlashFromRam", "true");
-  AppendInlinedNodeChildPcData(property_group, "RamSnippetAddress", "0x2000000");
+  AppendInlinedNodeChildPcData(property_group, "RamSnippetAddress", "0x20000000");
   AppendInlinedNodeChildPcData(property_group, "UncachedRange");
   AppendInlinedNodeChildPcData(property_group, "preserveEEPROM", "true");
-  AppendInlinedNodeChildPcData(property_group, "OverrideVtorValue");
+  AppendInlinedNodeChildPcData(property_group, "OverrideVtorValue", "exception_table");
   AppendInlinedNodeChildPcData(property_group, "BootSegment", "2");
   AppendInlinedNodeChildPcData(property_group, "ResetRule", "0");
   AppendInlinedNodeChildPcData(property_group, "eraseonlaunchrule", "0");
@@ -395,7 +425,7 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
   pugi::xml_node content_extension_node = dependencies_node.append_child("content-extension");
   content_extension_node.append_attribute("eid").set_value("atmel.asf");
   content_extension_node.append_attribute("uuidref").set_value("Atmel.ASF");
-  content_extension_node.append_attribute("version").set_value("3.40.0");
+  content_extension_node.append_attribute("version").set_value("3.49.1");
 
   BuildSimulatorConfiguration(property_group);
 }
@@ -418,6 +448,47 @@ void cmAtmelStudio7TargetGenerator::BuildSimulatorConfiguration(pugi::xml_node& 
     AppendInlinedNodeChildPcData(parent, "StimuliFile", stimuli_filepath.c_str());
   }
   AppendInlinedNodeChildPcData(parent, "avrtoolinterface");
+}
+
+void cmAtmelStudio7TargetGenerator::BuildProjectReferenceItemGroup(pugi::xml_node& parent)
+{
+  cmGlobalVisualStudioGenerator::OrderedTargetDependSet& target_dependencies = GetTargetDependencies();
+
+  auto item_group_node = parent.append_child("ItemGroup");
+
+  for (cmGeneratorTarget const* dependent_target : target_dependencies) {
+    if (!dependent_target->IsInBuildSystem()) {
+      continue;
+    }
+
+    cmLocalGenerator* lg = dependent_target->GetLocalGenerator();
+    std::string name = dependent_target->GetName();
+    std::string path;
+    cmProp p = dependent_target->GetProperty("EXTERNAL_MSPROJECT");
+    if (p != nullptr) {
+      path = *p;
+    } else {
+      path = cmStrCat(lg->GetCurrentBinaryDirectory(), '/', dependent_target->GetName(),
+                      AS7ProjectDescriptor::get_extension(computeProjectFileExtension(dependent_target)));
+    }
+
+    // Convert to windows paths
+    path = cmutils::strings::replace(path, "/", "\\");
+
+    auto project_reference_node = item_group_node.append_child("ProjectReference");
+    project_reference_node.append_attribute("Include") = path.c_str();
+    AppendInlinedNodeChildPcData(project_reference_node, "Name", name);
+    AppendInlinedNodeChildPcData(project_reference_node, "Project", "{" + this->GlobalGenerator->GetGUID(name) + "}");
+    AppendInlinedNodeChildPcData(project_reference_node, "Private", "True");
+  }
+}
+
+cmGlobalVisualStudioGenerator::OrderedTargetDependSet cmAtmelStudio7TargetGenerator::GetTargetDependencies() const
+{
+  cmGlobalGenerator::TargetDependSet const& unordered =
+    this->GlobalGenerator->GetTargetDirectDepends(this->GeneratorTarget);
+  cmGlobalVisualStudioGenerator::OrderedTargetDependSet depends(unordered, CMAKE_CHECK_BUILD_SYSTEM_TARGET);
+  return depends;
 }
 
 std::array<AS7ProjectDescriptor::Properties,

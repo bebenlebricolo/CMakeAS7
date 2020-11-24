@@ -14,6 +14,9 @@
 #include <vector>
 
 #include "cmGeneratorTarget.h"
+#include "cmStringAlgorithms.h"
+#include "cmGlobalVisualStudioGenerator.h"
+
 
 class cmComputeLinkInformation;
 class cmCustomCommand;
@@ -167,9 +170,14 @@ private:
                              ConfigToSettings& toolSettings);
   std::string GetCMakeFilePath(const char* name) const;
 
+  std::vector<std::string> cmAtmelStudio7TargetGenerator::ConvertStringRange(const cmStringRange& range) const;
+
   void AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value = "");
   void BuildConfigurationXmlGroup(pugi::xml_node& parent, const std::string& build_type);
   void BuildCompileItemGroup(pugi::xml_node& parent);
   void BuildDevicePropertyGroup(pugi::xml_node& parent, const std::string& target_name);
   void BuildSimulatorConfiguration(pugi::xml_node& parent, const std::string& device_signature = "0x1E930B", const std::string& stimuli_filepath = "");
+  void BuildProjectReferenceItemGroup(pugi::xml_node& parent);
+
+  cmGlobalVisualStudioGenerator::OrderedTargetDependSet GetTargetDependencies() const;
 };

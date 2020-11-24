@@ -6,22 +6,14 @@ enable_testing()
 
 add_executable(testCmStringUtils
     testCmStringUtils.cpp
-    ${CMAKE_SOURCE_DIR}/Source/Utils/cmStringUtils.cxx
 )
-
-if(MSVC)
-    # Handles both debug and Release modes using the generator expression
-    set_property(TARGET testCmStringUtils PROPERTY
-             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif()
-
 
 target_include_directories(testCmStringUtils PUBLIC
     ${CMAKE_SOURCE_DIR}/Source/Utils
     ${GTEST_INCLUDE_DIRS}
 )
 
-target_link_libraries(testCmStringUtils ${GTEST_LIBRARIES})
+target_link_libraries(testCmStringUtils cmutils ${GTEST_LIBRARIES})
 
 set_target_properties(testCmStringUtils
     PROPERTIES

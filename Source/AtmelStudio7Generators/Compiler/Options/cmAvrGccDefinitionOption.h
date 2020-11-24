@@ -21,14 +21,14 @@ struct DefinitionOption : public CompilerOption
   DefinitionOption();
   DefinitionOption(const std::string& _token);
 
-  std::string defsymbol;    /**< Defined symbol */
-  std::string value;        /**< Payload of a given option, if any is given. e.g : "-mmcu=atmega328p" option gets the "-mmcu" token + "atmega328p" value */
+  std::string defsymbol;    /**< Defined symbol with the stripped -D                                                                                   */
+  std::string value;        /**< Payload of a given option, if any is given. e.g : "-DUSE_FEATURE=1" option gets the "-DUSE_FEATURE" token + "1" value */
 
 private:
   /**
-   * @brief provides some means to parse an incoming flag like "-mmcu=atmega328p" where the "=" is the pivot point
-   * If no right part is found, the whole raw_token is used as the regular token (e.g. "-mcall-prologues" does not
-   * have a right part, so the final token is the same as the original one : token = "-mcall-prologues")
+   * @brief provides some means to parse an incoming flag like "-DUSE_FEATURE=1" where the "=" is the pivot point
+   * If no right part is found, the whole raw_token is used as the regular token (e.g. "-DUNIT_TESTING" does not
+   * have a right part, so the final token is the same as the original one : token = "-DUNIT_TESTING")
    * @param raw_token : token parsed from command line input
   */
   void parse(const std::string& raw_token);

@@ -6,6 +6,7 @@
 #include "cmAvrGccDebugOption.h"
 #include "cmAvrGccOptimizationOption.h"
 #include "cmAvrGccMachineOption.h"
+#include "cmAvrGccDefinitionOption.h"
 
 #include "pugixml.hpp"
 namespace AvrToolchain {
@@ -115,9 +116,13 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   {
     compiler::CompilerOption * opt = parser.get_option("-mmcu");
     auto option = dynamic_cast<compiler::MachineOption*>(opt);
-    common.Device = "-mmcu=" + option->value; // TODO : add parsed value (e.g. atmega328p) relevant DFP
+    common.Device = "-mmcu=" + option->value + " -B \"%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\gcc\\dev\\atmega328p\""; // TODO : add parsed value (e.g. atmega328p) relevant DFP
     // TODO2 : e.g. -mmcu=atmega328p -B "%24(PackRepoDir)\atmel\ATmega_DFP\1.2.209\gcc\dev\atmega328p"
     // <InstalledLocation>AtmelStudio7\7.0\packs\atmel\ATmega_DFP\1.2.209\gcc\dev
+  }
+
+  if (common.Device.empty()) {
+    common.Device = "-mmcu=atmega328p -B \"%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\gcc\\dev\\atmega328p\"";
   }
   common.relax_branches = parser.has_option("-mrelax");
 
@@ -133,7 +138,8 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   {
     const auto& definitions = parser.get_options(compiler::CompilerOption::Type::Definition);
     for (const auto& def : definitions) {
-      tool->symbols.def_symbols.push_back(def->get_token());
+      auto* def_ptr = dynamic_cast<compiler::DefinitionOption*>(def.get());
+      tool->symbols.def_symbols.push_back(def_ptr->defsymbol);
     }
   }
 
@@ -195,8 +201,7 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   linker.optimizations.put_read_only_data_in_writable_data_section = parser.has_option("--rodata-writable");
 
   // TODO : resolve other linker flags that weren't consumed already
-
-  assembler.debugging.debug_level = parser.has_option("-Wa,-g") ? "-Wa,-g": "";
+  assembler.debugging.debug_level = parser.has_option("-Wa,-g") ? "Default (-Wa,-g)": "";
 }
 
 void xml_append_inline(pugi::xml_node& parent, const std::string& node_name, const std::string& value = "")

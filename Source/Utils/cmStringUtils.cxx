@@ -179,16 +179,21 @@ std::string replace(const std::string& input_str, const std::string& orig, const
   out.reserve(input_str.size() + locations.size() * (replacement.size() - orig.size()));
   local = 0;
   while (local < input_str.size()) {
-    if (local != locations.front()) {
-      out += input_str[local];
-      // next character
-      ++local;
+    if (!locations.empty()) {
+      if (local != locations.front()) {
+        out += input_str[local];
+        // next character
+        ++local;
+      } else {
+        out += replacement;
+        // Fast forward
+        local += orig.size();
+        // drop first element of the queue
+        locations.pop_front();
+      }
     } else {
-      out += replacement;
-      // Fast forward
-      local += orig.size();
-      // drop first element of the queue
-      locations.pop_front();
+      out += input_str[local];
+      ++local;
     }
   }
 
