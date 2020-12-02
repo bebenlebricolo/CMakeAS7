@@ -54,6 +54,11 @@ std::string CompilerOption::get_token() const
   return token;
 }
 
+bool CompilerOption::contains(const std::string& input_token) const
+{
+  return input_token == token;
+}
+
 std::string CompilerOption::get_description() const
 {
   return description;

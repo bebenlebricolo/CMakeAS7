@@ -23,9 +23,9 @@ bool CompilerOptionFactory::is_valid(const std::string& token)
   return (prefixes.find(token[1]) != std::string::npos);
 }
 
-std::shared_ptr<CompilerOption> CompilerOptionFactory::create(const std::string& token)
+std::vector<std::shared_ptr<CompilerOption>> CompilerOptionFactory::create(const std::string& token)
 {
-  std::shared_ptr<CompilerOption> out;
+  std::vector<std::shared_ptr<CompilerOption>> out;
   if (!is_valid(token)) {
     return out;
   }
@@ -33,19 +33,19 @@ std::shared_ptr<CompilerOption> CompilerOptionFactory::create(const std::string&
   switch (token[1]) {
     case 'O':
       if (OptimizationOption::can_create(token)) {
-        out = std::make_shared<OptimizationOption>(token);
+        out.push_back(std::make_shared<OptimizationOption>(token));
       }
       break;
 
     // Compile definitions
     case 'D':
-      out = std::make_shared<DefinitionOption>(token);
+      out.push_back(std::make_shared<DefinitionOption>(token));
       break;
 
     // Debug flags
     case 'g':
       if (DebugOption::can_create(token)) {
-        out = std::make_shared<DebugOption>(token);
+        out.push_back(std::make_shared<DebugOption>(token));
       }
       break;
 
@@ -53,17 +53,20 @@ std::shared_ptr<CompilerOption> CompilerOptionFactory::create(const std::string&
     // Warning flags or linker flags (this is resolved with the help of the next character)
     case 'W':
       if (token[2] == 'l') {
-        out = std::make_shared<LinkerOption>(token);
+        auto& split_tokens = LinkerOption::split_concatenated_options(token);
+        for (auto& elem : split_tokens) {
+          out.push_back(std::make_shared<LinkerOption>(elem));
+        }
       }
       else
       {
-        out = std::make_shared<WarningOption>(token);
+        out.push_back(std::make_shared<WarningOption>(token));
       }
       break;
 
     // Machine-dependent options
     case 'm':
-      out = std::make_shared<MachineOption>(token);
+      out.push_back(std::make_shared<MachineOption>(token));
       break;
 
     // Generic, normal flags
@@ -71,7 +74,7 @@ std::shared_ptr<CompilerOption> CompilerOptionFactory::create(const std::string&
     case 'w':
     case 'n':
     default:
-      out = std::make_shared<CompilerOption>(CompilerOption::Type::Generic, token);
+      out.push_back(std::make_shared<CompilerOption>(CompilerOption::Type::Generic, token));
       break;
 
   }
@@ -97,17 +100,18 @@ std::vector<cmAvrGccCompiler::ShrdOption> cmAvrGccCompiler::get_options(const Co
 
 CompilerOption * cmAvrGccCompiler::get_option(const std::string& token) const
 {
-  ShrdOption opt = options.get_option(token);
+  auto opt = options.get_option(token);
   return opt.get();
 }
-
 
 void cmAvrGccCompiler::parse_flags(const std::vector<std::string>& tokens)
 {
   for (const auto& token : tokens) {
     if (compiler::CompilerOptionFactory::is_valid(token)) {
-      ShrdOption flag = compiler::CompilerOptionFactory::create(token);
-      options.accept_flag(flag);
+      std::vector<ShrdOption> option_list = compiler::CompilerOptionFactory::create(token);
+      for (auto& option : option_list) {
+        this->options.accept_flag(option);
+      }
     }
   }
 }
@@ -170,7 +174,7 @@ bool cmAvrGccCompiler::Options::contains(const std::string& token, const Options
 {
   auto found_item = std::find_if(reference.begin(), reference.end(), [token](const ShrdOption& target)
   {
-    return token == target->get_token();
+    return target->contains(token);
   });
 
   return (found_item != reference.end());

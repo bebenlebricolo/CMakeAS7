@@ -9,6 +9,7 @@
 #include "cmAvrGccOptimizationOption.h"
 #include "cmAvrGccMachineOption.h"
 #include "cmAvrGccDebugOption.h"
+#include "cmAvrGccLinkerOption.h"
 #include "AvrGCC8Toolchain.h"
 #include "AS7ToolchainTranslator.h"
 
@@ -25,7 +26,7 @@ public:
     std::vector<std::string> cflags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
                                     "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
                                     "-fpendantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
-                                    "-nostdinc", "-fpack-struct", "-mshort-calls", "-mmcu=atmega328p" };
+                                    "-nostdinc", "-fpack-struct", "-mshort-calls", "-mmcu=atmega328p", "-Wl,--gc-sections,-relax" };
 
     std::vector<std::string> cppflags = { "-Wall", "-DTEST_C++=148", "-Wextra",
                                           "-fpedantic", "-O2", "-g1", "-g3", "-ffunction-sections",
@@ -50,7 +51,7 @@ static bool check_flag_uniqueness(const std::vector<std::string>& target, const 
   // Test that each input flag is unique inside selected flag vector from avr gcc compiler abstraction
   for (auto& flag : target) {
     auto nb_matches = std::count_if(reference.begin(), reference.end(), [flag](const std::shared_ptr<compiler::CompilerOption>& ref) {
-      return flag == ref->get_token();
+      return ref->contains(flag);
     });
 
     if (1 != nb_matches) {
@@ -109,6 +110,22 @@ TEST(AvrGccCompilerFlagsParsing, test_optimization_flags)
   }
 }
 
+TEST(AvrGccCompilerFlagsParsing, test_linker_concatenated_options)
+{
+  const std::string concatenated_options = { "-Wl,--gc-sections,--relax"};
+  compiler::cmAvrGccCompiler compiler_abstraction;
+  compiler_abstraction.parse_flags(concatenated_options);
+
+  ASSERT_TRUE(compiler_abstraction.has_option("Wl,--gc-sections"));
+  ASSERT_TRUE(compiler_abstraction.has_option("--gc-sections"));
+  ASSERT_TRUE(compiler_abstraction.has_option("Wl,--relax"));
+  ASSERT_TRUE(compiler_abstraction.has_option("--relax"));
+
+  auto& linker_options = compiler_abstraction.get_options(compiler::CompilerOption::Type::Linker);
+  ASSERT_EQ(linker_options.size(), 2);
+
+}
+
 TEST(AvrGccCompilerFlagsParsing, test_machine_options)
 {
 
@@ -151,9 +168,10 @@ TEST(AvrGccCompilerFlagsParsing, test_compiler_flags_factory_optimization_flags)
     EXPECT_TRUE(compiler::CompilerOptionFactory::is_valid(f));
   }
 
-  std::shared_ptr<compiler::CompilerOption> built_flag = compiler::CompilerOptionFactory::create("-O2");
-  ASSERT_NE(nullptr, built_flag);
-  ASSERT_EQ(built_flag->get_type(), compiler::CompilerOption::Type::Optimization);
+  std::vector<std::shared_ptr<compiler::CompilerOption>> built_flag = compiler::CompilerOptionFactory::create("-O2");
+  ASSERT_EQ(built_flag.size(), 1);
+  EXPECT_NE(nullptr, built_flag[0]);
+  ASSERT_EQ(built_flag[0]->get_type(), compiler::CompilerOption::Type::Optimization);
 }
 
 TEST(AvrGcc8Representation, test_AvrGcc8Representation_convert_from_compiler_abstraction)

@@ -74,6 +74,14 @@ struct CompilerOption
   std::string get_token() const;
 
   /**
+   * @brief Cheks if incoming token is recognized by current option.
+   *
+   * @param token : a token to be checked
+   * @return true (contains) or false (does not contain)
+   */
+  virtual bool contains(const std::string& token) const;
+
+  /**
    * @brief returns the underlying constant description
    * @return underlying description
   */
@@ -88,7 +96,7 @@ protected:
 // A simple namespace will do it, no need for any object instantiation
 namespace CompilerOptionFactory {
   bool is_valid(const std::string& token);
-  std::shared_ptr<CompilerOption> create(const std::string& token);
+  std::vector<std::shared_ptr<CompilerOption>> create(const std::string& token);
 };
 
 }
