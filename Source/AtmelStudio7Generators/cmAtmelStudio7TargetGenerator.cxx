@@ -204,6 +204,24 @@ std::vector<std::string> cmAtmelStudio7TargetGenerator::ConvertStringRange(const
   return out;
 }
 
+static std::string encode_lang_std(const std::string& std_version, const std::string& lang, bool use_gnu_standard = false)
+{
+  std::string out = "-std=";
+
+  if (use_gnu_standard) {
+    out += "gnu";
+  } else {
+    out += "c";
+  }
+
+  if (lang == "CXX") {
+    out += "++";
+  }
+
+  out += std_version;
+  return out;
+}
+
 std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGenerator::RetrieveCmakeFlags(const std::vector<std::string>& languages,
                                                                                                             const std::string& upConfig)
 {
@@ -214,9 +232,13 @@ std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGe
     std::vector<std::string> all_flags;
     std::string flag_variable_name = "CMAKE_" + lang + "_FLAGS";
     std::string flag_variable_config_name = flag_variable_name + "_" + upConfig;
+    std::string lang_standard_varname = "CMAKE_" + lang + "_STANDARD";
+
 
     cmProp lang_flags_base = this->Makefile->GetDefinition(flag_variable_name);
     cmProp lang_flags_config = this->Makefile->GetDefinition(flag_variable_config_name);
+    cmProp lang_standard_def = this->Makefile->GetDefinition(lang_standard_varname);
+
     auto compile_definitions = ConvertStringRange(this->Makefile->GetCompileDefinitionsEntries());
     auto compile_options = ConvertStringRange(this->Makefile->GetCompileOptionsEntries());
 
@@ -229,6 +251,10 @@ std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGe
 
     if (lang_flags_config != nullptr) {
       config_flags = cmutils::strings::split(*lang_flags_config);
+    }
+
+    if (lang_standard_def != nullptr) {
+        all_flags.push_back(encode_lang_std(*lang_standard_def, lang, false));
     }
 
     // Merge all flags within one big vector

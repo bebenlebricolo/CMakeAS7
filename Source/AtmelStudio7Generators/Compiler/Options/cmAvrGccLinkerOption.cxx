@@ -23,9 +23,9 @@ std::vector<std::string> LinkerOption::split_concatenated_options(const std::str
   // remove first element as it contains only "Wl"
   out.erase(out.begin());
 
-  // Add back "Wl," prefix to each element and return the vector
+  // Add back "-Wl," prefix to each element and return the vector
   for (auto& elem : out) {
-    elem = "Wl," + elem;
+    elem = "-Wl," + elem;
   }
   return out;
 }
