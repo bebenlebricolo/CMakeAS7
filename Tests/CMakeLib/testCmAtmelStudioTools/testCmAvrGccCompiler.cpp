@@ -25,12 +25,12 @@ public:
 
     std::vector<std::string> cflags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
                                     "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
-                                    "-fpendantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
+                                    "-fpedantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
                                     "-nostdinc", "-fpack-struct", "-mshort-calls", "-mmcu=atmega328p", "-Wl,--gc-sections,-relax" };
 
     std::vector<std::string> cppflags = { "-Wall", "-DTEST_C++=148", "-Wextra",
                                           "-fpedantic", "-O2", "-g1", "-g3", "-ffunction-sections",
-                                          "-fpendantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
+                                          "-fpedantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
                                           "-nostdinc", "-fpack-struct", "-mshort-calls" , "-flto", "-fno-exceptions", "-fno-rtti", "-Wa,-g"};
 
     toolchain_translator.parse(cflags, "C");
@@ -178,8 +178,8 @@ TEST(AvrGcc8Representation, test_AvrGcc8Representation_convert_from_compiler_abs
 {
   const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
                                            "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
-                                           "-fpendantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
-                                           "-nostdinc", "-fpack-struct", "-mshort-calls" };
+                                           "-fpedantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
+                                           "-nostdinc", "-fpack-struct", "-mshort-calls", "-std=c11" };
   for (auto& f : flags) {
     EXPECT_TRUE(compiler::CompilerOptionFactory::is_valid(f));
   }
@@ -197,6 +197,7 @@ TEST(AvrGcc8Representation, test_AvrGcc8Representation_convert_from_compiler_abs
   ASSERT_TRUE(toolchain.avrgcc.optimizations.pack_structure_members);
   ASSERT_FALSE(toolchain.avrgcc.optimizations.prepare_data_for_garbage_collection);
   ASSERT_TRUE(toolchain.avrgcc.optimizations.prepare_function_for_garbage_collection);
+  ASSERT_EQ(toolchain.avrgcc.miscellaneous.other_flags, "-std=c11 -fpedantic -fpedantic-errors");
 }
 
 TEST_F(FlagParsingFixture, test_generate_xml)

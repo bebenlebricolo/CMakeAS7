@@ -9,6 +9,7 @@
 #include "cmAvrGccDebugOption.h"
 #include "cmAvrGccMachineOption.h"
 #include "cmAvrGccDefinitionOption.h"
+#include "cmAvrGccLanguageStandardOption.h"
 
 namespace compiler {
 
@@ -18,7 +19,7 @@ bool CompilerOptionFactory::is_valid(const std::string& token)
     return false;
   }
 
-  const std::string prefixes = "WfODgwEnm";
+  const std::string prefixes = "WfODgwEnms";
   // Check if second character of token is part of the above characters list
   return (prefixes.find(token[1]) != std::string::npos);
 }
@@ -69,6 +70,14 @@ std::vector<std::shared_ptr<CompilerOption>> CompilerOptionFactory::create(const
       out.push_back(std::make_shared<MachineOption>(token));
       break;
 
+    // Language standard
+    case 's':
+      if (token.find("-std") != std::string::npos)
+      {
+        out.push_back(std::make_shared<LanguageStandardOption>(token));
+      }
+      break;
+
     // Generic, normal flags
     case 'f':
     case 'w':
@@ -100,8 +109,18 @@ std::vector<cmAvrGccCompiler::ShrdOption> cmAvrGccCompiler::get_options(const Co
 
 CompilerOption * cmAvrGccCompiler::get_option(const std::string& token) const
 {
-  auto opt = options.get_option(token);
-  return opt.get();
+  return options.get_option(token).get();
+}
+
+std::vector<std::string> cmAvrGccCompiler::get_all_options(const CompilerOption::Type type) const
+{
+  OptionsVec options = get_options(type);
+  std::vector<std::string> out;
+  for (auto& opt : options)
+  {
+    out.push_back(opt->get_token());
+  }
+  return out;
 }
 
 void cmAvrGccCompiler::parse_flags(const std::vector<std::string>& tokens)
@@ -122,7 +141,6 @@ void cmAvrGccCompiler::Options::push_flag(const ShrdOption& flag, OptionsVec& ve
     vec.push_back(flag);
   }
 }
-
 
 void cmAvrGccCompiler::Options::accept_flag(const ShrdOption& flag)
 {
@@ -176,6 +194,7 @@ cmAvrGccCompiler::Options::Options()
   storage[CompilerOption::Type::Linker] = {};
   storage[CompilerOption::Type::Optimization] = {};
   storage[CompilerOption::Type::Warning] = {};
+  storage[CompilerOption::Type::LanguageStandard] = {};
 }
 
 bool cmAvrGccCompiler::Options::contains(const std::string& token) const

@@ -22,6 +22,14 @@ public:
     CompilerOption * get_option(const std::string& token) const;
 
     /**
+     * @brief Get all supported options for a given kind of option.
+     *
+     * @param type  : the kind of option you want to know about
+     * @return  a list of supported options for that kind of option
+     */
+    std::vector<std::string> get_all_options(const CompilerOption::Type type) const;
+
+    /**
      * @brief returns a list of raw tokens contained within a collection of Options, minus the options that Atmel Studio supports.
      * This is used to compute the "Other flags" section to be filled within AtmelStudio7 project files
      *

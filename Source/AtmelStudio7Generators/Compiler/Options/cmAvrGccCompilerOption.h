@@ -30,7 +30,8 @@ struct CompilerOption
     Warning,
     Linker,
     Definition,
-    Machine
+    Machine,
+    LanguageStandard
   };
 
   CompilerOption(const Type _type);

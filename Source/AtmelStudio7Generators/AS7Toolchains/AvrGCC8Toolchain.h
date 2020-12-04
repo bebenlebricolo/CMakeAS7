@@ -43,6 +43,7 @@ struct Common : public BasicRepresentation
 struct AS7AvrGcc8_Base : public BasicRepresentation
 {
   AS7AvrGcc8_Base() = default;
+  AS7AvrGcc8_Base(const std::string& lang_standard);
   AS7AvrGcc8_Base(const AS7AvrGcc8_Base& other);
 
   void copy_from(const AS7AvrGcc8_Base& other);
@@ -172,8 +173,8 @@ struct AS7AvrGCC8Assembler : public BasicRepresentation
 struct AS7AvrGCC8
 {
   Common common;
-  AS7AvrGcc8_Base avrgcc;
-  AS7AvrGcc8_Base avrgcccpp;
+  AS7AvrGcc8_Base avrgcc {"-std=c89"};
+  AS7AvrGcc8_Base avrgcccpp {"-std=c++98"};
   AS7AvrGCC8Linker linker;
   AS7AvrGCC8Assembler assembler;
   std::string archiver_flags = "-r";
@@ -187,6 +188,7 @@ private:
   std::string get_unsupported_options(const compiler::cmAvrGccCompiler& parser,
                                       const compiler::CompilerOption::Type type,
                                       const std::vector<std::string>& options) const;
+  std::vector<std::string> get_all_supported_options() const;
 };
 
 }

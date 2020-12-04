@@ -5,87 +5,94 @@
 #include "cmAvrGccCompiler.h"
 #include "cmAvrGccCompilerOption.h"
 #include "cmAvrGccDebugOption.h"
-#include "cmAvrGccOptimizationOption.h"
-#include "cmAvrGccMachineOption.h"
 #include "cmAvrGccDefinitionOption.h"
+#include "cmAvrGccLanguageStandardOption.h"
+#include "cmAvrGccMachineOption.h"
+#include "cmAvrGccOptimizationOption.h"
+#include "cmStringUtils.h"
 
 #include "pugixml.hpp"
-#include "cmStringUtils.h"
 
 namespace AvrToolchain {
 
 void AS7AvrGCC8::clear()
 {
-    common.clear();
-    avrgcc.clear();
-    avrgcccpp.clear();
-    linker.clear();
-    assembler.clear();
-    archiver_flags.clear();
+  common.clear();
+  avrgcc.clear();
+  avrgcccpp.clear();
+  linker.clear();
+  assembler.clear();
+  archiver_flags.clear();
 }
 
 void AS7AvrGcc8_Base::clear()
 {
-    general.subroutine_function_prologue = false;
-    general.change_stack_pointer_without_disabling_interrupt = false;
-    general.change_default_bitfield_unsigned = true;
-    general.change_default_chartype_unsigned = true;
+  general.subroutine_function_prologue = false;
+  general.change_stack_pointer_without_disabling_interrupt = false;
+  general.change_default_bitfield_unsigned = true;
+  general.change_default_chartype_unsigned = true;
 
-    preprocessor.do_not_search_system_directories = false;
-    preprocessor.preprocess_only = false;
+  preprocessor.do_not_search_system_directories = false;
+  preprocessor.preprocess_only = false;
 
-    symbols.def_symbols.clear();
-    directories.include_paths.clear();
+  symbols.def_symbols.clear();
+  directories.include_paths.clear();
 
-    optimizations.level.clear();
-    optimizations.other_flags.clear();
-    optimizations.prepare_data_for_garbage_collection = true;
-    optimizations.prepare_function_for_garbage_collection = true;
-    optimizations.pack_structure_members = true;
-    optimizations.allocate_bytes_needed_for_enum = true;
-    optimizations.use_short_calls = false;
-    optimizations.debug_level.clear();
-    optimizations.other_debugging_flags.clear();
+  optimizations.level.clear();
+  optimizations.other_flags.clear();
+  optimizations.prepare_data_for_garbage_collection = true;
+  optimizations.prepare_function_for_garbage_collection = true;
+  optimizations.pack_structure_members = true;
+  optimizations.allocate_bytes_needed_for_enum = true;
+  optimizations.use_short_calls = false;
+  optimizations.debug_level.clear();
+  optimizations.other_debugging_flags.clear();
 
-    warnings.all_warnings = true;
-    warnings.extra_warnings = true;
-    warnings.undefined = false;
-    warnings.warnings_as_error = false;
-    warnings.check_syntax_only = false;
-    warnings.pedantic = false;
-    warnings.pedantic_warnings_as_errors = false;
-    warnings.inhibit_all_warnings = false;
+  warnings.all_warnings = true;
+  warnings.extra_warnings = true;
+  warnings.undefined = false;
+  warnings.warnings_as_error = false;
+  warnings.check_syntax_only = false;
+  warnings.pedantic = false;
+  warnings.pedantic_warnings_as_errors = false;
+  warnings.inhibit_all_warnings = false;
 
-    miscellaneous.other_flags.clear();
-    miscellaneous.verbose = false;
-    miscellaneous.support_ansi_programs = false;
-    miscellaneous.do_not_delete_temporary_files = false;
+  miscellaneous.other_flags.clear();
+  miscellaneous.verbose = false;
+  miscellaneous.support_ansi_programs = false;
+  miscellaneous.do_not_delete_temporary_files = false;
 }
 
 void AS7AvrGCC8Linker::clear()
 {
-    general.do_not_use_default_libraries = false;
-    general.do_not_use_standard_start_file = false;
-    general.no_startup_or_default_libs = false;
-    general.omit_all_symbol_information = false;
-    general.no_shared_libraries = true;
-    general.generate_map_file = true;
-    general.use_vprintf_library = false;
+  general.do_not_use_default_libraries = false;
+  general.do_not_use_standard_start_file = false;
+  general.no_startup_or_default_libs = false;
+  general.omit_all_symbol_information = false;
+  general.no_shared_libraries = true;
+  general.generate_map_file = true;
+  general.use_vprintf_library = false;
 
-    libraries.libraries.clear();
-    libraries.search_path.clear();
+  libraries.libraries.clear();
+  libraries.search_path.clear();
 
-    optimizations.garbage_collect_unused_sections = true;
-    optimizations.put_read_only_data_in_writable_data_section = false;
+  optimizations.garbage_collect_unused_sections = true;
+  optimizations.put_read_only_data_in_writable_data_section = false;
 
-    miscellaneous.linker_flags.clear();
+  miscellaneous.linker_flags.clear();
 }
 
 void AS7AvrGCC8Assembler::clear()
 {
-    general.include_path.clear();
-    general.anounce_version = false;
-    debugging.debug_level.clear();
+  general.include_path.clear();
+  general.anounce_version = false;
+  debugging.debug_level.clear();
+}
+
+AS7AvrGcc8_Base::AS7AvrGcc8_Base(const std::string& lang_standard)
+{
+  // Make room for subsequent flags
+  miscellaneous.other_flags = lang_standard + " ";
 }
 
 AS7AvrGcc8_Base::AS7AvrGcc8_Base(const AS7AvrGcc8_Base& other)
@@ -110,14 +117,28 @@ std::string AS7AvrGCC8::get_unsupported_options(const compiler::cmAvrGccCompiler
 {
   std::string out;
   std::vector<std::string> unsupported_optim = parser.get_unsupported_options(type, options);
-  for (uint8_t i = 0; i < unsupported_optim.size(); i++)
-  {
+  for (uint8_t i = 0; i < unsupported_optim.size(); i++) {
     out += unsupported_optim[i];
-    if (i != (unsupported_optim.size() - 1))
-    {
+    if (i != (unsupported_optim.size() - 1)) {
       out += " ";
     }
   }
+  return out;
+}
+
+std::vector<std::string> AS7AvrGCC8::get_all_supported_options() const
+{
+  std::vector<std::string> out;
+  std::vector<std::string>& common_vec = common.get_supported_options();
+  std::vector<std::string>& avrgcc_vec = avrgcc.get_supported_options();
+  std::vector<std::string>& linker_vec = linker.get_supported_options();
+  std::vector<std::string>& assem_vec = assembler.get_supported_options();
+
+  out.insert(out.end(), common_vec.begin(), common_vec.end());
+  out.insert(out.end(), avrgcc_vec.begin(), avrgcc_vec.end());
+  out.insert(out.end(), linker_vec.begin(), linker_vec.end());
+  out.insert(out.end(), assem_vec.begin(), assem_vec.end());
+
   return out;
 }
 
@@ -132,9 +153,8 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   }
 
   // This option is a bit special and requires dedicated handling
-  if(parser.has_option("-mmcu"))
-  {
-    compiler::CompilerOption * opt = parser.get_option("-mmcu");
+  if (parser.has_option("-mmcu")) {
+    compiler::CompilerOption* opt = parser.get_option("-mmcu");
     auto option = dynamic_cast<compiler::MachineOption*>(opt);
     common.Device = "-mmcu=" + option->value + " -B \"%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\gcc\\dev\\atmega328p\""; // TODO : add parsed value (e.g. atmega328p) relevant DFP
     // TODO2 : e.g. -mmcu=atmega328p -B "%24(PackRepoDir)\atmel\ATmega_DFP\1.2.209\gcc\dev\atmega328p"
@@ -217,12 +237,19 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   tool->miscellaneous.do_not_delete_temporary_files = parser.has_option("-save-temps");
   tool->miscellaneous.verbose = parser.has_option("-v");
   tool->miscellaneous.support_ansi_programs = parser.has_option("-ansi");
-  // TODO : resolve flags that weren't parsed already and add them to miscellaneous flags
 
   // List "other" miscellaneous flags (a.k.a unsupported flags)
-  tool->miscellaneous.other_flags = get_unsupported_options(parser,
-                                                            compiler::CompilerOption::Type::Generic,
-                                                            tool->get_supported_misc_options());
+  compiler::cmAvrGccCompiler::OptionsVec language_standards = parser.get_options(compiler::CompilerOption::Type::LanguageStandard);
+  for (auto& opt : language_standards) {
+    compiler::LanguageStandardOption* lstd = static_cast<compiler::LanguageStandardOption*>(opt.get());
+    if (lstd->lang.to_string() == lang) {
+      tool->miscellaneous.other_flags = lstd->get_token() + " ";
+    }
+  }
+
+  tool->miscellaneous.other_flags += get_unsupported_options(parser,
+                                                             compiler::CompilerOption::Type::Generic,
+                                                             get_all_supported_options());
 
   linker.general.do_not_use_default_libraries = parser.has_option("-nostartfile");
   linker.general.do_not_use_default_libraries = parser.has_option("-nodefaultlibs");
@@ -240,7 +267,7 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
                                                               compiler::CompilerOption::Type::Linker,
                                                               linker.get_supported_options());
 
-  assembler.debugging.debug_level = parser.has_option("-Wa,-g") ? "Default (-Wa,-g)": "";
+  assembler.debugging.debug_level = parser.has_option("-Wa,-g") ? "Default (-Wa,-g)" : "";
 }
 
 void xml_append_inline(pugi::xml_node& parent, const std::string& node_name, const std::string& value = "")
@@ -263,8 +290,7 @@ void AS7AvrGCC8::generate_xml_per_language(pugi::xml_node& parent, const std::st
   xml_append_inline(parent, toolname + ".compiler.preprocessor.PreprocessOnly", target.preprocessor.preprocess_only ? "True" : "False");
 
   // Symbols definition
-  if (!target.symbols.def_symbols.empty())
-  {
+  if (!target.symbols.def_symbols.empty()) {
     pugi::xml_node defsymbols_node = parent.append_child((toolname + ".compiler.symbols.DefSymbols").c_str());
     pugi::xml_node list_values_node = defsymbols_node.append_child("ListValues");
     for (const auto& symbol : target.symbols.def_symbols) {
@@ -273,8 +299,7 @@ void AS7AvrGCC8::generate_xml_per_language(pugi::xml_node& parent, const std::st
   }
 
   // Include directories definition
-  if (!target.directories.include_paths.empty())
-  {
+  if (!target.directories.include_paths.empty()) {
     pugi::xml_node include_path_node = parent.append_child((toolname + ".compiler.directories.IncludePaths").c_str());
     pugi::xml_node list_values_node = include_path_node.append_child("ListValues");
     for (const auto& include : target.directories.include_paths) {
@@ -284,9 +309,9 @@ void AS7AvrGCC8::generate_xml_per_language(pugi::xml_node& parent, const std::st
 
   // Optimizations and debug flags
   xml_append_inline(parent, toolname + ".compiler.optimization.level", target.optimizations.level);
-  if (!target.optimizations.other_flags.empty())
-  {
-    xml_append_inline(parent, toolname + ".compiler.optimization.OtherFlags", target.optimizations.other_flags);
+  if (!target.optimizations.other_flags.empty()) {
+    std::string other_flags = cmutils::strings::trim(target.optimizations.other_flags, ' ', cmutils::strings::TransformLocation::Both);
+    xml_append_inline(parent, toolname + ".compiler.optimization.OtherFlags", other_flags);
   }
 
   xml_append_inline(parent, toolname + ".compiler.optimization.PrepareFunctionsForGarbageCollection", target.optimizations.prepare_function_for_garbage_collection ? "True" : "False");
@@ -296,17 +321,16 @@ void AS7AvrGCC8::generate_xml_per_language(pugi::xml_node& parent, const std::st
   xml_append_inline(parent, toolname + ".compiler.optimization.UseShortCalls", target.optimizations.use_short_calls ? "True" : "False");
   xml_append_inline(parent, toolname + ".compiler.optimization.DebugLevel", target.optimizations.debug_level);
 
-  if (!target.optimizations.other_debugging_flags.empty())
-  {
-    xml_append_inline(parent, toolname + ".compiler.optimization.OtherDebuggingFlags", target.optimizations.other_debugging_flags);
+  if (!target.optimizations.other_debugging_flags.empty()) {
+    std::string other_flags = cmutils::strings::trim(target.optimizations.other_debugging_flags, ' ', cmutils::strings::TransformLocation::Both);
+    xml_append_inline(parent, toolname + ".compiler.optimization.OtherDebuggingFlags", other_flags);
   }
 
   // Warnings
   xml_append_inline(parent, toolname + ".compiler.warnings.AllWarnings", target.warnings.all_warnings ? "True" : "False");
 
   // Note : only avrgcc supports -Wextra in AtmelStudio7 ...
-  if (toolname == "avrgcc")
-  {
+  if (toolname == "avrgcc") {
     xml_append_inline(parent, toolname + ".compiler.warnings.ExtraWarnings", target.warnings.extra_warnings ? "True" : "False");
   }
   xml_append_inline(parent, toolname + ".compiler.warnings.Undefined", target.warnings.undefined ? "True" : "False");
@@ -317,9 +341,9 @@ void AS7AvrGCC8::generate_xml_per_language(pugi::xml_node& parent, const std::st
   xml_append_inline(parent, toolname + ".compiler.warnings.InhibitAllWarnings", target.warnings.inhibit_all_warnings ? "True" : "False");
 
   // Miscellaneous flags
-  if (!target.miscellaneous.other_flags.empty())
-  {
-    xml_append_inline(parent, toolname + ".compiler.miscellaneous.OtherFlags", target.miscellaneous.other_flags);
+  if (!target.miscellaneous.other_flags.empty()) {
+    std::string other_flags = cmutils::strings::trim(target.miscellaneous.other_flags, ' ', cmutils::strings::TransformLocation::Both);
+    xml_append_inline(parent, toolname + ".compiler.miscellaneous.OtherFlags", other_flags);
   }
 
   xml_append_inline(parent, toolname + ".compiler.miscellaneous.Verbose", target.miscellaneous.verbose ? "True" : "False");
@@ -360,8 +384,7 @@ void AS7AvrGCC8::generate_xml(pugi::xml_node& parent, const std::string& lang) c
   xml_append_inline(parent, linker_ref + ".linker.general.UseVprintfLibrary", linker.general.use_vprintf_library ? "True" : "False");
 
   // Link libraries
-  if (!linker.libraries.libraries.empty())
-  {
+  if (!linker.libraries.libraries.empty()) {
     pugi::xml_node link_libraries_node = parent.append_child((linker_ref + ".linker.libraries.Libraries").c_str());
     pugi::xml_node list_values_node = link_libraries_node.append_child("ListValues");
     for (const auto& lib : linker.libraries.libraries) {
@@ -370,8 +393,7 @@ void AS7AvrGCC8::generate_xml(pugi::xml_node& parent, const std::string& lang) c
   }
 
   // Link libraries search path
-  if(!linker.libraries.search_path.empty())
-  {
+  if (!linker.libraries.search_path.empty()) {
     pugi::xml_node link_libraries_search_path_node = parent.append_child((linker_ref + ".linker.libraries.LibrarySearchPaths").c_str());
     pugi::xml_node list_values_node = link_libraries_search_path_node.append_child("ListValues");
     for (const auto& lib : linker.libraries.search_path) {
@@ -382,15 +404,14 @@ void AS7AvrGCC8::generate_xml(pugi::xml_node& parent, const std::string& lang) c
   xml_append_inline(parent, linker_ref + ".linker.optimization.GarbageCollectUnusedSections", linker.optimizations.garbage_collect_unused_sections ? "True" : "False");
   xml_append_inline(parent, linker_ref + ".linker.optimization.PutReadOnlyDataInWritableDataSection", linker.optimizations.put_read_only_data_in_writable_data_section ? "True" : "False");
 
-  if (!linker.miscellaneous.linker_flags.empty())
-  {
-    xml_append_inline(parent, linker_ref + ".linker.miscellaneous.LinkerFlags", linker.miscellaneous.linker_flags);
+  if (!linker.miscellaneous.linker_flags.empty()) {
+    std::string other_flags = cmutils::strings::trim(linker.miscellaneous.linker_flags, ' ', cmutils::strings::TransformLocation::Both);
+    xml_append_inline(parent, linker_ref + ".linker.miscellaneous.LinkerFlags", other_flags);
   }
 
   ////////////////////////////// Assembler //////////////////////////////
   // Assembler include path
-  if (!assembler.general.include_path.empty())
-  {
+  if (!assembler.general.include_path.empty()) {
     pugi::xml_node assembler_include_path_node = parent.append_child((linker_ref + ".assembler.general.IncludePaths").c_str());
     pugi::xml_node list_values_node = assembler_include_path_node.append_child("ListValues");
     for (const auto& include : assembler.general.include_path) {
@@ -399,14 +420,12 @@ void AS7AvrGCC8::generate_xml(pugi::xml_node& parent, const std::string& lang) c
   }
   xml_append_inline(parent, linker_ref + ".assembler.general.AnounceVersion", assembler.general.anounce_version ? " True" : "False");
 
-  if (!assembler.debugging.debug_level.empty())
-  {
+  if (!assembler.debugging.debug_level.empty()) {
     xml_append_inline(parent, linker_ref + ".assembler.debugging.DebugLevel", assembler.debugging.debug_level);
   }
 
   // Archiver parameters
-  if (archiver_flags != "-r")
-  {
+  if (archiver_flags != "-r") {
     xml_append_inline(parent, linker_ref + ".archiver.general.ArchiverFlags", archiver_flags);
   }
 }
@@ -452,8 +471,7 @@ std::vector<std::string> AS7AvrGcc8_Base::get_supported_options() const
 
 std::vector<std::string> AS7AvrGcc8_Base::get_supported_general_options() const
 {
-  const std::vector<std::string> out =
-  {
+  const std::vector<std::string> out = {
     "-mcall-prologues",
     "-mno-interrupts",
     "-funsigned-char",
@@ -464,8 +482,7 @@ std::vector<std::string> AS7AvrGcc8_Base::get_supported_general_options() const
 
 std::vector<std::string> AS7AvrGcc8_Base::get_supported_optimizations_options() const
 {
-  const std::vector<std::string> out =
-  {
+  const std::vector<std::string> out = {
     "-O0",
     "-O",
     "-O1",
@@ -485,8 +502,7 @@ std::vector<std::string> AS7AvrGcc8_Base::get_supported_optimizations_options() 
 
 std::vector<std::string> AS7AvrGcc8_Base::get_supported_debug_options() const
 {
-  const std::vector<std::string> out =
-  {
+  const std::vector<std::string> out = {
     "-g0",
     "-g",
     "-g1",
@@ -500,8 +516,7 @@ std::vector<std::string> AS7AvrGcc8_Base::get_supported_debug_options() const
 
 std::vector<std::string> AS7AvrGcc8_Base::get_supported_warning_options() const
 {
-  const std::vector<std::string> out =
-  {
+  const std::vector<std::string> out = {
     "-Wall",
     "-Wextra",
     "-Wundef",
@@ -516,8 +531,7 @@ std::vector<std::string> AS7AvrGcc8_Base::get_supported_warning_options() const
 
 std::vector<std::string> AS7AvrGcc8_Base::get_supported_misc_options() const
 {
-  const std::vector<std::string> out =
-  {
+  const std::vector<std::string> out = {
     "-v",
     "-ansi",
     "-save-temps"
@@ -527,8 +541,7 @@ std::vector<std::string> AS7AvrGcc8_Base::get_supported_misc_options() const
 
 std::vector<std::string> AS7AvrGcc8_Base::get_supported_preprocessor_options() const
 {
-  const std::vector<std::string> out =
-  {
+  const std::vector<std::string> out = {
     "-nostdinc",
     "-E"
   };
@@ -547,8 +560,7 @@ std::vector<std::string> AS7AvrGCC8Linker::get_supported_options() const
 
 std::vector<std::string> AS7AvrGCC8Linker::get_supported_optimizations_options() const
 {
-  const std::vector<std::string> out =
-  {
+  const std::vector<std::string> out = {
     "-Wl,--gc-sections",
     "-E"
   };
@@ -557,23 +569,21 @@ std::vector<std::string> AS7AvrGCC8Linker::get_supported_optimizations_options()
 
 std::vector<std::string> AS7AvrGCC8Linker::get_supported_general_options() const
 {
-  const std::vector<std::string> out =
-  {
+  const std::vector<std::string> out = {
     "-nostartfile",
     "-nodefaultlibs",
     "-nostdlib",
     "-Wl,s",
     "-Wl,-static",
     "-Wl,-Map",
-    "-Wl,-u,vprintf",   // FIXME : We will have issues with this one as this requires a special parsing, simple "split" function won't do!
+    "-Wl,-u,vprintf", // FIXME : We will have issues with this one as this requires a special parsing, simple "split" function won't do!
   };
   return out;
 }
 
 std::vector<std::string> AS7AvrGCC8Assembler::get_supported_options() const
 {
-  const std::vector<std::string> out =
-  {
+  const std::vector<std::string> out = {
     "-Wa,g",
   };
   return out;
