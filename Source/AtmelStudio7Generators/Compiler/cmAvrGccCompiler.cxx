@@ -132,6 +132,25 @@ void cmAvrGccCompiler::Options::accept_flag(const ShrdOption& flag)
   push_flag(flag, storage[flag->get_type()]);
 }
 
+std::vector<std::string> cmAvrGccCompiler::get_unsupported_options(const CompilerOption::Type type, const std::vector<std::string>& as7_options) const
+{
+  OptionsVec typed_options = get_options(type);
+  std::vector<std::string> all_tokens;
+  for (auto& option : typed_options) {
+    all_tokens.push_back(option->get_token());
+  }
+
+  // Selectively copy only tokens which are not supported by atmel studio 7
+  std::vector<std::string> out;
+  for (auto& token : all_tokens) {
+    if (std::find(as7_options.begin(), as7_options.end(), token) == as7_options.end()) {
+      out.push_back(token);
+    }
+  }
+
+  return out;
+}
+
 bool cmAvrGccCompiler::has_option(const std::string& option) const
 {
   return options.contains(option);

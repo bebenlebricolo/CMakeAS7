@@ -3,12 +3,15 @@
 #include <algorithm>
 
 #include "cmAvrGccCompiler.h"
+#include "cmAvrGccCompilerOption.h"
 #include "cmAvrGccDebugOption.h"
 #include "cmAvrGccOptimizationOption.h"
 #include "cmAvrGccMachineOption.h"
 #include "cmAvrGccDefinitionOption.h"
 
 #include "pugixml.hpp"
+#include "cmStringUtils.h"
+
 namespace AvrToolchain {
 
 void AS7AvrGCC8::clear()
@@ -101,6 +104,23 @@ void AS7AvrGcc8_Base::copy_from(const AS7AvrGcc8_Base& other)
   miscellaneous = other.miscellaneous;
 }
 
+std::string AS7AvrGCC8::get_unsupported_options(const compiler::cmAvrGccCompiler& parser,
+                                                const compiler::CompilerOption::Type type,
+                                                const std::vector<std::string>& options) const
+{
+  std::string out;
+  std::vector<std::string> unsupported_optim = parser.get_unsupported_options(type, options);
+  for (uint8_t i = 0; i < unsupported_optim.size(); i++)
+  {
+    out += unsupported_optim[i];
+    if (i != (unsupported_optim.size() - 1))
+    {
+      out += " ";
+    }
+  }
+  return out;
+}
+
 void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const std::string& lang)
 {
   //parser.get_options(compiler::CompilerOption::Type::Optimization)
@@ -162,6 +182,11 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   tool->optimizations.allocate_bytes_needed_for_enum = parser.has_option("-fshort-enums");
   tool->optimizations.use_short_calls = parser.has_option("-mshort-calls");
 
+  // List "other" optimizations flags (a.k.a unsupported flags)
+  tool->optimizations.other_flags = get_unsupported_options(parser,
+                                                            compiler::CompilerOption::Type::Optimization,
+                                                            tool->get_supported_optimizations_options());
+
   // Extract debug option
   {
     const auto& debug_opts = parser.get_options(compiler::CompilerOption::Type::Debug);
@@ -174,6 +199,11 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
       tool->optimizations.debug_level = (*max_opt)->generate(true);
     }
   }
+
+  // List "other" debugging flags (a.k.a unsupported flags)
+  tool->optimizations.other_debugging_flags = get_unsupported_options(parser,
+                                                                      compiler::CompilerOption::Type::Debug,
+                                                                      tool->get_supported_debug_options());
 
   tool->warnings.all_warnings = parser.has_option("-Wall");
   tool->warnings.extra_warnings = parser.has_option("-Wextra");
@@ -189,6 +219,11 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   tool->miscellaneous.support_ansi_programs = parser.has_option("-ansi");
   // TODO : resolve flags that weren't parsed already and add them to miscellaneous flags
 
+  // List "other" miscellaneous flags (a.k.a unsupported flags)
+  tool->miscellaneous.other_flags = get_unsupported_options(parser,
+                                                            compiler::CompilerOption::Type::Generic,
+                                                            tool->get_supported_misc_options());
+
   linker.general.do_not_use_default_libraries = parser.has_option("-nostartfile");
   linker.general.do_not_use_default_libraries = parser.has_option("-nodefaultlibs");
   linker.general.no_startup_or_default_libs = parser.has_option("-nostdlib");
@@ -200,7 +235,11 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   linker.optimizations.garbage_collect_unused_sections = parser.has_option("-Wl,--gc-sections");
   linker.optimizations.put_read_only_data_in_writable_data_section = parser.has_option("--rodata-writable");
 
-  // TODO : resolve other linker flags that weren't consumed already
+  // List "other" miscellaneous flags (a.k.a unsupported flags)
+  linker.miscellaneous.linker_flags = get_unsupported_options(parser,
+                                                              compiler::CompilerOption::Type::Linker,
+                                                              linker.get_supported_options());
+
   assembler.debugging.debug_level = parser.has_option("-Wa,-g") ? "Default (-Wa,-g)": "";
 }
 
@@ -382,6 +421,162 @@ void Common::clear()
   outputfiles.eep = false;
   outputfiles.srec = false;
   outputfiles.usersignatures = false;
+}
+
+std::vector<std::string> Common::get_supported_options() const
+{
+  const std::vector<std::string> out = {
+    "-mrelax"
+  };
+  return out;
+}
+
+std::vector<std::string> AS7AvrGcc8_Base::get_supported_options() const
+{
+  std::vector<std::string> out;
+  std::vector<std::string> general_opts = get_supported_general_options();
+  std::vector<std::string> optimizations_opts = get_supported_optimizations_options();
+  std::vector<std::string> misc_opts = get_supported_misc_options();
+  std::vector<std::string> warning_opts = get_supported_warning_options();
+  std::vector<std::string> preprocessor_opts = get_supported_preprocessor_options();
+
+  out.insert(out.end(), general_opts.begin(), general_opts.end());
+  out.insert(out.end(), optimizations_opts.begin(), optimizations_opts.end());
+  out.insert(out.end(), misc_opts.begin(), misc_opts.end());
+  out.insert(out.end(), warning_opts.begin(), warning_opts.end());
+  out.insert(out.end(), general_opts.begin(), general_opts.end());
+  out.insert(out.end(), preprocessor_opts.begin(), preprocessor_opts.end());
+
+  return out;
+}
+
+std::vector<std::string> AS7AvrGcc8_Base::get_supported_general_options() const
+{
+  const std::vector<std::string> out =
+  {
+    "-mcall-prologues",
+    "-mno-interrupts",
+    "-funsigned-char",
+    "-funsigned-bitfields",
+  };
+  return out;
+}
+
+std::vector<std::string> AS7AvrGcc8_Base::get_supported_optimizations_options() const
+{
+  const std::vector<std::string> out =
+  {
+    "-O0",
+    "-O",
+    "-O1",
+    "-O2",
+    "-O3",
+    "-Os",
+    "-Ofast",
+    "-Og",
+    "-ffunction-sections",
+    "-fdata-sections",
+    "-fpack-struct",
+    "-fshort-enums",
+    "-mshort-calls",
+  };
+  return out;
+}
+
+std::vector<std::string> AS7AvrGcc8_Base::get_supported_debug_options() const
+{
+  const std::vector<std::string> out =
+  {
+    "-g0",
+    "-g",
+    "-g1",
+    "-g2",
+    "-g3",
+    "-ggdb",
+    "-gdwarf"
+  };
+  return out;
+}
+
+std::vector<std::string> AS7AvrGcc8_Base::get_supported_warning_options() const
+{
+  const std::vector<std::string> out =
+  {
+    "-Wall",
+    "-Wextra",
+    "-Wundef",
+    "-Werror",
+    "-fsyntax-only",
+    "-pedantic",
+    "-pedantic-errors",
+    "-w",
+  };
+  return out;
+}
+
+std::vector<std::string> AS7AvrGcc8_Base::get_supported_misc_options() const
+{
+  const std::vector<std::string> out =
+  {
+    "-v",
+    "-ansi",
+    "-save-temps"
+  };
+  return out;
+}
+
+std::vector<std::string> AS7AvrGcc8_Base::get_supported_preprocessor_options() const
+{
+  const std::vector<std::string> out =
+  {
+    "-nostdinc",
+    "-E"
+  };
+  return out;
+}
+
+std::vector<std::string> AS7AvrGCC8Linker::get_supported_options() const
+{
+  std::vector<std::string> out;
+  const std::vector<std::string> optims = get_supported_optimizations_options();
+  const std::vector<std::string> general = get_supported_general_options();
+  out.insert(out.end(), optims.begin(), optims.end());
+  out.insert(out.end(), general.begin(), general.end());
+  return out;
+}
+
+std::vector<std::string> AS7AvrGCC8Linker::get_supported_optimizations_options() const
+{
+  const std::vector<std::string> out =
+  {
+    "-Wl,--gc-sections",
+    "-E"
+  };
+  return out;
+}
+
+std::vector<std::string> AS7AvrGCC8Linker::get_supported_general_options() const
+{
+  const std::vector<std::string> out =
+  {
+    "-nostartfile",
+    "-nodefaultlibs",
+    "-nostdlib",
+    "-Wl,s",
+    "-Wl,-static",
+    "-Wl,-Map",
+    "-Wl,-u,vprintf",   // FIXME : We will have issues with this one as this requires a special parsing, simple "split" function won't do!
+  };
+  return out;
+}
+
+std::vector<std::string> AS7AvrGCC8Assembler::get_supported_options() const
+{
+  const std::vector<std::string> out =
+  {
+    "-Wa,g",
+  };
+  return out;
 }
 
 }

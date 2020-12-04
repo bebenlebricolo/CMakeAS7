@@ -20,6 +20,17 @@ public:
 
     OptionsVec get_options(const CompilerOption::Type type) const;
     CompilerOption * get_option(const std::string& token) const;
+
+    /**
+     * @brief returns a list of raw tokens contained within a collection of Options, minus the options that Atmel Studio supports.
+     * This is used to compute the "Other flags" section to be filled within AtmelStudio7 project files
+     *
+     * @param   type        :   type of targeted options
+     * @param   as7_options :   atmel studio 7 supported options list
+     * @return  a vector of raw tokens
+     */
+    std::vector<std::string> get_unsupported_options(const CompilerOption::Type type, const std::vector<std::string>& as7_options) const;
+
     bool has_option(const std::string& option) const;
     void clear();
 
