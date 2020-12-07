@@ -4,18 +4,12 @@ cmake_policy(SET CMP0091 NEW)
 find_package(GTest REQUIRED)
 enable_testing()
 
+
+####### Atmel Studio 7 toolchains tests
+
 add_executable(testAtmelStudioTools
     testCmAvrGccCompiler.cpp
-    #${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/AS7Toolchains/AvrGCC8Toolchain.cxx
 )
-
-if(MSVC)
-#    # Handles both debug and Release modes using the generator expression
-#    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-#    set_property(TARGET testAtmelStudioTools PROPERTY
-#             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif()
-
 
 target_include_directories(testAtmelStudioTools PUBLIC
     ${CMAKE_SOURCE_DIR}/Source/Utils
@@ -30,4 +24,24 @@ target_link_libraries(testAtmelStudioTools AtmelStudio7Generators cmutils ${GTES
 set_target_properties(testAtmelStudioTools
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Tests/CMakeLib/testAtmelStudioTools
+)
+
+
+####### AS7 Device resolver tests
+
+add_executable(testAS7DeviceResolver
+    testAS7DeviceResolver.cpp
+)
+
+target_include_directories(testAS7DeviceResolver PUBLIC
+    ${CMAKE_SOURCE_DIR}/Source/Utils
+    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/AS7Toolchains
+    ${GTEST_INCLUDE_DIRS}
+)
+
+target_link_libraries(testAS7DeviceResolver AtmelStudio7Generators cmutils ${GTEST_LIBRARIES})
+
+set_target_properties(testAS7DeviceResolver
+    PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/Tests/CMakeLib/testAS7DeviceResolver
 )
