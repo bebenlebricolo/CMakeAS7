@@ -44,6 +44,11 @@ void AS7ToolchainTranslator::parse(const std::vector<std::string>& flags, const 
     }
 }
 
+std::string AS7ToolchainTranslator::get_targeted_language() const
+{
+  return targeted_language;
+}
+
 void AS7ToolchainTranslator::clear()
 {
     toolchain.clear();

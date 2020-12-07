@@ -51,4 +51,11 @@ std::string resolve_from_defines(const std::vector<std::string>& definitions);
 */
 std::string resolve_from_defines(const std::string& definition);
 
+/**
+ * @brief computes the kind of core using device's name.
+ * @param device_name   : device's name using naming convention
+ * @return the Core kind for this specific device
+ */
+Core resolve_core_from_name(const std::string& device_name);
+
 }

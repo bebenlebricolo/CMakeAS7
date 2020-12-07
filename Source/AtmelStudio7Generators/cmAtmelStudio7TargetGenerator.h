@@ -16,6 +16,7 @@
 #include "cmGeneratorTarget.h"
 #include "cmStringAlgorithms.h"
 #include "cmGlobalVisualStudioGenerator.h"
+#include "AS7ToolchainTranslator.h"
 
 
 class cmComputeLinkInformation;
@@ -150,6 +151,8 @@ private:
   std::string const Name;                   /**< Target name                                                                                 */
   std::string const GUID;                   /**< This target's unique ID                                                                     */
 
+  AvrToolchain::AS7ToolchainTranslator translator; /**< Used to parse compiler command line input and convert it to xml                      */
+
   cmGlobalAtmelStudio7Generator* const GlobalGenerator;
   cmLocalAtmelStudio7Generator* const LocalGenerator;
 
@@ -175,7 +178,7 @@ private:
   void AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value = "");
   void BuildConfigurationXmlGroup(pugi::xml_node& parent, const std::string& build_type);
   void BuildCompileItemGroup(pugi::xml_node& parent);
-  void BuildDevicePropertyGroup(pugi::xml_node& parent, const std::string& target_name);
+  void BuildDevicePropertyGroup(pugi::xml_node& parent, const std::string& target_name, const std::string& lang = "C");
   void BuildSimulatorConfiguration(pugi::xml_node& parent, const std::string& device_signature = "0x1E930B", const std::string& stimuli_filepath = "");
   void BuildProjectReferenceItemGroup(pugi::xml_node& parent);
 

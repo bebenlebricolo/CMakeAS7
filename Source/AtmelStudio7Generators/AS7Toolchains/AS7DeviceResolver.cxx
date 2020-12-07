@@ -84,33 +84,7 @@ std::string resolve_from_mmcu(const std::string& mmcu_option)
     }
   }
 
-  if (option.find("ata") != std::string::npos) {
-    core = Core::ATautomotive;
-  }
-
-  if (option.find("atm") != std::string::npos) {
-    core = Core::ATmega;
-  }
-
-  if (option.find("atx") != std::string::npos) {
-    core = Core::ATxmega;
-  }
-
-  if (option.find("at90") != std::string::npos) {
-    core = Core::AT90mega;
-  }
-
-  if (option.find("att") != std::string::npos) {
-    core = Core::ATtiny;
-  }
-
-  if (option.find("at32") != std::string::npos) {
-    core = Core::UC;
-  }
-
-  if (option.find("atsam") != std::string::npos) {
-    core = Core::SAM;
-  }
+  core = resolve_core_from_name(option);
 
   return apply_naming_convention(core, option);
 }
@@ -175,6 +149,43 @@ std::string resolve_from_defines(const std::string& definition)
     }
 
     return device;
+}
+
+Core resolve_core_from_name(const std::string& device_name)
+{
+  Core core = Core::Unknown;
+
+  std::string option = cmutils::strings::to_lowercase(device_name);
+
+  if (option.find("ata") != std::string::npos) {
+    core = Core::ATautomotive;
+  }
+
+  if (option.find("atm") != std::string::npos) {
+    core = Core::ATmega;
+  }
+
+  if (option.find("atx") != std::string::npos) {
+    core = Core::ATxmega;
+  }
+
+  if (option.find("at90") != std::string::npos) {
+    core = Core::AT90mega;
+  }
+
+  if (option.find("att") != std::string::npos) {
+    core = Core::ATtiny;
+  }
+
+  if (option.find("at32") != std::string::npos) {
+    core = Core::UC;
+  }
+
+  if (option.find("atsam") != std::string::npos) {
+    core = Core::SAM;
+  }
+
+  return core;
 }
 
 

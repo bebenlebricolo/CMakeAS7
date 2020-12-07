@@ -44,6 +44,12 @@ public:
     compiler::cmAvrGccCompiler* get_compiler(const std::string& lang);
 
     /**
+     * @brief returns targeted language.
+     * @return
+     */
+    std::string get_targeted_language() const;
+
+    /**
      * @brief Clears memory
     */
     void clear();

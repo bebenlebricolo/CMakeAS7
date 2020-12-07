@@ -25,6 +25,8 @@
 #include "cmSystemTools.h"
 
 #include "AS7ToolchainTranslator.h"
+#include "cmAvrGccMachineOption.h"
+#include "AS7DeviceResolver.h"
 #include "pugixml.hpp"
 
 cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
@@ -273,8 +275,6 @@ std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGe
 
 void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& parent, const std::string& build_type)
 {
-  AvrToolchain::AS7ToolchainTranslator translator;
-
   pugi::xml_node property_group_node = parent.append_child("PropertyGroup");
   std::string conditionnal_str = " '$(Configuration)' == '" + build_type + "' ";
   property_group_node.append_attribute("Condition").set_value(conditionnal_str.c_str());
@@ -391,15 +391,72 @@ void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent
   }
 }
 
-void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& parent, const std::string& target_name)
+void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& parent, const std::string& target_name, const std::string& lang)
 {
   // @see http://www.gerald-fahrnholz.eu/sw/DocGenerated/HowToUse/html/group___grp_pugi_xml.html#pugi_xml_generated_file
   pugi::xml_node property_group = parent.append_child("PropertyGroup");
   AppendInlinedNodeChildPcData(property_group, "SchemaVersion", "2.0");
   AppendInlinedNodeChildPcData(property_group, "ProjectVersion", "7.0");
-  AppendInlinedNodeChildPcData(property_group, "ToolchainName", "com.Atmel.AVRGCC8.C");
+
+  // Preparse flags from the first configuration to retrieve Device's name !
+  std::string device_name;
+  {
+    // Get languages
+    std::vector<std::string> enabledLanguages;
+    this->GlobalGenerator->GetEnabledLanguages(enabledLanguages);
+
+    if (!enabledLanguages.empty()) {
+      std::unordered_map<std::string, std::vector<std::string>> first_config_flags = RetrieveCmakeFlags(enabledLanguages, cmSystemTools::UpperCase(this->Configurations[0]));
+      for (auto& flags : first_config_flags) {
+        translator.parse(flags.second, flags.first);
+      }
+
+      // extract -mmcu option
+      compiler::cmAvrGccCompiler* comp = translator.get_compiler(enabledLanguages[0]);
+      if (comp != nullptr) {
+        compiler::CompilerOption* mmcu_opt = comp->get_option("-mmcu");
+        if (mmcu_opt != nullptr) {
+          compiler::MachineOption* opt = static_cast<compiler::MachineOption*>(mmcu_opt);
+          device_name = AS7DeviceResolver::resolve_from_mmcu(opt->value);
+        }
+
+        // Try with definitions ... !
+        if (device_name.empty()) {
+          std::vector<std::string> options_vec = comp->get_all_options(compiler::CompilerOption::Type::Definition);
+          device_name = AS7DeviceResolver::resolve_from_defines(options_vec);
+        }
+      }
+    }
+  }
+
+  AS7DeviceResolver::Core core = AS7DeviceResolver::resolve_core_from_name(device_name);
+  std::string toolchain;
+  switch (core) {
+
+    case AS7DeviceResolver::Core::UC:
+      toolchain = "AVRGCC32";
+      break;
+
+    case AS7DeviceResolver::Core::AT90mega:
+    case AS7DeviceResolver::Core::ATmega:
+    case AS7DeviceResolver::Core::ATxmega:
+    case AS7DeviceResolver::Core::ATtiny:
+      toolchain = "AVRGCC8";
+      break;
+
+    case AS7DeviceResolver::Core::SAM:
+      toolchain = "ARMGCC";
+      break;
+
+    default:
+      break;
+  }
+
+
+
+  AppendInlinedNodeChildPcData(property_group, "ToolchainName", "com.Atmel." + toolchain + "." + lang);
   AppendInlinedNodeChildPcData(property_group, "ProjectGuid", this->GUID);
-  AppendInlinedNodeChildPcData(property_group, "avrdevice", "ATmega328P");
+  AppendInlinedNodeChildPcData(property_group, "avrdevice", device_name);
   AppendInlinedNodeChildPcData(property_group, "avrdeviceseries", "none");
 
   if (this->GeneratorTarget->GetType() == cmStateEnums::TargetType::EXECUTABLE) {
@@ -408,7 +465,7 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
     AppendInlinedNodeChildPcData(property_group, "OutputType", "StaticLibrary");
   }
 
-  AppendInlinedNodeChildPcData(property_group, "Language", "C");
+  AppendInlinedNodeChildPcData(property_group, "Language", lang);
 
   if (this->GeneratorTarget->GetType() == cmStateEnums::TargetType::EXECUTABLE) {
     AppendInlinedNodeChildPcData(property_group, "OutputFileName", "$(MSBuildProjectName)");
