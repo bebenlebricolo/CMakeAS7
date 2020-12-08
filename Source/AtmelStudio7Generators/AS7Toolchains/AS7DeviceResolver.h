@@ -65,4 +65,11 @@ Core resolve_core_from_name(const std::string& device_name);
  */
 std::string resolve_device_dfp_name(const std::string& device_name);
 
+/**
+ * @brief retrieves the highest package version using the given input path.
+ * @param path : input path to be inspected (DFP folder absolute path)
+ * @return the highest package version found in DFP folder
+ */
+std::string get_max_packs_version(const std::string& path);
+
 }

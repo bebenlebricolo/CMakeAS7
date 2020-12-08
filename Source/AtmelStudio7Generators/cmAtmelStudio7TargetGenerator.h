@@ -153,6 +153,23 @@ private:
 
   AvrToolchain::AS7ToolchainTranslator translator; /**< Used to parse compiler command line input and convert it to xml                      */
 
+  struct TargetedDevice_t
+  {
+    std::string name;                   /**< AtmelStudio compatible device name */
+    std::string DFP_name;               /**< Device's targeted DFP name         */
+    std::string version;                /**< Device's package version           */
+    std::string mmcu_option;            /**< Device's mmcu option if it exists  */
+
+    /**
+     * @brief Constructs the DFP path relatively to Atmel Studio installation path.
+     * @return
+     */
+    std::string get_dfp_path(const std::string& packs_path) const;
+    std::string get_dfp_include_dir(const std::string& packs_path);
+    std::string resolve_version(const std::string& packs_path);
+  } TargetedDevice;
+
+
   cmGlobalAtmelStudio7Generator* const GlobalGenerator;
   cmLocalAtmelStudio7Generator* const LocalGenerator;
 

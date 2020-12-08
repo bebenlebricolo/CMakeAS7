@@ -311,9 +311,15 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
   }
 
   // Handle include paths
-  // TODO : use parsed device representation to compute the right DFP for this device. Default for now
-  translator.toolchain.avrgcc.directories.include_paths.push_back("%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
-  translator.toolchain.avrgcccpp.directories.include_paths.push_back("%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
+  std::string as7_installation_folder = this->GlobalGenerator->GetAtmelStudio7InstallationFolder();
+  std::string dfp_dir = TargetedDevice.get_dfp_path(as7_installation_folder + "\\packs");
+  TargetedDevice.version = AS7DeviceResolver::get_max_packs_version(dfp_dir);
+
+  std::string dfp_include_dir = TargetedDevice.get_dfp_include_dir(as7_installation_folder + "\\packs");
+
+  translator.toolchain.avrgcc.directories.include_paths.push_back(dfp_include_dir);
+  translator.toolchain.avrgcccpp.directories.include_paths.push_back(dfp_include_dir);
+
   for (const auto& lang : enabledLanguages) {
     auto includesList = this->GetIncludes(build_type, lang);
     for (const auto& singleInclude : includesList) {
@@ -340,7 +346,7 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
       translator.toolchain.linker.libraries.search_path.push_back(cmutils::strings::replace(build_directory, "/", "\\"));
     }
   }
-  translator.toolchain.assembler.general.include_path.push_back("%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\include");
+  translator.toolchain.assembler.general.include_path.push_back(dfp_include_dir);
 
   translator.generate_xml(avr_gcc_node);
 }
@@ -418,6 +424,7 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
         if (mmcu_opt != nullptr) {
           compiler::MachineOption* opt = static_cast<compiler::MachineOption*>(mmcu_opt);
           device_name = AS7DeviceResolver::resolve_from_mmcu(opt->value);
+          TargetedDevice.mmcu_option = opt->value;
         }
 
         // Try with definitions ... !
@@ -430,6 +437,10 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
   }
 
   AS7DeviceResolver::Core core = AS7DeviceResolver::resolve_core_from_name(device_name);
+  TargetedDevice.DFP_name = AS7DeviceResolver::resolve_device_dfp_name(device_name);
+  TargetedDevice.name = device_name;
+  TargetedDevice.resolve_version(this->GlobalGenerator->GetAtmelStudio7InstallationFolder() + "\\packs");
+
   std::string toolchain;
   switch (core) {
 
@@ -452,7 +463,11 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
       break;
   }
 
-
+  // handles devices with mmcu option
+  if (!TargetedDevice.mmcu_option.empty()) {
+    translator.toolchain.common.Device = "-mmcu=" + TargetedDevice.mmcu_option;
+    translator.toolchain.common.Device += " -B \"%24(PackRepoDir)\\atmel\\" + TargetedDevice.DFP_name + '\\' + TargetedDevice.version + "\\gcc\\dev\\" + TargetedDevice.mmcu_option + "\"";
+  }
 
   AppendInlinedNodeChildPcData(property_group, "ToolchainName", "com.Atmel." + toolchain + "." + lang);
   AppendInlinedNodeChildPcData(property_group, "ProjectGuid", this->GUID);
@@ -616,4 +631,24 @@ std::string AS7ProjectDescriptor::get_extension(Type type)
   }
 
   return "";
+}
+
+std::string cmAtmelStudio7TargetGenerator::TargetedDevice_t::get_dfp_path(const std::string& packs_path) const
+{
+  return packs_path + "\\atmel\\" + DFP_name;
+}
+
+std::string cmAtmelStudio7TargetGenerator::TargetedDevice_t::resolve_version(const std::string& packs_path)
+{
+  std::string dfp_dir = get_dfp_path(packs_path);
+  version = AS7DeviceResolver::get_max_packs_version(dfp_dir);
+  return version;
+}
+
+std::string cmAtmelStudio7TargetGenerator::TargetedDevice_t::get_dfp_include_dir(const std::string& packs_path)
+{
+  if (version.empty()) {
+    version = resolve_version(packs_path);
+  }
+  return "%24(PackRepoDir)\\atmel\\" + DFP_name + "\\" + version + "\\include";
 }

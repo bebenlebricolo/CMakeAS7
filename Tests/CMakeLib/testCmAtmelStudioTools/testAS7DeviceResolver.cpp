@@ -3,6 +3,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <filesystem>
 #include "AS7DeviceResolver.h"
 
 namespace cmAtmelStudioToolsTests
@@ -188,6 +189,34 @@ TEST(DeviceNamingConventionTest, test_DFP_resolution)
     std::string resolved = AS7DeviceResolver::resolve_device_dfp_name(elem.first);
     EXPECT_EQ(resolved, elem.second);
   }
+}
+
+
+TEST(DeviceNamingConventionTest, test_version_finder)
+{
+  std::vector<std::string> data = {
+    "1.1.1",
+    "1.2.1",
+    "1.1.3",
+    "4.1.1",
+    "5.0.0",
+  };
+
+  auto temp_folder = std::filesystem::temp_directory_path();
+  auto base_path = temp_folder.string() + "\\AS7DeviceResolverTests";
+
+  if (!std::filesystem::exists(base_path)) {
+    ASSERT_TRUE(std::filesystem::create_directory(base_path));
+  }
+
+  // Create folders
+  for (auto& dir : data) {
+    if (!std::filesystem::exists(base_path + "\\" + dir)) {
+      ASSERT_TRUE(std::filesystem::create_directory(base_path + "\\" + dir));
+    }
+  }
+
+  ASSERT_EQ(AS7DeviceResolver::get_max_packs_version(base_path), "5.0.0");
 }
 
 }

@@ -1,6 +1,11 @@
 #include "AS7DeviceResolver.h"
 
+#include <algorithm>
+#include <filesystem>
+#include <numeric>
 #include <regex>
+#include <vector>
+#include <cmath>
 
 #include "cmStringUtils.h"
 
@@ -161,8 +166,7 @@ Core resolve_core_from_name(const std::string& device_name)
   }
 
   // There are 2 available naming conventions for those AVR32 cores ... !
-  if ( (option.find("at32") != std::string::npos)
-    || (option.find("atuc") != std::string::npos)) {
+  if ((option.find("at32") != std::string::npos) || (option.find("atuc") != std::string::npos)) {
     core = Core::AT32UC;
   }
 
@@ -276,6 +280,46 @@ std::string resolve_device_dfp_name(const std::string& device_name)
       break;
   }
 
+  return out;
+}
+
+std::string get_max_packs_version(const std::string& path)
+{
+  std::string out;
+  if (!std::filesystem::exists(path)) {
+    return out;
+  }
+
+  std::vector<std::string> versions;
+
+  for (const auto& entry : std::filesystem::directory_iterator(path)) {
+    if (std::filesystem::is_directory(entry)) {
+      std::string entry_name = entry.path().filename().string();
+
+      // only accept folder versions like "12.34.56" with 2 dots
+      if (std::count(entry_name.begin(), entry_name.end(), '.') == 2) {
+        versions.push_back(entry_name);
+      }
+    }
+  }
+
+  auto max_version = std::max_element(versions.begin(), versions.end(), [](const std::string& left, const std::string& right) {
+    auto l = cmutils::strings::split(left, '.');
+    auto r = cmutils::strings::split(right, '.');
+
+    bool lbigger = false;
+
+    uint64_t lsum = 0;
+    uint64_t rsum = 0;
+    for (unsigned int i = 0; i < l.size(); i++) {
+      lsum += (uint64_t)(std::stoi(l[i]) * pow(10, (l.size() - i)));
+      rsum += (uint64_t)(std::stoi(r[i]) * pow(10, (l.size() - i)));
+    }
+
+    return lsum < rsum;
+  });
+
+  out = *max_version;
   return out;
 }
 

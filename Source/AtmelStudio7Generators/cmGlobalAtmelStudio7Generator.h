@@ -102,6 +102,7 @@ public:
   static std::unique_ptr<cmGlobalGeneratorFactory> NewFactory();
   bool MatchesGeneratorName(const std::string& name) const;
   bool IsAtmelStudioInstalled() const;
+  std::string GetAtmelStudio7InstallationFolder() const;
 
   std::unique_ptr<cmLocalGenerator> CreateLocalGenerator(
     cmMakefile* mf) override;

@@ -153,17 +153,15 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   }
 
   // This option is a bit special and requires dedicated handling
-  if (parser.has_option("-mmcu")) {
-    compiler::CompilerOption* opt = parser.get_option("-mmcu");
-    auto option = dynamic_cast<compiler::MachineOption*>(opt);
-    common.Device = "-mmcu=" + option->value + " -B \"%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\gcc\\dev\\atmega328p\""; // TODO : add parsed value (e.g. atmega328p) relevant DFP
-    // TODO2 : e.g. -mmcu=atmega328p -B "%24(PackRepoDir)\atmel\ATmega_DFP\1.2.209\gcc\dev\atmega328p"
-    // <InstalledLocation>AtmelStudio7\7.0\packs\atmel\ATmega_DFP\1.2.209\gcc\dev
+  if (common.Device.empty()) {
+    if (parser.has_option("-mmcu")) {
+      compiler::CompilerOption* opt = parser.get_option("-mmcu");
+      auto option = dynamic_cast<compiler::MachineOption*>(opt);
+      common.Device = "-mmcu=" + option->value;
+    }
+    common.Device += " -B \"%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\gcc\\dev\\atmega328p\"";
   }
 
-  if (common.Device.empty()) {
-    common.Device = "-mmcu=atmega328p -B \"%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\gcc\\dev\\atmega328p\"";
-  }
   common.relax_branches = parser.has_option("-mrelax");
 
   tool->general.subroutine_function_prologue = parser.has_option("-mcall-prologues");

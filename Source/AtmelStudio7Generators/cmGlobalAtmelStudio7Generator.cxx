@@ -25,7 +25,7 @@ public:
   std::unique_ptr<cmGlobalGenerator> CreateGlobalGenerator(
     const std::string& name, cmake* cm) const override
   {
-    if (name == cmGlobalAtmelStudio7Generator::TruncatedGeneratorName || 
+    if (name == cmGlobalAtmelStudio7Generator::TruncatedGeneratorName ||
         name == cmGlobalAtmelStudio7Generator::GeneratorName) {
         return std::unique_ptr<cmGlobalAtmelStudio7Generator>(
           new cmGlobalAtmelStudio7Generator(cm, name));
@@ -156,7 +156,7 @@ bool cmGlobalAtmelStudio7Generator::SupportsLanguage(const cmGlobalAtmelStudio7G
   auto found_item = std::find_if(SupportedLanguagesList.begin(), SupportedLanguagesList.end(), [lang](const LangProp& prop) {
     return prop.lang == lang;
   });
-  
+
   return found_item != SupportedLanguagesList.end();
 }
 
@@ -305,7 +305,7 @@ bool cmGlobalAtmelStudio7Generator::FindMakeProgram(cmMakefile*)
   // Visual Studio generators know how to lookup their build tool
   // directly instead of needing a helper module to do it, so we
   // do not actually need to put CMAKE_MAKE_PROGRAM into the cache.
-  
+
   //if (cmIsOff(mf->GetDefinition("CMAKE_MAKE_PROGRAM"))) {
   //  mf->AddDefinition("CMAKE_MAKE_PROGRAM", this->GetVSMakeProgram());
   //}
@@ -400,14 +400,22 @@ bool cmGlobalAtmelStudio7Generator::MatchesGeneratorName(
 
 bool cmGlobalAtmelStudio7Generator::IsAtmelStudioInstalled() const
 {
+  return !GetAtmelStudio7InstallationFolder().empty();
+}
+
+std::string cmGlobalAtmelStudio7Generator::GetAtmelStudio7InstallationFolder() const
+{
   const char atmelStudio7InstallDir[] =
     R"(HKEY_CURRENT_USER\Software\Atmel\AtmelStudio\7.0_Config;InstallDir)";
 
-  std::vector<std::string> subkeys;
   std::string path;
   bool hasKey = cmSystemTools::ReadRegistryValue(atmelStudio7InstallDir, path,
                                                  cmSystemTools::KeyWOW64_32);
-  return (hasKey && cmSystemTools::PathExists(path));
+  if (hasKey) {
+    return path;
+  }
+
+  return "";
 }
 
 cmGlobalAtmelStudio7Generator::~cmGlobalAtmelStudio7Generator()
@@ -472,7 +480,7 @@ cmGlobalAtmelStudio7Generator::GenerateBuildCommand(
     makeCommands.push_back(makeCommand);
     return makeCommands;
   }
-  
+
   // "C:\Program Files (x86)\Atmel\Studio\7.0\AtmelStudio.exe" GETTING - STARTED14.atsln / build debug / out log.txt "
   GeneratedMakeCommand makeCommand;
   makeCommand.Add(*AtmelStudioPath);
