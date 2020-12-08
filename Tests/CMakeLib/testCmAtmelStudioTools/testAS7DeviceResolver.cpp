@@ -92,7 +92,7 @@ TEST(DeviceNamingConventionTest, test_At32UC_names)
 
   for (auto& elem : data)
   {
-    std::string convert = AS7DeviceResolver::apply_naming_convention(AS7DeviceResolver::Core::UC, elem.first);
+    std::string convert = AS7DeviceResolver::apply_naming_convention(AS7DeviceResolver::Core::AT32UC, elem.first);
     EXPECT_EQ(convert, elem.second);
   }
 }
@@ -156,6 +156,38 @@ TEST(DeviceNamingConventionTest, test_definition_collection_resolving)
 
   std::string resolved = AS7DeviceResolver::resolve_from_defines(data);
   ASSERT_EQ(resolved, "ATmega328PB");
+}
+
+TEST(DeviceNamingConventionTest, test_DFP_resolution)
+{
+  std::vector<std::pair<std::string,std::string>> data = {
+    { "ATSAM3A4C", "SAM3A_DFP" },
+    { "ATSAM4N8C", "SAM4N_DFP" },
+    { "ATSAMD10D14AM", "SAMD10_DFP" },
+    { "ATSAME51N19A", "SAME51_DFP" },
+    { "ATSAMG51G18", "SAMG_DFP" },
+
+    { "ATmega328PB", "ATmega_DFP" },
+    { "ATtiny85", "ATtiny_DFP" },
+    { "ATa6613c", "ATautomotive_DFP" },
+    { "ATtiny416auto", "ATautomotive_DFP" }, //  Special case
+
+    { "ATxmega32A4U", "XMEGAA_DFP" },
+    { "ATxmega64B1", "XMEGAB_DFP" },
+    { "ATxmega64D3", "XMEGAD_DFP" },
+    { "ATxmega16E5", "XMEGAE_DFP" },
+
+    { "AT32UC3A4256S", "UC3A_DFP" },
+    { "AT32UC3B0512", "UC3B_DFP" },
+    { "ATUC128D3", "UC3D_DFP" },
+    { "ATUC128L3", "UC3L_DFP" },
+
+  };
+
+  for (auto& elem : data) {
+    std::string resolved = AS7DeviceResolver::resolve_device_dfp_name(elem.first);
+    EXPECT_EQ(resolved, elem.second);
+  }
 }
 
 }

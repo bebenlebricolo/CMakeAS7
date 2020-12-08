@@ -17,8 +17,8 @@ enum class Core
     AT90mega,       /**< Atmel 8 bit MCU, "mega" core with connectivity */
     ATtiny,         /**< Atmel tiny devices                             */
     ATxmega,        /**< Atmel xmega devices                            */
-    SAM,            /**< Atmel SAM 32bits arm microcontrollers          */
-    UC,             /**< Atmel 32 bits AVR devices                      */
+    ATSAM,          /**< Atmel SAM 32bits arm microcontrollers          */
+    AT32UC,         /**< Atmel 32 bits AVR devices                      */
 };
 
 /**
@@ -57,5 +57,12 @@ std::string resolve_from_defines(const std::string& definition);
  * @return the Core kind for this specific device
  */
 Core resolve_core_from_name(const std::string& device_name);
+
+/**
+ * @brief Computes the Device's DFP name using the resolved device name (device_name shall match the AtmelStudio7 naming convention).
+ * @param device_name : device name using the AS7 naming convention
+ * @return the resolved name (e.g. ATmega_DFP) or "" in case
+ */
+std::string resolve_device_dfp_name(const std::string& device_name);
 
 }

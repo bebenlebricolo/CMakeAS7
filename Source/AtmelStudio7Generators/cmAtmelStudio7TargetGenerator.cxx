@@ -433,7 +433,7 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
   std::string toolchain;
   switch (core) {
 
-    case AS7DeviceResolver::Core::UC:
+    case AS7DeviceResolver::Core::AT32UC:
       toolchain = "AVRGCC32";
       break;
 
@@ -444,7 +444,7 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
       toolchain = "AVRGCC8";
       break;
 
-    case AS7DeviceResolver::Core::SAM:
+    case AS7DeviceResolver::Core::ATSAM:
       toolchain = "ARMGCC";
       break;
 

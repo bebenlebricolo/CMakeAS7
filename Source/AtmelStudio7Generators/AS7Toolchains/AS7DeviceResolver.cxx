@@ -1,74 +1,62 @@
 #include "AS7DeviceResolver.h"
 
-#include "cmStringUtils.h"
 #include <regex>
 
-namespace AS7DeviceResolver
-{
+#include "cmStringUtils.h"
+
+namespace AS7DeviceResolver {
 
 std::string apply_naming_convention(Core core, const std::string& device_name)
 {
-    std::string out;
-    std::string dev_up = cmutils::strings::to_uppercase(device_name);
+  std::string out;
+  std::string dev_up = cmutils::strings::to_uppercase(device_name);
 
-    switch (core)
-    {
-        case Core::ATautomotive:
-            {
-                std::regex pattern("ATA([0-9]+)(.*)");
-                std::smatch matches;
-                std::regex_match(dev_up, matches, pattern);
-                out = "ATA" + matches[1].str() + matches[2].str();
-            }
-            break;
+  switch (core) {
+    case Core::ATautomotive: {
+      std::regex pattern("ATA([0-9]+)(.*)");
+      std::smatch matches;
+      std::regex_match(dev_up, matches, pattern);
+      out = "ATA" + matches[1].str() + matches[2].str();
+    } break;
 
-        case Core::ATmega:
-            {
-                std::regex pattern("ATMEGA([0-9]+)(.*)");
-                std::smatch matches;
-                std::regex_match(dev_up, matches, pattern);
-                out = "ATmega" + matches[1].str() + matches[2].str();
-            }
-            break;
+    case Core::ATmega: {
+      std::regex pattern("ATMEGA([0-9]+)(.*)");
+      std::smatch matches;
+      std::regex_match(dev_up, matches, pattern);
+      out = "ATmega" + matches[1].str() + matches[2].str();
+    } break;
 
-        case Core::ATtiny:
-            {
-                std::regex pattern("ATTINY([0-9]+)(.*)");
-                std::smatch matches;
-                std::regex_match(dev_up, matches, pattern);
+    case Core::ATtiny: {
+      std::regex pattern("ATTINY([0-9]+)(.*)");
+      std::smatch matches;
+      std::regex_match(dev_up, matches, pattern);
 
-                // Special case handling for ATtiny416auto ...
-                if (dev_up.find("AUTO") == std::string::npos)
-                {
-                    out = "ATtiny" + matches[1].str() + matches[2].str();
-                }
-                else
-                {
-                    out = "ATtiny" + matches[1].str() + "auto";
-                }
-            }
-            break;
+      // Special case handling for ATtiny416auto ...
+      if (dev_up.find("AUTO") == std::string::npos) {
+        out = "ATtiny" + matches[1].str() + matches[2].str();
+      } else {
+        out = "ATtiny" + matches[1].str() + "auto";
+      }
+    } break;
 
-        case Core::ATxmega:
-            {
-                std::regex pattern("ATXMEGA([0-9]+)(.*)");
-                std::smatch matches;
-                std::regex_match(dev_up, matches, pattern);
-                out = "ATxmega" + matches[1].str() + matches[2].str();
-            }
-            break;
+    case Core::ATxmega: {
+      std::regex pattern("ATXMEGA([0-9]+)(.*)");
+      std::smatch matches;
+      std::regex_match(dev_up, matches, pattern);
+      out = "ATxmega" + matches[1].str() + matches[2].str();
+    } break;
 
-        case Core::SAM:
-        case Core::UC:
-            out = cmutils::strings::to_uppercase(device_name);
-            break;
+    case Core::ATSAM:
+    case Core::AT32UC:
+      out = cmutils::strings::to_uppercase(device_name);
+      break;
 
-        default:
-            // unknown core, nothing to do
-            break;
-    }
+    default:
+      // unknown core, nothing to do
+      break;
+  }
 
-    return out;
+  return out;
 }
 
 std::string resolve_from_mmcu(const std::string& mmcu_option)
@@ -102,53 +90,48 @@ std::string resolve_from_defines(const std::vector<std::string>& definitions)
 
 static std::string resolve_single_core(const std::string& input, const std::string& regex_pattern, const std::string& output_radical)
 {
-    std::string device;
-    std::regex pattern;
-    std::smatch matches;
+  std::string device;
+  std::regex pattern;
+  std::smatch matches;
 
-    pattern.assign(regex_pattern);
-    std::regex_match(input, matches, pattern);
-    if (matches.size() > 1)
-    {
-        device = output_radical + matches[1].str();
-    }
+  pattern.assign(regex_pattern);
+  std::regex_match(input, matches, pattern);
+  if (matches.size() > 1) {
+    device = output_radical + matches[1].str();
+  }
 
-    return device;
+  return device;
 }
 
 std::string resolve_from_defines(const std::string& definition)
 {
-    // Reject definitions with values as MCU definitions does not use any
-    if (definition.find("=") != std::string::npos)
-    {
-        return "";
-    }
+  // Reject definitions with values as MCU definitions does not use any
+  if (definition.find("=") != std::string::npos) {
+    return "";
+  }
 
-    std::string device;
+  std::string device;
 
-    // Check for AVR cores (8 bit)
-    device = resolve_single_core(definition, "__AVR_(.*)__", "");
+  // Check for AVR cores (8 bit)
+  device = resolve_single_core(definition, "__AVR_(.*)__", "");
 
-    // Check for AVR32 cores (32 bit)
-    if (device.empty())
-    {
-        device = resolve_single_core(definition, "__AVR32_UC(.*)__", "AT32UC");
-    }
+  // Check for AVR32 cores (32 bit)
+  if (device.empty()) {
+    device = resolve_single_core(definition, "__AVR32_UC(.*)__", "AT32UC");
+  }
 
-    // AT32 defines could as well be provided with __AT32UC...__ root
-    // such as __AT32UC3A4256S__
-    if (device.empty())
-    {
-        device = resolve_single_core(definition, "__AT32UC(.*)__", "AT32UC");
-    }
+  // AT32 defines could as well be provided with __AT32UC...__ root
+  // such as __AT32UC3A4256S__
+  if (device.empty()) {
+    device = resolve_single_core(definition, "__AT32UC(.*)__", "AT32UC");
+  }
 
-    // SAM devices check
-    if (device.empty())
-    {
-        device = resolve_single_core(definition, "__SAM(.*)__", "ATSAM");
-    }
+  // SAM devices check
+  if (device.empty()) {
+    device = resolve_single_core(definition, "__SAM(.*)__", "ATSAM");
+  }
 
-    return device;
+  return device;
 }
 
 Core resolve_core_from_name(const std::string& device_name)
@@ -177,16 +160,123 @@ Core resolve_core_from_name(const std::string& device_name)
     core = Core::ATtiny;
   }
 
-  if (option.find("at32") != std::string::npos) {
-    core = Core::UC;
+  // There are 2 available naming conventions for those AVR32 cores ... !
+  if ( (option.find("at32") != std::string::npos)
+    || (option.find("atuc") != std::string::npos)) {
+    core = Core::AT32UC;
   }
 
   if (option.find("atsam") != std::string::npos) {
-    core = Core::SAM;
+    core = Core::ATSAM;
   }
 
   return core;
 }
 
+static std::string resolve_sam_dfps(const std::string& device_name)
+{
+  std::string out;
+  std::regex pattern("ATSAM([0-9][A-Z]).*");
+  std::smatch matches;
+  std::regex_match(device_name, matches, pattern);
+
+  if (!matches.empty()) {
+    out = "SAM" + matches[1].str() + "_DFP";
+  } else {
+
+    // Get the "G" series out of the way first, otherwise it will interfere with the last regex!
+    if (device_name.find("ATSAMG") != std::string::npos) {
+      out = "SAMG_DFP";
+    } else {
+      pattern.assign("ATSAM([A-Z][0-9]+).*");
+      std::regex_match(device_name, matches, pattern);
+      if (!matches.empty()) {
+        out = "SAM" + matches[1].str() + "_DFP";
+      }
+    }
+  }
+
+  return out;
+}
+
+static std::string resolve_at32uc_dfps(const std::string& device_name)
+{
+  std::string out;
+  std::regex pattern("AT32UC3([A-Z]).*");
+  std::smatch matches;
+
+  std::regex_match(device_name, matches, pattern);
+  if (!matches.empty()) {
+    out = "UC3" + matches[1].str() + "_DFP";
+  }
+
+  if (out.empty()) {
+    pattern.assign("ATUC[0-9]+([A-Z])([0-9])");
+    std::regex_match(device_name, matches, pattern);
+
+    if (!matches.empty()) {
+      out = "UC" + matches[2].str() + matches[1].str() + "_DFP";
+    }
+  }
+
+  return out;
+}
+
+static std::string resolve_xmega_dfps(const std::string& device_name)
+{
+  std::string out;
+  std::regex pattern("ATxmega[0-9]+([A-Z]).*");
+  std::smatch matches;
+
+  std::regex_match(device_name, matches, pattern);
+  if (!matches.empty()) {
+    out = "XMEGA" + matches[1].str() + "_DFP";
+  }
+
+  return out;
+}
+
+std::string resolve_device_dfp_name(const std::string& device_name)
+{
+  Core core = resolve_core_from_name(device_name);
+  std::string out = "";
+
+  switch (core) {
+    case Core::AT90mega:
+    case Core::ATmega:
+      out = "ATmega_DFP";
+      break;
+
+    case Core::ATtiny:
+      // Special case handling for automotive attinies!
+      if (cmutils::strings::to_uppercase(device_name).find("AUTO") != std::string::npos) {
+        out = "ATautomotive_DFP";
+      } else {
+        out = "ATtiny_DFP";
+      }
+      break;
+
+    case Core::ATautomotive:
+      out = "ATautomotive_DFP";
+      break;
+
+    case Core::ATSAM:
+      out = resolve_sam_dfps(device_name);
+      break;
+
+    case Core::AT32UC:
+      out = resolve_at32uc_dfps(device_name);
+      break;
+
+    case Core::ATxmega:
+      out = resolve_xmega_dfps(device_name);
+      break;
+
+    default:
+      break;
+  }
+
+  return out;
+}
 
 }
