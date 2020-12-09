@@ -13,6 +13,8 @@ target_include_directories(testCmStringUtils PUBLIC
     ${GTEST_INCLUDE_DIRS}
 )
 
+CMAKE_SET_TARGET_FOLDER(testCmStringUtils "Tests")
+
 target_link_libraries(testCmStringUtils cmutils ${GTEST_LIBRARIES})
 
 set_target_properties(testCmStringUtils

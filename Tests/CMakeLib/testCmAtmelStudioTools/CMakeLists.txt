@@ -19,6 +19,9 @@ target_include_directories(testAtmelStudioTools PUBLIC
     ${GTEST_INCLUDE_DIRS}
 )
 
+
+CMAKE_SET_TARGET_FOLDER(testAtmelStudioTools "Tests")
+
 target_link_libraries(testAtmelStudioTools AtmelStudio7Generators cmutils ${GTEST_LIBRARIES})
 
 set_target_properties(testAtmelStudioTools
@@ -38,6 +41,8 @@ target_include_directories(testAS7DeviceResolver PUBLIC
     ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/AS7Toolchains
     ${GTEST_INCLUDE_DIRS}
 )
+
+CMAKE_SET_TARGET_FOLDER(testAS7DeviceResolver "Tests")
 
 target_link_libraries(testAS7DeviceResolver AtmelStudio7Generators cmutils ${GTEST_LIBRARIES})
 
