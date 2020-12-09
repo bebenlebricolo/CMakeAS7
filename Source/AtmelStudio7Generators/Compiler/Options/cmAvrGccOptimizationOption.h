@@ -13,14 +13,14 @@ struct OptimizationOption : public CompilerOption
 {
     enum class Level : uint8_t
     {
-        O0,     /**< No Optimizations whatsoever                            */
         O1,     /**< Optimization for code size and execution time          */
         O,      /**< Equivalent of O1                                       */
         O2,     /**< Optimize more for code size and execution time         */
         O3,     /**< Optimize more for code size and execution time         */
         Og,     /**< Optimize but keep enough information to help debugging */
         Os,     /**< Optimize for code size                                 */
-        Ofast   /**< O3 with fast none accurate math calculations           */
+        Ofast,  /**< O3 with fast none accurate math calculations           */
+        O0,     /**< No Optimizations whatsoever, prevails on other options */
     };
 
     /**
