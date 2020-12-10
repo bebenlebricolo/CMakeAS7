@@ -11,6 +11,7 @@
 #include <cm/vector>
 #include <cmext/algorithm>
 
+#include "cmAvrGccMachineOption.h"
 #include "cmGeneratedFileStream.h"
 #include "cmGeneratorExpression.h"
 #include "cmGeneratorTarget.h"
@@ -24,9 +25,8 @@
 #include "cmStringUtils.h"
 #include "cmSystemTools.h"
 
-#include "AS7ToolchainTranslator.h"
-#include "cmAvrGccMachineOption.h"
 #include "AS7DeviceResolver.h"
+#include "AS7ToolchainTranslator.h"
 #include "pugixml.hpp"
 
 cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
@@ -39,13 +39,8 @@ cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
   , GlobalGenerator(gg)
   , LocalGenerator((cmLocalAtmelStudio7Generator*)target->GetLocalGenerator())
 {
-  this->Configurations =
-    this->Makefile->GetGeneratorConfigs(cmMakefile::ExcludeEmptyConfig);
-  //this->LocalGenerator->GetCurrentBinaryDirectory() + "/" +
-  //  this->LocalGenerator->GetTargetDirectory(this->GeneratorTarget);
-  this->InSourceBuild = (this->Makefile->GetCurrentSourceDirectory() ==
-                         this->Makefile->GetCurrentBinaryDirectory());
-  //this->ClassifyAllConfigSources();
+  this->Configurations = this->Makefile->GetGeneratorConfigs(cmMakefile::ExcludeEmptyConfig);
+  this->InSourceBuild = (this->Makefile->GetCurrentSourceDirectory() == this->Makefile->GetCurrentBinaryDirectory());
 }
 
 cmAtmelStudio7TargetGenerator::~cmAtmelStudio7TargetGenerator()
@@ -73,33 +68,29 @@ static AS7ProjectDescriptor::Type computeProjectFileExtension(cmGeneratorTarget 
     return AS7ProjectDescriptor::Type::asmproj;
   }
 
-  // Defaults to c projects
+  // Defaults to C projects
   return AS7ProjectDescriptor::Type::cproj;
 }
 
 void cmAtmelStudio7TargetGenerator::Generate()
 {
   // Retrieve project file extension
-  const AS7ProjectDescriptor::Type ProjectFileType =
-    computeProjectFileExtension(this->GeneratorTarget);
+  const AS7ProjectDescriptor::Type ProjectFileType = computeProjectFileExtension(this->GeneratorTarget);
   const std::string ProjectFileExtension = AS7ProjectDescriptor::get_extension(ProjectFileType);
 
   // Tell the global generator the name of the project file
-  this->GeneratorTarget->Target->SetProperty("GENERATOR_FILE_NAME",
-                                             this->Name);
-  this->GeneratorTarget->Target->SetProperty("GENERATOR_FILE_NAME_EXT",
-                                             ProjectFileExtension);
-  this->AdditionalUsingDirectories.clear();
+  this->GeneratorTarget->Target->SetProperty("GENERATOR_FILE_NAME", this->Name);
+  this->GeneratorTarget->Target->SetProperty("GENERATOR_FILE_NAME_EXT", ProjectFileExtension);
 
-  std::string path =
-    cmStrCat(this->LocalGenerator->GetCurrentBinaryDirectory(), '/',
-             this->Name, ProjectFileExtension);
+  std::string path = cmStrCat(this->LocalGenerator->GetCurrentBinaryDirectory(), '/', this->Name, ProjectFileExtension);
   cmGeneratedFileStream BuildFileStream(path);
   const std::string PathToProjectFile = path;
   BuildFileStream.SetCopyIfDifferent(true);
 
+  // Output project file is an XML file using default UTF-8 encoding
   pugi::xml_document doc;
   // Prepend delcaration node will look like this : <?xml version="1.0" encoding="utf-8"?>
+  // This is the implementation of XML Byte Order Mask (BOM) for UTF-8 encoding : https://en.wikipedia.org/wiki/Byte_order_mark
   pugi::xml_node decl = doc.prepend_child(pugi::node_declaration);
   decl.append_attribute("version") = "1.0";
   decl.append_attribute("encoding") = "utf-8";
@@ -110,11 +101,12 @@ void cmAtmelStudio7TargetGenerator::Generate()
   project_node.append_attribute("xmlns") = "http://schemas.microsoft.com/developer/msbuild/2003";
   project_node.append_attribute("ToolsVersion") = "14.0";
 
+  // Device name is resolved from compiler options
   BuildDevicePropertyGroup(project_node, this->Name);
 
-  std::vector<cmGeneratorTarget::AllConfigSource> const& sources =
-    this->GeneratorTarget->GetAllConfigSources();
-
+  // Iterate over build configurations such as Release, Debug, etc. and write their dedicated descriptions
+  // Based on compiler options
+  std::vector<cmGeneratorTarget::AllConfigSource> const& sources = this->GeneratorTarget->GetAllConfigSources();
   for (std::string const& config : this->Configurations) {
     std::string configUpper = cmSystemTools::UpperCase(config);
     BuildConfigurationXmlGroup(project_node, config);
@@ -130,52 +122,9 @@ void cmAtmelStudio7TargetGenerator::Generate()
   pugi::xml_node import_projects_node = project_node.append_child("Import");
   import_projects_node.append_attribute("Project") = R"($(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets)";
 
-  //doc.save_file(PathToProjectFile.c_str(), "  ", (pugi::format_indent | pugi::format_write_bom), pugi::xml_encoding::encoding_utf8);
   doc.save(BuildFileStream, "  ", (pugi::format_indent | pugi::format_write_bom), pugi::xml_encoding::encoding_utf8);
   BuildFileStream.Close();
 }
-
-void cmAtmelStudio7TargetGenerator::WriteTargetGlobalProperties(pugi::xml_node& node)
-{
-}
-
-//void cmAtmelStudio7TargetGenerator::ClassifyAllConfigSources()
-//{
-//    for (cmGeneratorTarget::AllConfigSource const& source :
-//         this->GeneratorTarget->GetAllConfigSources()) {
-//      this->ClassifyAllConfigSource(source);
-//    }
-//}
-
-//void cmAtmelStudio7TargetGenerator::ClassifyAllConfigSource(cmGeneratorTarget::AllConfigSource const& acs)
-//{
-//  switch (acs.Kind) {
-//    case cmGeneratorTarget::SourceKindResx: {
-//      // Build and save the name of the corresponding .h file
-//      // This relationship will be used later when building the project files.
-//      // Both names would have been auto generated from Visual Studio
-//      // where the user supplied the file name and Visual Studio
-//      // appended the suffix.
-//      std::string resx = acs.Source->ResolveFullPath();
-//      std::string hFileName = resx.substr(0, resx.find_last_of('.')) + ".h";
-//      this->ExpectedResxHeaders.insert(hFileName);
-//    } break;
-//    case cmGeneratorTarget::SourceKindXaml: {
-//      // Build and save the name of the corresponding .h and .cpp file
-//      // This relationship will be used later when building the project files.
-//      // Both names would have been auto generated from Visual Studio
-//      // where the user supplied the file name and Visual Studio
-//      // appended the suffix.
-//      std::string xaml = acs.Source->ResolveFullPath();
-//      std::string hFileName = xaml + ".h";
-//      std::string cppFileName = xaml + ".cpp";
-//      this->ExpectedXamlHeaders.insert(hFileName);
-//      this->ExpectedXamlSources.insert(cppFileName);
-//    } break;
-//    default:
-//      break;
-//  }
-//}
 
 void cmAtmelStudio7TargetGenerator::AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value)
 {
@@ -206,6 +155,7 @@ std::vector<std::string> cmAtmelStudio7TargetGenerator::ConvertStringRange(const
   return out;
 }
 
+// TODO : this util function could be implemented elsewhere, for instance in the cmAvrGccLanguageStandardOption or in a more generic place
 static std::string encode_lang_std(const std::string& std_version, const std::string& lang, bool use_gnu_standard = false)
 {
   std::string out = "-std=";
@@ -230,12 +180,12 @@ std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGe
   std::unordered_map<std::string, std::vector<std::string>> out;
   std::string linker_variable_name = "CMAKE_EXE_LINKER_FLAGS";
 
+  // Extract all compiler options, parse them and use them in the final XML file
   for (auto& lang : languages) {
     std::vector<std::string> all_flags;
     std::string flag_variable_name = "CMAKE_" + lang + "_FLAGS";
     std::string flag_variable_config_name = flag_variable_name + "_" + upConfig;
     std::string lang_standard_varname = "CMAKE_" + lang + "_STANDARD";
-
 
     cmProp lang_flags_base = this->Makefile->GetDefinition(flag_variable_name);
     cmProp lang_flags_config = this->Makefile->GetDefinition(flag_variable_config_name);
@@ -256,7 +206,7 @@ std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGe
     }
 
     if (lang_standard_def != nullptr) {
-        all_flags.push_back(encode_lang_std(*lang_standard_def, lang, false));
+      all_flags.push_back(encode_lang_std(*lang_standard_def, lang, false));
     }
 
     // Merge all flags within one big vector
@@ -305,6 +255,8 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
   }
   pugi::xml_node avr_gcc_node = toolchain_settings_node.append_child(avr_gcc_node_name.c_str());
 
+  // NOTE : this is a "default" setting for Release config which might be annoying, consider removing this if need be
+  // Classic default symbols for Release configuration
   if (build_type != "Release") {
     translator.toolchain.avrgcc.symbols.def_symbols.push_back("NDEBUG");
     translator.toolchain.avrgcccpp.symbols.def_symbols.push_back("NDEBUG");
@@ -320,6 +272,8 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
   translator.toolchain.avrgcc.directories.include_paths.push_back(dfp_include_dir);
   translator.toolchain.avrgcccpp.directories.include_paths.push_back(dfp_include_dir);
 
+  // This is the only way the toolchain translator could know about those includes as
+  // they are not parsed from compiler options alone.
   for (const auto& lang : enabledLanguages) {
     auto includesList = this->GetIncludes(build_type, lang);
     for (const auto& singleInclude : includesList) {
@@ -332,9 +286,12 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
   }
 
   // Configure linker
+  // libm is always present in projects, so add it by default.
+  // NOTE : this default behavior could be annoying as well, provide a way to NOT include libm everytime
   translator.toolchain.linker.libraries.libraries.push_back("libm");
   cmGlobalVisualStudioGenerator::OrderedTargetDependSet target_dependencies = GetTargetDependencies();
 
+  // Resolve project's dependencies
   for (cmGeneratorTarget const* dependent_target : target_dependencies) {
     if (!dependent_target->IsInBuildSystem()) {
       continue;
@@ -348,6 +305,7 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
   }
   translator.toolchain.assembler.general.include_path.push_back(dfp_include_dir);
 
+  // Finally generate the xml project file
   translator.generate_xml(avr_gcc_node);
 }
 
@@ -355,41 +313,31 @@ void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent
 {
   // collect up group information
   std::vector<cmSourceGroup> sourceGroups = this->Makefile->GetSourceGroups();
-  // TODO : add source files
-
-  std::vector<cmGeneratorTarget::AllConfigSource> const& sources =
-    this->GeneratorTarget->GetAllConfigSources();
+  std::vector<cmGeneratorTarget::AllConfigSource> const& sources = this->GeneratorTarget->GetAllConfigSources();
 
   pugi::xml_node item_group_node = parent.append_child("ItemGroup");
 
+  //
   for (cmGeneratorTarget::AllConfigSource const& si : sources) {
     const char* tool = nullptr;
     switch (si.Kind) {
       case cmGeneratorTarget::SourceKindObjectSource: {
         const std::string& lang = si.Source->GetLanguage();
+
         if (lang == "C" || lang == "CXX") {
           tool = "Compile";
           pugi::xml_node compile_node = item_group_node.append_child(tool);
           std::string path = si.Source->GetFullPath().c_str();
+
           // Convert regular slashes to Windows backslashes
           std::replace(path.begin(), path.end(), '/', '\\');
           compile_node.append_attribute("Include") = path.c_str();
           AppendInlinedNodeChildPcData(compile_node, "SubType", "compile");
         }
-      }
-      break;
+      } break;
 
+      // NOTE : External Object source kind is not supported for now, investigations needed
       case cmGeneratorTarget::SourceKindExternalObject:
-        tool = "Object";
-        if (this->LocalGenerator) {
-          std::vector<cmSourceFile*> const* d =
-            this->GeneratorTarget->GetSourceDepends(si.Source);
-          if (d && !d->empty()) {
-            tool = "None";
-          }
-        }
-        break;
-
       default:
         tool = "None";
         break;
@@ -436,11 +384,15 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
     }
   }
 
+  // Update targeted Device member for further use in subsequent calls to other methods (for instance when building configurations xml...)
   AS7DeviceResolver::Core core = AS7DeviceResolver::resolve_core_from_name(device_name);
   TargetedDevice.DFP_name = AS7DeviceResolver::resolve_device_dfp_name(device_name);
   TargetedDevice.name = device_name;
   TargetedDevice.resolve_version(this->GlobalGenerator->GetAtmelStudio7InstallationFolder() + "\\packs");
 
+  // TODO : put this elsewhere, this could easily be moved to the AS7DeviceResolver namespace or even in AS7Toolchains !
+  // This could be a simple function such as :
+  // std::string toolchain = AS7DeviceResolver::resolve_toolchain_name(core);
   std::string toolchain;
   switch (core) {
 
@@ -464,6 +416,7 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
   }
 
   // handles devices with mmcu option
+  // TODO : this kind of functionality could be implemented in the AvrGCC8Common structure or whatnot.
   if (!TargetedDevice.mmcu_option.empty()) {
     translator.toolchain.common.Device = "-mmcu=" + TargetedDevice.mmcu_option;
     translator.toolchain.common.Device += " -B \"%24(PackRepoDir)\\atmel\\" + TargetedDevice.DFP_name + '\\' + TargetedDevice.version + "\\gcc\\dev\\" + TargetedDevice.mmcu_option + "\"";
@@ -474,6 +427,7 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
   AppendInlinedNodeChildPcData(property_group, "avrdevice", device_name);
   AppendInlinedNodeChildPcData(property_group, "avrdeviceseries", "none");
 
+  // Shared libraries are not supported for now as they imply to use some real time OS (?)
   if (this->GeneratorTarget->GetType() == cmStateEnums::TargetType::EXECUTABLE) {
     AppendInlinedNodeChildPcData(property_group, "OutputType", "Executable");
   } else {
@@ -528,6 +482,7 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
   BuildSimulatorConfiguration(property_group);
 }
 
+// NOTE : this implementation of Simulator configuration is a default one and does not reflect any expected configuration
 void cmAtmelStudio7TargetGenerator::BuildSimulatorConfiguration(pugi::xml_node& parent, const std::string& device_signature, const std::string& stimuli_filepath)
 {
   AppendInlinedNodeChildPcData(parent, "avrtool", "com.atmel.avrdbg.tool.simulator");
