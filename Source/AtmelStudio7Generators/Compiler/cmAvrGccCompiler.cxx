@@ -109,7 +109,9 @@ std::vector<cmAvrGccCompiler::ShrdOption> cmAvrGccCompiler::get_options(const Co
 
 CompilerOption * cmAvrGccCompiler::get_option(const std::string& token) const
 {
-  return options.get_option(token).get();
+  compiler::cmAvrGccCompiler::ShrdOption opt = options.get_option(token);
+  CompilerOption* out = opt.get();
+  return out;
 }
 
 std::vector<std::string> cmAvrGccCompiler::get_all_options(const CompilerOption::Type type) const

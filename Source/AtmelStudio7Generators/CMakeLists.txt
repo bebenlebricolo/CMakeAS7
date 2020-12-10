@@ -29,6 +29,11 @@ add_library(AtmelStudio7Generators
     ${AS7_GENERATOR_SOURCES}
 )
 
+if (WIN32)
+    # I want those warnings out !
+    target_compile_options(AtmelStudio7Generators PRIVATE "/W4")
+endif()
+
 target_include_directories(AtmelStudio7Generators PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/
     ${CMAKE_CURRENT_SOURCE_DIR}/Compiler

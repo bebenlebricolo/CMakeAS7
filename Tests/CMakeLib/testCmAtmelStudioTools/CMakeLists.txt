@@ -19,8 +19,10 @@ target_include_directories(testAtmelStudioTools PUBLIC
     ${GTEST_INCLUDE_DIRS}
 )
 
-
-CMAKE_SET_TARGET_FOLDER(testAtmelStudioTools "Tests")
+if (WIN32)
+    CMAKE_SET_TARGET_FOLDER(testAtmelStudioTools "Tests")
+    target_compile_options(testAtmelStudioTools PRIVATE "/W4")
+endif()
 
 target_link_libraries(testAtmelStudioTools AtmelStudio7Generators cmutils ${GTEST_LIBRARIES})
 
@@ -42,7 +44,11 @@ target_include_directories(testAS7DeviceResolver PUBLIC
     ${GTEST_INCLUDE_DIRS}
 )
 
-CMAKE_SET_TARGET_FOLDER(testAS7DeviceResolver "Tests")
+if (WIN32)
+    CMAKE_SET_TARGET_FOLDER(testAS7DeviceResolver "Tests")
+    target_compile_options(testAS7DeviceResolver PRIVATE "/W4")
+endif()
+
 
 target_link_libraries(testAS7DeviceResolver AtmelStudio7Generators cmutils ${GTEST_LIBRARIES})
 

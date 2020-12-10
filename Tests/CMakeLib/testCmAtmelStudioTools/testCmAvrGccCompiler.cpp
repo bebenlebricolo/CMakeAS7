@@ -121,7 +121,7 @@ TEST(AvrGccCompilerFlagsParsing, test_linker_concatenated_options)
   ASSERT_TRUE(compiler_abstraction.has_option("Wl,--relax"));
   ASSERT_TRUE(compiler_abstraction.has_option("--relax"));
 
-  auto& linker_options = compiler_abstraction.get_options(compiler::CompilerOption::Type::Linker);
+  const auto& linker_options = compiler_abstraction.get_options(compiler::CompilerOption::Type::Linker);
   ASSERT_EQ(linker_options.size(), 2);
 
 }

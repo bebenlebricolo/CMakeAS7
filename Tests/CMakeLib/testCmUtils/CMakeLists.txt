@@ -15,6 +15,10 @@ target_include_directories(testCmStringUtils PUBLIC
 
 CMAKE_SET_TARGET_FOLDER(testCmStringUtils "Tests")
 
+if (WIN32)
+    target_compile_options(testCmStringUtils PRIVATE "/W4")
+endif()
+
 target_link_libraries(testCmStringUtils cmutils ${GTEST_LIBRARIES})
 
 set_target_properties(testCmStringUtils
