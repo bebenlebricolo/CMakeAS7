@@ -7,7 +7,6 @@
 #include "cmAlgorithms.h"
 #include "cmDocumentationEntry.h"
 #include "cmEncoding.h"
-#include "cmStringUtils.h"
 #include "cmGeneratedFileStream.h"
 #include "cmGeneratorExpression.h"
 #include "cmGeneratorTarget.h"
@@ -16,6 +15,7 @@
 #include "cmMessageType.h"
 #include "cmState.h"
 #include "cmStringAlgorithms.h"
+#include "cmStringUtils.h"
 #include "cmUuid.h"
 #include "cmake.h"
 
@@ -27,8 +27,8 @@ public:
   {
     if (name == cmGlobalAtmelStudio7Generator::TruncatedGeneratorName ||
         name == cmGlobalAtmelStudio7Generator::GeneratorName) {
-        return std::unique_ptr<cmGlobalAtmelStudio7Generator>(
-          new cmGlobalAtmelStudio7Generator(cm, name));
+      return std::unique_ptr<cmGlobalAtmelStudio7Generator>(
+        new cmGlobalAtmelStudio7Generator(cm, name));
     }
     return std::unique_ptr<cmGlobalGenerator>();
   }
@@ -118,22 +118,19 @@ bool cmGlobalAtmelStudio7Generator::SetGeneratorPlatform(std::string const& p, c
   }
 
   AvailablePlatforms platform = GetPlatform(p);
-  if (AvailablePlatforms::Unsupported == platform)
-  {
-      std::ostringstream e;
-      /* clang-format off */
+  if (AvailablePlatforms::Unsupported == platform) {
+    std::ostringstream e;
+    /* clang-format off */
       e <<
         "Generator\n"
         "  " << this->GetName() << "\n"
         "does not support platform specification, but platform\n"
         "  " << p << "\n"
         "was specified.";
-      /* clang-format on */
-      mf->IssueMessage(MessageType::FATAL_ERROR, e.str());
-      return false;
-  }
-  else
-  {
+    /* clang-format on */
+    mf->IssueMessage(MessageType::FATAL_ERROR, e.str());
+    return false;
+  } else {
     CurrentPlatform = platform;
   }
 
@@ -147,7 +144,7 @@ std::string cmGlobalAtmelStudio7Generator::GetName() const
 
 std::vector<cmGlobalAtmelStudio7Generator::LangProp> cmGlobalAtmelStudio7Generator::SupportedLanguagesList = {
   { cmGlobalAtmelStudio7Generator::SupportedLanguages::C, { "C" }, { "H" } },
-  { cmGlobalAtmelStudio7Generator::SupportedLanguages::CPP, { "CPP", "CXX" }, { "HPP", "HXX", "H" }},
+  { cmGlobalAtmelStudio7Generator::SupportedLanguages::CPP, { "CPP", "CXX" }, { "HPP", "HXX", "H" } },
   { cmGlobalAtmelStudio7Generator::SupportedLanguages::ASM, { "ASM" }, {} }
 };
 
@@ -172,12 +169,11 @@ static bool langmatch(const std::string& lang, const std::vector<std::string>& r
 bool cmGlobalAtmelStudio7Generator::SupportsLanguage(const std::string& lang)
 {
   auto found_item = std::find_if(SupportedLanguagesList.begin(), SupportedLanguagesList.end(), [lang](const LangProp& prop) {
-      return langmatch(lang, prop.lang_src_str);
+    return langmatch(lang, prop.lang_src_str);
   });
 
   return found_item != SupportedLanguagesList.end();
 }
-
 
 bool cmGlobalAtmelStudio7Generator::CheckLanguages(std::vector<std::string> const& languages, cmMakefile* mf) const
 {
@@ -193,7 +189,7 @@ bool cmGlobalAtmelStudio7Generator::CheckLanguages(std::vector<std::string> cons
 // Static map definition
 std::map<cmGlobalAtmelStudio7Generator::AvailablePlatforms, std::string>
   cmGlobalAtmelStudio7Generator::PlatformMap = {
-    { cmGlobalAtmelStudio7Generator::AvailablePlatforms::ARM, "ARM" },
+    { cmGlobalAtmelStudio7Generator::AvailablePlatforms::ARM32, "ARM" },
     { cmGlobalAtmelStudio7Generator::AvailablePlatforms::AVR32, "AVR32" },
     { cmGlobalAtmelStudio7Generator::AvailablePlatforms::AVR8, "AVR8" },
     { cmGlobalAtmelStudio7Generator::AvailablePlatforms::Unsupported,
@@ -210,18 +206,6 @@ cmGlobalAtmelStudio7Generator::cmGlobalAtmelStudio7Generator(
   cmake* cm, const std::string& platformInGeneratorName)
   : cmGlobalGenerator(cm)
 {
-  // this->ExpressEdition = cmSystemTools::ReadRegistryValue(
-  //  "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\VCExpress\\11.0\\Setup\\VC;"
-  //  "ProductDir",
-  //  vc11Express, cmSystemTools::KeyWOW64_32);
-  // this->DefaultPlatformToolset = "v110";
-  // this->DefaultCLFlagTableName = "v11";
-  // this->DefaultCSharpFlagTableName = "v11";
-  // this->DefaultLibFlagTableName = "v11";
-  // this->DefaultLinkFlagTableName = "v11";
-  // this->DefaultMasmFlagTableName = "v11";
-  // this->DefaultRCFlagTableName = "v11";
-  // this->Version = VS11;
 }
 
 void cmGlobalAtmelStudio7Generator::WriteATSLNHeader(std::ostream& fout)
@@ -302,13 +286,10 @@ std::string cmGlobalAtmelStudio7Generator::GetStartupProjectName(
 
 bool cmGlobalAtmelStudio7Generator::FindMakeProgram(cmMakefile*)
 {
-  // Visual Studio generators know how to lookup their build tool
+  // Atmel Studio generators know how to lookup their build tool
   // directly instead of needing a helper module to do it, so we
   // do not actually need to put CMAKE_MAKE_PROGRAM into the cache.
 
-  //if (cmIsOff(mf->GetDefinition("CMAKE_MAKE_PROGRAM"))) {
-  //  mf->AddDefinition("CMAKE_MAKE_PROGRAM", this->GetVSMakeProgram());
-  //}
   return true;
 }
 
@@ -361,15 +342,13 @@ void cmGlobalAtmelStudio7Generator::WriteATSLNFile(
 
   // Generate folder specification.
   bool useFolderProperty = this->UseFolderProperty();
-  if (useFolderProperty) {
-    this->WriteFolders(fout);
-  }
 
   // Now write the actual target specification content.
   fout << targetsAtSlnString.str();
 
   // Write out the configurations information for the solution
   fout << "Global\n";
+
   // Write out the configurations for the solution
   this->WriteSolutionConfigurations(fout, configs);
   fout << "\tGlobalSection(" << this->ProjectConfigurationSectionName
@@ -378,13 +357,6 @@ void cmGlobalAtmelStudio7Generator::WriteATSLNFile(
   this->WriteTargetConfigurations(fout, configs, orderedProjectTargets);
   fout << "\tEndGlobalSection\n";
 
-  if (useFolderProperty) {
-    // Write out project folders
-    fout << "\tGlobalSection(NestedProjects) = preSolution\n";
-    this->WriteFoldersContent(fout);
-    fout << "\tEndGlobalSection\n";
-  }
-
   // Write out global sections
   this->WriteATSLNGlobalSections(fout, root);
 
@@ -392,18 +364,12 @@ void cmGlobalAtmelStudio7Generator::WriteATSLNFile(
   this->WriteATSLNFooter(fout);
 }
 
-bool cmGlobalAtmelStudio7Generator::MatchesGeneratorName(
-  const std::string& name) const
-{
-  return (name == std::string(this->GeneratorName));
-}
-
-bool cmGlobalAtmelStudio7Generator::IsAtmelStudioInstalled() const
+bool cmGlobalAtmelStudio7Generator::IsAtmelStudioInstalled()
 {
   return !GetAtmelStudio7InstallationFolder().empty();
 }
 
-std::string cmGlobalAtmelStudio7Generator::GetAtmelStudio7InstallationFolder() const
+std::string cmGlobalAtmelStudio7Generator::GetAtmelStudio7InstallationFolder()
 {
   const char atmelStudio7InstallDir[] =
     R"(HKEY_CURRENT_USER\Software\Atmel\AtmelStudio\7.0_Config;InstallDir)";
@@ -464,12 +430,10 @@ void cmGlobalAtmelStudio7Generator::Generate()
   this->OutputATSLNFile();
 }
 
-std::vector<cmGlobalGenerator::GeneratedMakeCommand>
-cmGlobalAtmelStudio7Generator::GenerateBuildCommand(
-  const std::string& makeProgram, const std::string& projectName,
-  const std::string& projectDir, std::vector<std::string> const& targetNames,
-  const std::string& config, bool fast, int jobs, bool verbose,
-  std::vector<std::string> const& makeOptions)
+std::vector<cmGlobalGenerator::GeneratedMakeCommand> cmGlobalAtmelStudio7Generator::GenerateBuildCommand(const std::string& makeProgram, const std::string& projectName,
+                                                                                                         const std::string& projectDir, std::vector<std::string> const& targetNames,
+                                                                                                         const std::string& config, bool fast, int jobs, bool verbose,
+                                                                                                         std::vector<std::string> const& makeOptions)
 {
   std::vector<GeneratedMakeCommand> makeCommands;
   // Select the caller- or user-preferred make program, else MSBuild.
@@ -494,110 +458,16 @@ cmGlobalAtmelStudio7Generator::GenerateBuildCommand(
   return makeCommands;
 }
 
-// Write a dsp file into the SLN file, Note, that dependencies from
-// executables to the libraries it uses are also done here
-void cmGlobalAtmelStudio7Generator::WriteExternalProject(
-  std::ostream& fout, const std::string& name, const std::string& location,
-  const char* typeGuid,
-  const std::set<BT<std::pair<std::string, bool>>>& depends)
-{
-  fout << "Project(\"{"
-       << (typeGuid ? typeGuid : this->ExternalProjectType(location))
-       << "}\") = \"" << name << "\", \""
-       << this->ConvertToSolutionPath(location) << "\", \"{"
-       << this->GetGUID(name) << "}\"\n";
-
-  // write out the dependencies here VS 7.1 includes dependencies with the
-  // project instead of in the global section
-  if (!depends.empty()) {
-    fout << "\tProjectSection(ProjectDependencies) = postProject\n";
-    for (BT<std::pair<std::string, bool>> const& it : depends) {
-      std::string const& dep = it.Value.first;
-      if (!dep.empty()) {
-        fout << "\t\t{" << this->GetGUID(dep) << "} = {" << this->GetGUID(dep)
-             << "}\n";
-      }
-    }
-    fout << "\tEndProjectSection\n";
-  }
-
-  fout << "EndProject\n";
-}
-
-const char* cmGlobalAtmelStudio7Generator::ExternalProjectType(
-  const std::string& location)
-{
-  std::string extension = cmSystemTools::GetFilenameLastExtension(location);
-  return "8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942";
-}
-
 void cmGlobalAtmelStudio7Generator::WriteTargetsToSolution(
   std::ostream& fout, cmLocalGenerator* root,
   OrderedTargetDependSet const& projectTargets)
 {
-  AtmelStudioFolders.clear();
-
   std::string rootBinaryDir = root->GetCurrentBinaryDirectory();
   for (cmGeneratorTarget const* target : projectTargets) {
     if (!target->IsInBuildSystem()) {
       continue;
     }
     bool written = false;
-
-    // handle external vc project files
-    cmProp expath = target->GetProperty("EXTERNAL_MSPROJECT");
-    if (expath) {
-      std::string project = target->GetName();
-      std::string location = *expath;
-
-      cmProp p = target->GetProperty("VS_PROJECT_TYPE");
-      this->WriteExternalProject(fout, project, location, cmToCStr(p),
-                                 target->GetUtilities());
-      written = true;
-    } else {
-      cmProp cprojName = target->GetProperty("GENERATOR_FILE_NAME");
-      if (cprojName) {
-        cmLocalGenerator* lg = target->GetLocalGenerator();
-        std::string dir = lg->GetCurrentBinaryDirectory();
-        dir = root->MaybeConvertToRelativePath(rootBinaryDir, dir);
-        if (dir == ".") {
-          dir.clear(); // msbuild cannot handle ".\" prefix
-        }
-        this->WriteProject(fout, *cprojName, dir, target);
-        written = true;
-      }
-    }
-
-    // Create "solution folder" information from FOLDER target property
-    //
-    if (written && this->UseFolderProperty()) {
-      const std::string targetFolder = target->GetEffectiveFolderName();
-      if (!targetFolder.empty()) {
-        std::vector<std::string> tokens =
-          cmSystemTools::SplitString(targetFolder, '/', false);
-
-        std::string cumulativePath;
-
-        for (std::string const& iter : tokens) {
-          if (!iter.size()) {
-            continue;
-          }
-
-          if (cumulativePath.empty()) {
-            cumulativePath = "CMAKE_FOLDER_GUID_" + iter;
-          } else {
-            AtmelStudioFolders[cumulativePath].insert(cumulativePath + "/" +
-                                                      iter);
-
-            cumulativePath = cumulativePath + "/" + iter;
-          }
-        }
-
-        if (!cumulativePath.empty()) {
-          AtmelStudioFolders[cumulativePath].insert(target->GetName());
-        }
-      }
-    }
   }
 }
 
@@ -607,19 +477,13 @@ std::string cmGlobalAtmelStudio7Generator::ConvertToSolutionPath(
   // Convert to backslashes.  Do not use ConvertToOutputPath because
   // we will add quoting ourselves, and we know these projects always
   // use windows slashes.
-  std::string d = path;
-  std::string::size_type pos = 0;
-  while ((pos = d.find('/', pos)) != d.npos) {
-    d[pos++] = '\\';
-  }
-  return d;
+  return cmutils::strings::replace(path, '/', '\\');
 }
 
-void cmGlobalAtmelStudio7Generator::WriteProjectDepends(
-  std::ostream& fout, const std::string&, const std::string&,
-  cmGeneratorTarget const* gt)
+void cmGlobalAtmelStudio7Generator::WriteProjectDepends(std::ostream& fout,
+                                                        cmGeneratorTarget const* target_gen)
 {
-  TargetDependSet const& unordered = this->GetTargetDirectDepends(gt);
+  TargetDependSet const& unordered = this->GetTargetDirectDepends(target_gen);
   OrderedTargetDependSet depends(unordered, std::string());
   for (cmTargetDepend const& i : depends) {
     if (!i->IsInBuildSystem()) {
@@ -630,41 +494,42 @@ void cmGlobalAtmelStudio7Generator::WriteProjectDepends(
   }
 }
 
-// Write a dsp file into the SLN file,
+// Write a dependent project file into the SLN file,
 // Note, that dependencies from executables to
 // the libraries it uses are also done here
 void cmGlobalAtmelStudio7Generator::WriteProject(std::ostream& fout,
-                                                 const std::string& dspname,
-                                                 const std::string& dir,
-                                                 cmGeneratorTarget const* t)
+                                                 const std::string& display_name,
+                                                 const std::string& relative_path,
+                                                 cmGeneratorTarget const* target_gen)
 {
   // check to see if this is a fortran build
   std::string ext = ".vcproj";
   const char* project =
     "Project(\"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}\") = \"";
 
-  cmProp targetExt = t->GetProperty("GENERATOR_FILE_NAME_EXT");
+  cmProp targetExt = target_gen->GetProperty("GENERATOR_FILE_NAME_EXT");
   if (targetExt) {
     ext = *targetExt;
   }
 
-  std::string guid = this->GetGUID(dspname);
-  fout << project << dspname << "\", \"" << this->ConvertToSolutionPath(dir)
-       << (!dir.empty() ? "\\" : "") << dspname << ext << "\", \"{" << guid
+  std::string guid = this->GetGUID(display_name);
+  fout << project << display_name << "\", \"" << this->ConvertToSolutionPath(relative_path)
+       << (!relative_path.empty() ? "\\" : "") << display_name << ext << "\", \"{" << guid
        << "}\"\n";
+
   fout << "\tProjectSection(ProjectDependencies) = postProject\n";
-  this->WriteProjectDepends(fout, dspname, dir, t);
+  this->WriteProjectDepends(fout, target_gen);
   fout << "\tEndProjectSection\n";
 
   fout << "EndProject\n";
 
-  UtilityDependsMap::iterator ui = this->UtilityDepends.find(t);
+  UtilityDependsMap::iterator ui = this->UtilityDepends.find(target_gen);
   if (ui != this->UtilityDepends.end()) {
     const char* uname = ui->second.c_str();
     /* clang-format off */
     fout << "Project(\"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}\") = \""
          << uname << "\", \""
-         << this->ConvertToSolutionPath(dir) << (dir[0]? "\\":"")
+         << this->ConvertToSolutionPath(relative_path) << (relative_path[0]? "\\":"")
          << uname << ".vcproj" << "\", \"{"
          << this->GetGUID(uname) << "}\"\n"
          << "\tProjectSection(ProjectDependencies) = postProject\n"
@@ -704,41 +569,6 @@ void cmGlobalAtmelStudio7Generator::WriteTargetConfigurations(
   }
 }
 
-void cmGlobalAtmelStudio7Generator::WriteFolders(std::ostream& fout)
-{
-  cm::string_view const prefix = "CMAKE_FOLDER_GUID_";
-  std::string guidProjectTypeFolder = "2150E333-8FDC-42A3-9474-1A3956D46DE8";
-  for (auto const& iter : AtmelStudioFolders) {
-    std::string fullName = iter.first;
-    std::string guid = this->GetGUID(fullName);
-
-    std::replace(fullName.begin(), fullName.end(), '/', '\\');
-    if (cmHasPrefix(fullName, prefix)) {
-      fullName = fullName.substr(prefix.size());
-    }
-
-    std::string nameOnly = cmSystemTools::GetFilenameName(fullName);
-
-    fout << "Project(\"{" << guidProjectTypeFolder << "}\") = \"" << nameOnly
-         << "\", \"" << fullName << "\", \"{" << guid << "}\"\nEndProject\n";
-  }
-}
-
-void cmGlobalAtmelStudio7Generator::WriteFoldersContent(std::ostream& fout)
-{
-  for (auto const& iter : AtmelStudioFolders) {
-    std::string key(iter.first);
-    std::string guidParent(this->GetGUID(key));
-
-    for (std::string const& it : iter.second) {
-      std::string value(it);
-      std::string guid(this->GetGUID(value));
-
-      fout << "\t\t{" << guid << "} = {" << guidParent << "}\n";
-    }
-  }
-}
-
 void cmGlobalAtmelStudio7Generator::WriteProjectConfigurations(
   std::ostream& fout, const std::string& name, cmGeneratorTarget const& target,
   std::vector<std::string> const& configs,
@@ -759,6 +589,7 @@ void cmGlobalAtmelStudio7Generator::WriteProjectConfigurations(
       }
     }
 
+    // NOTE : we might remove the platform override here if need be
     std::string platformName = GetPlatform(CurrentPlatform);
     fout << "\t\t{" << guid << "}." << i << "|" << platformName
          << ".ActiveCfg = " << dstConfig << "|"
