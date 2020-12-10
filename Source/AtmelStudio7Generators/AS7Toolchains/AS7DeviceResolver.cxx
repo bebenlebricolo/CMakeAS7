@@ -323,7 +323,10 @@ std::string get_max_packs_version(const std::string& path)
     return lsum < rsum;
   });
 
-  out = *max_version;
+  // Guard against cases where versions is empty
+  if (max_version != versions.end()) {
+    out = *max_version;
+  }
   return out;
 }
 
