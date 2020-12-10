@@ -35,7 +35,7 @@ cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
   , Makefile(target->Target->GetMakefile())
   , Platform(gg->GetPlatform(gg->GetCurrentPlatform()))
   , Name(target->GetName())
-  , GUID(gg->GetGUID(this->Name))
+  , GUID(gg->GetGUID(target->GetName()))
   , GlobalGenerator(gg)
   , LocalGenerator((cmLocalAtmelStudio7Generator*)target->GetLocalGenerator())
 {

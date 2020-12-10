@@ -129,10 +129,10 @@ std::string AS7AvrGCC8::get_unsupported_options(const compiler::cmAvrGccCompiler
 std::vector<std::string> AS7AvrGCC8::get_all_supported_options() const
 {
   std::vector<std::string> out;
-  std::vector<std::string>& common_vec = common.get_supported_options();
-  std::vector<std::string>& avrgcc_vec = avrgcc.get_supported_options();
-  std::vector<std::string>& linker_vec = linker.get_supported_options();
-  std::vector<std::string>& assem_vec = assembler.get_supported_options();
+  const std::vector<std::string>& common_vec = common.get_supported_options();
+  const std::vector<std::string>& avrgcc_vec = avrgcc.get_supported_options();
+  const std::vector<std::string>& linker_vec = linker.get_supported_options();
+  const std::vector<std::string>& assem_vec = assembler.get_supported_options();
 
   out.insert(out.end(), common_vec.begin(), common_vec.end());
   out.insert(out.end(), avrgcc_vec.begin(), avrgcc_vec.end());
@@ -549,10 +549,10 @@ std::vector<std::string> AS7AvrGcc8_Base::get_supported_preprocessor_options() c
 std::vector<std::string> AS7AvrGCC8Linker::get_supported_options() const
 {
   std::vector<std::string> out;
-  const std::vector<std::string> optims = get_supported_optimizations_options();
-  const std::vector<std::string> general = get_supported_general_options();
-  out.insert(out.end(), optims.begin(), optims.end());
-  out.insert(out.end(), general.begin(), general.end());
+  const std::vector<std::string> opt_vec = get_supported_optimizations_options();
+  const std::vector<std::string> gen_vec = get_supported_general_options();
+  out.insert(out.end(), opt_vec.begin(), opt_vec.end());
+  out.insert(out.end(), gen_vec.begin(), gen_vec.end());
   return out;
 }
 

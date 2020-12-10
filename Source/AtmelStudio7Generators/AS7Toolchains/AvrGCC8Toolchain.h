@@ -20,10 +20,14 @@ struct BasicRepresentation
 public:
   virtual void clear() = 0;
   virtual std::vector<std::string> get_supported_options() const = 0;
+  virtual ~BasicRepresentation() = default;
 };
 
 struct Common : public BasicRepresentation
 {
+  ~Common() {
+    clear();
+  }
   std::string Device;
   bool relax_branches = false; /**< -mrelax    */
   bool external_ram_mem_ovflw = false;

@@ -18,7 +18,7 @@ std::unordered_set<std::string> MachineOption::available_flags =
 bool MachineOption::can_create(const std::string& _token)
 {
   const auto vec = cmutils::strings::split(_token, '=');
-  auto& found_it = available_flags.find(vec[0]);
+  const auto& found_it = available_flags.find(vec[0]);
   return (found_it != available_flags.end());
 }
 

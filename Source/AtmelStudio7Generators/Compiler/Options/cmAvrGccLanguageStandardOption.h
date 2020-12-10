@@ -51,8 +51,11 @@ namespace compiler {
       {
         case Lang::C:
           return "C";
+
         case Lang::CXX:
           return "CXX";
+
+        case Lang::Undefined:
         default:
           return "Undefined";
       }

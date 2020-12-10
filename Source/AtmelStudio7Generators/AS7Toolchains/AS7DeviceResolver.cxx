@@ -31,6 +31,10 @@ std::string apply_naming_convention(Core core, const std::string& device_name)
       out = "ATmega" + matches[1].str() + matches[2].str();
     } break;
 
+    case Core::AT90mega: {
+      out = dev_up;
+    } break;
+
     case Core::ATtiny: {
       std::regex pattern("ATTINY([0-9]+)(.*)");
       std::smatch matches;
@@ -56,6 +60,7 @@ std::string apply_naming_convention(Core core, const std::string& device_name)
       out = cmutils::strings::to_uppercase(device_name);
       break;
 
+    case Core::Unknown:
     default:
       // unknown core, nothing to do
       break;
@@ -276,6 +281,7 @@ std::string resolve_device_dfp_name(const std::string& device_name)
       out = resolve_xmega_dfps(device_name);
       break;
 
+    case Core::Unknown:
     default:
       break;
   }
@@ -306,8 +312,6 @@ std::string get_max_packs_version(const std::string& path)
   auto max_version = std::max_element(versions.begin(), versions.end(), [](const std::string& left, const std::string& right) {
     auto l = cmutils::strings::split(left, '.');
     auto r = cmutils::strings::split(right, '.');
-
-    bool lbigger = false;
 
     uint64_t lsum = 0;
     uint64_t rsum = 0;

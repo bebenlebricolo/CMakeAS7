@@ -17,6 +17,7 @@ struct WarningOption : public CompilerOption
 
   WarningOption();
   WarningOption(const std::string& _token);
+  ~WarningOption() = default;
 };
 
 }

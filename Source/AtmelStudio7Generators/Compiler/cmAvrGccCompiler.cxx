@@ -54,7 +54,7 @@ std::vector<std::shared_ptr<CompilerOption>> CompilerOptionFactory::create(const
     // Warning flags or linker flags (this is resolved with the help of the next character)
     case 'W':
       if (token[2] == 'l') {
-        auto& split_tokens = LinkerOption::split_concatenated_options(token);
+        const auto& split_tokens = LinkerOption::split_concatenated_options(token);
         for (auto& elem : split_tokens) {
           out.push_back(std::make_shared<LinkerOption>(elem));
         }
@@ -114,9 +114,9 @@ CompilerOption * cmAvrGccCompiler::get_option(const std::string& token) const
 
 std::vector<std::string> cmAvrGccCompiler::get_all_options(const CompilerOption::Type type) const
 {
-  OptionsVec options = get_options(type);
+  OptionsVec options_vec = get_options(type);
   std::vector<std::string> out;
-  for (auto& opt : options)
+  for (auto& opt : options_vec)
   {
     out.push_back(opt->get_token());
   }
@@ -250,7 +250,7 @@ cmAvrGccCompiler::ShrdOption cmAvrGccCompiler::Options::get_option(const std::st
 bool cmAvrGccCompiler::Options::is_unique(const std::string& token, const OptionsVec& reference) const
 {
 
-  unsigned int count = std::count_if(reference.begin(), reference.end(), [token](const ShrdOption& target)
+  size_t count = std::count_if(reference.begin(), reference.end(), [token](const ShrdOption& target)
   {
     return token == target->get_token();
   });
@@ -261,7 +261,7 @@ bool cmAvrGccCompiler::Options::is_unique(const std::string& token, const Option
 bool cmAvrGccCompiler::Options::is_unique(const ShrdOption& option, const OptionsVec& reference) const
 {
 
-  unsigned int count = std::count_if(reference.begin(), reference.end(), [option](const ShrdOption& target)
+  size_t count = std::count_if(reference.begin(), reference.end(), [option](const ShrdOption& target)
   {
     return option == target;
   });

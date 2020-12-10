@@ -11,6 +11,7 @@ AS7OptionRepresentation::AS7OptionRepresentation(const std::string& _opt, const 
 
 bool CompilerOption::can_create( const std::string& _token)
 {
+  (void)_token;
   return true;
 }
 
