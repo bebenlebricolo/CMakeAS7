@@ -1,5 +1,3 @@
-/* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
-   file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmLocalAtmelStudio7Generator.h"
 
 #include <cmext/algorithm>
@@ -28,9 +26,9 @@ void cmLocalAtmelStudio7Generator::WriteStampFiles()
 {
   // Touch a timestamp file used to determine when the project file is
   // out of date.
-  std::string stampName =
-    cmStrCat(this->GetCurrentBinaryDirectory(), "/CMakeFiles");
+  std::string stampName = cmStrCat(this->GetCurrentBinaryDirectory(), "/CMakeFiles");
   cmSystemTools::MakeDirectory(stampName);
+
   stampName += "/generate.stamp";
   cmsys::ofstream stamp(stampName.c_str());
   stamp << "# CMake generation timestamp file for this directory.\n";
@@ -62,6 +60,11 @@ void cmLocalAtmelStudio7Generator::WriteStampFiles()
   }
 }
 
+std::set<cmSourceFile const*>& cmLocalAtmelStudio7Generator::GetSourcesVisited(cmGeneratorTarget const* target)
+{
+  return this->SourcesVisited[const_cast<cmGeneratorTarget*>(target)];
+}
+
 void cmLocalAtmelStudio7Generator::Generate()
 {
   auto target_list = this->GlobalGenerator->GetLocalGeneratorTargetsInOrder(this);
@@ -79,6 +82,7 @@ void cmLocalAtmelStudio7Generator::Generate()
       gtVisited.insert(depVisited.begin(), depVisited.end());
     }
 
+    // Generate each target
     this->GenerateTarget(gt);
   }
 
@@ -87,28 +91,9 @@ void cmLocalAtmelStudio7Generator::Generate()
 
 void cmLocalAtmelStudio7Generator::GenerateTarget(cmGeneratorTarget* target)
 {
-  cmAtmelStudio7TargetGenerator targetGenerator(
-    target,
-    static_cast<cmGlobalAtmelStudio7Generator*>(this->GetGlobalGenerator()));
+  cmAtmelStudio7TargetGenerator targetGenerator( target,
+                                                 static_cast<cmGlobalAtmelStudio7Generator*>(this->GetGlobalGenerator()));
   targetGenerator.Generate();
-}
-
-void cmLocalAtmelStudio7Generator::ReadAndStoreExternalGUID(
-  const std::string& name, const char* path)
-{
-  // Parse previously written file and extract GUID from it if found
-  //  cmVS10XMLParser parser;
-  // parser.ParseFile(path);
-
-  // if we can not find a GUID then we will generate one later
-  //if (parser.GUID.empty()) {
-  //  return;
-  //}
-
-  //std::string guidStoreName = cmStrCat(name, "_GUID_CMAKE");
-  //// save the GUID in the cache
-  //this->GlobalGenerator->GetCMakeInstance()->AddCacheEntry(
-  //  guidStoreName, parser.GUID.c_str(), "Stored GUID", cmStateEnums::INTERNAL);
 }
 
 const char* cmLocalAtmelStudio7Generator::ReportErrorLabel() const
