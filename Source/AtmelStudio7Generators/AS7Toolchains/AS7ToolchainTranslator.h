@@ -15,6 +15,10 @@ namespace pugi
 namespace AvrToolchain
 {
 
+/**
+ * @brief the AS7ToolchainTranslator class provides a simple way to parse input command line options for several
+ * languages (C, C++ adn ASM) and to generate the AS7 xml representation for them.
+ */
 class AS7ToolchainTranslator
 {
 public:
@@ -44,8 +48,11 @@ public:
     compiler::cmAvrGccCompiler* get_compiler(const std::string& lang);
 
     /**
-     * @brief returns targeted language.
-     * @return
+     * @brief returns targeted language. This method resolves the "highest" language used in
+     * terms of abstractions and returns it.
+     * E.g. : C++ > C > ASM
+     *
+     * @return the "highest" level language found in the parsed ones.
      */
     std::string get_targeted_language() const;
 

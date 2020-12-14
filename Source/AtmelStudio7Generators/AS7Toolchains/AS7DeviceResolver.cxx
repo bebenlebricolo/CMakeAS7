@@ -309,6 +309,7 @@ std::string get_max_packs_version(const std::string& path)
     }
   }
 
+  // Computes weighted sum to discriminate the max folder version
   auto max_version = std::max_element(versions.begin(), versions.end(), [](const std::string& left, const std::string& right) {
     auto l = cmutils::strings::split(left, '.');
     auto r = cmutils::strings::split(right, '.');

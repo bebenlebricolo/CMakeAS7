@@ -152,6 +152,9 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
     tool = &avrgcccpp;
   }
 
+  // TODO : Use the device resolver to perform device deduction. note that the TargetedDevice code from TargetGenerator
+  // first has to be moved closer for this to be enabled. For now, default -mmcu handling is proposed
+
   // This option is a bit special and requires dedicated handling
   if (common.Device.empty()) {
     if (parser.has_option("-mmcu")) {

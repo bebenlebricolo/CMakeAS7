@@ -70,6 +70,7 @@ void AS7ToolchainTranslator::sync_toolchain_languages()
     }
 }
 
+// NOTE : better switch to enum versions of the languages : plain strings are not a good solution.
 void AS7ToolchainTranslator::translate()
 {
     toolchain.convert_from(compilers["C"], "C");
