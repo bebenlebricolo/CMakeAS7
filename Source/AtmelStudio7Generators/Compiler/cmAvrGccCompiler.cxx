@@ -19,6 +19,14 @@ bool CompilerOptionFactory::is_valid(const std::string& token)
     return false;
   }
 
+  // FIXME : this is not really flexible and could (will) bring maintainability issues in the future.
+  // Better switch to another way of parsing options instead of their flag...
+  // Not to mention that some options (e.g. '-f..." flags) may belong to a category such as Linker options
+  // or Warning options, and the distinction is not present in their naming convention...
+  // One solution could be to store every known flag/option in maps alongside the right
+  // category (Linker, Optimization, Warnings, etc). Parsing might then be automated while comparing
+  // against existing option/flag within those maps, retrieving their categorization at the same time.
+
   const std::string prefixes = "WfODgwEnms";
   // Check if second character of token is part of the above characters list
   return (prefixes.find(token[1]) != std::string::npos);
@@ -131,25 +139,25 @@ void cmAvrGccCompiler::parse_flags(const std::vector<std::string>& tokens)
     if (compiler::CompilerOptionFactory::is_valid(token)) {
       std::vector<ShrdOption> option_list = compiler::CompilerOptionFactory::create(token);
       for (auto& option : option_list) {
-        this->options.accept_flag(option);
+        this->options.accept_option(option);
       }
     }
   }
 }
 
-void cmAvrGccCompiler::Options::push_flag(const ShrdOption& flag, OptionsVec& vec)
+void cmAvrGccCompiler::Options::push_option(const ShrdOption& option, OptionsVec& vec)
 {
-  if (!contains(flag->get_token(), vec)) {
-    vec.push_back(flag);
+  if (!contains(option->get_token(), vec)) {
+    vec.push_back(option);
   }
 }
 
-void cmAvrGccCompiler::Options::accept_flag(const ShrdOption& flag)
+void cmAvrGccCompiler::Options::accept_option(const ShrdOption& option)
 {
-  if (flag == nullptr) {
+  if (option == nullptr) {
     return;
   }
-  push_flag(flag, storage[flag->get_type()]);
+  push_option(option, storage[option->get_type()]);
 }
 
 std::vector<std::string> cmAvrGccCompiler::get_unsupported_options(const CompilerOption::Type type, const std::vector<std::string>& as7_options) const
