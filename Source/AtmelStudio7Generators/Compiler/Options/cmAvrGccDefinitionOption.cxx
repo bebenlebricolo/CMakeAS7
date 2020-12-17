@@ -22,15 +22,15 @@ DefinitionOption::DefinitionOption(const std::string& _token)
 
 void DefinitionOption::parse(const std::string& raw_token)
 {
-  std::vector<std::string> splitted = cmutils::strings::split(raw_token, '=');
-  defsymbol = splitted[0];
+  std::vector<std::string> split = cmutils::strings::split(raw_token, '=');
+  defsymbol = split[0];
 
   // Strip the "-D"
   defsymbol = defsymbol.substr(2);
 
-  if (splitted.size() != 1)
+  if (split.size() != 1)
   {
-    value = splitted[1];
+    value = split[1];
   }
 }
 

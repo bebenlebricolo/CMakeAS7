@@ -35,12 +35,12 @@ MachineOption::MachineOption(const std::string& _token)
 
 void MachineOption::parse(const std::string& raw_token)
 {
-  std::vector<std::string> splitted = cmutils::strings::split(raw_token, '=');
-  token = splitted[0];
+  std::vector<std::string> split = cmutils::strings::split(raw_token, '=');
+  token = split[0];
 
-  if (splitted.size() != 1)
+  if (split.size() != 1)
   {
-    value = splitted[1];
+    value = split[1];
   }
 }
 

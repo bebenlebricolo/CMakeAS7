@@ -9,6 +9,11 @@
 
 namespace compiler {
 
+/**
+ * @brief LinkerOption are used to represent a single option passed to the linker through avr-gcc (using the -Wl) flag.
+ * It provides additional services used to parse and interprete concatenated options such as "-Wl,--gc-sections,--relax"
+ * which is split in 2 LinkerOptions.
+ */
 struct LinkerOption : public CompilerOption
 {
   /**
@@ -18,7 +23,18 @@ struct LinkerOption : public CompilerOption
     */
   static bool can_create(const std::string& _token);
 
+  /**
+   * @brief Standard constructor.
+   */
   LinkerOption();
+
+  /**
+   * @brief Builds a LinkerOption using a raw token. Token is parsed and eventually split
+   * if it is required to do so, but at this a constructor, only the first part of the split
+   * could be used to initialize this new object.
+   *
+   * @param _token : raw token parsed from command line input (or already split)
+   */
   LinkerOption(const std::string& _token);
 
   /**

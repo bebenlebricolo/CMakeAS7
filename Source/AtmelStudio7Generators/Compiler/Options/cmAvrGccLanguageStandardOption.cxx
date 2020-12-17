@@ -94,8 +94,8 @@ LanguageStandardOption::LanguageStandardOption(const std::string& _token)
 
 void LanguageStandardOption::parse(const std::string& raw_token)
 {
-  std::vector<std::string> splitted = cmutils::strings::split(raw_token, '=');
-  if (splitted[0] != "-std")
+  std::vector<std::string> split = cmutils::strings::split(raw_token, '=');
+  if (split[0] != "-std")
   {
     token = raw_token;
     value = "";
@@ -103,7 +103,7 @@ void LanguageStandardOption::parse(const std::string& raw_token)
   }
   else
   {
-    if (exists_in(c_standards, splitted[1]))
+    if (exists_in(c_standards, split[1]))
     {
       lang = Language::Lang::C;
     }
@@ -113,9 +113,9 @@ void LanguageStandardOption::parse(const std::string& raw_token)
     }
 
     token = raw_token;
-    if (splitted.size() != 1)
+    if (split.size() != 1)
     {
-      value = splitted[1];
+      value = split[1];
     }
   }
 }

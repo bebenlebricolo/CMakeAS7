@@ -9,65 +9,104 @@
 
 namespace compiler {
 
-  struct Language
+// TODO : this could be moved to a more generic place for better language handling accross all AtmelStudio7Generators project
+/**
+ * @brief depicts some Language abstractions used to resolve the targeted language
+ * from its string representation or to be able to process language standards later on.
+ */
+struct Language
+{
+  /**
+   * @brief gives a list of supported languages.
+   */
+  enum class Lang
   {
-    enum class Lang
-    {
-      Undefined,
-      C,
-      CXX
-    };
-
-    Language()
-      : lang(Lang::Undefined)
-    {
-    }
-
-    Language(const Lang l)
-      : lang(l)
-    {
-    }
-
-    Language(const Language& other)
-      : lang(other.lang)
-    {
-    }
-
-    Language& operator=(const Language& other)
-    {
-      lang = other.lang;
-      return *this;
-    }
-
-    Language& operator=(const Language::Lang& _lang)
-    {
-      lang = _lang;
-      return *this;
-    }
-
-    std::string to_string()
-    {
-      switch (lang)
-      {
-        case Lang::C:
-          return "C";
-
-        case Lang::CXX:
-          return "CXX";
-
-        case Lang::Undefined:
-        default:
-          return "Undefined";
-      }
-    }
-
-    private:
-        Lang lang;
+    Undefined, /**< Default value used as a fallback    */
+    C,         /**< C language                          */
+    CXX        /**< C++ language                        */
   };
 
+  /**
+   * @brief Instanciates a default container for the language representation.
+   * Shall be updated manually later on (no method will work with Undefined language settings)
+   */
+  Language()
+    : lang(Lang::Undefined)
+  {
+  }
+
+  /**
+   * @brief Instanciates a default container for the language representation.
+   * @param l : input language
+   */
+  Language(const Lang l)
+    : lang(l)
+  {
+  }
+
+  /**
+   * @brief Standard Copy constructor.
+   * @param other : other language object
+   */
+  Language(const Language& other)
+    : lang(other.lang)
+  {
+  }
+
+  /**
+   * @brief Standard assignment operator.
+   *
+   * @param other : other Language object
+   * @return itself
+   */
+  Language& operator=(const Language& other)
+  {
+    lang = other.lang;
+    return *this;
+  }
+
+  /**
+   * @brief Standard assignment operator using the enum value of Language instead
+   * of the complete object
+   *
+   * @param other : targeted language
+   * @return itself
+   */
+  Language& operator=(const Language::Lang& _lang)
+  {
+    lang = _lang;
+    return *this;
+  }
+
+  /**
+   * @brief returns a std::string representation of this language object.
+   */
+  std::string to_string()
+  {
+    switch (lang) {
+      case Lang::C:
+        return "C";
+
+      case Lang::CXX:
+        return "CXX";
+
+      case Lang::Undefined:
+      default:
+        return "Undefined";
+    }
+  }
+
+private:
+  Lang lang; /**< Embedded enumerate used for comparison purposes */
+};
+
+/**
+ * @brief Language standard option is used to interprete language standards such as -std=c++17 for instance.
+ * This structure provides services to parse all known standards, which could either come from
+ * ISO, gnu or shorthand C++ standards.
+ */
 struct LanguageStandardOption : public CompilerOption
 {
-
 
   /**
      * @brief determines whether the given token is part of the static map of available optimizations flags or not
@@ -76,16 +115,34 @@ struct LanguageStandardOption : public CompilerOption
     */
   static bool can_create(const std::string& _token);
 
+  /**
+   * @brief Standard constructor for LanguageStandardOption.
+   */
   LanguageStandardOption();
+
+  /**
+   * @brief Builds a LanguageStandardOption using the given raw token to deduce the right
+   * standard representation for this token.
+   *
+   * @param _token : raw token parsed from command line input
+   */
   LanguageStandardOption(const std::string& _token);
 
-  std::string value;  /**< Payload of a given option, if any is given. e.g : "-mmcu=atmega328p" option gets the "-mmcu" token + "atmega328p" value */
-  Language lang;
+  std::string value; /**< Payload of a given option, if any is given. e.g : "-mmcu=atmega328p" option gets the "-mmcu" token + "atmega328p" value */
+  Language lang;     /**< Language to which this standard applies                                                                                 */
 
 private:
-  static std::vector<std::string> c_standards;
-  static std::vector<std::string> cpp_standards;
+  static std::vector<std::string> c_standards;    /**< Lists all available C standards keys */
+  static std::vector<std::string> cpp_standards;  /**< Lists all available C++ standards keys */
 
+  /**
+   * @brief Checks that a token exists in the referenced vector.
+   *
+   * @param ref     : reference vector
+   * @param token   : raw token
+   * @return true  : token is contained in reference vector
+   *         false : token does not appear within reference vector
+   */
   static bool exists_in(const std::vector<std::string>& ref, std::string token);
 
   /**

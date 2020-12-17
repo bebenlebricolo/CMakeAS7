@@ -9,6 +9,15 @@
 
 namespace compiler {
 
+/**
+ * @brief Definition option provides services to handle -DCOMMAND_LINE_DEFINE=somevalue types
+ * of options.
+ *
+ * Raw tokens are parsed and split around the '=' character. If none is found, it means
+ * the option is of the following form : -DCOMMAND_LINE_DEFINE which represents a simple #define macro
+ * If a '=' pivot character is found, the left part of the '=' is parsed as the #define macro symbol name, and
+ * the right part of '=' is interpreted as the value conveyed by this option, using its std::string representation only.
+ */
 struct DefinitionOption : public CompilerOption
 {
   /**
@@ -18,7 +27,18 @@ struct DefinitionOption : public CompilerOption
     */
   static bool can_create(const std::string& _token);
 
+  /**
+   * @brief Standard default constructor .
+   */
   DefinitionOption();
+
+  /**
+   * @brief Builds a DefinitionOption based on a raw token parsed from command line.
+   * Token is parsed at construction time in the aim to retrieve the name of the definition option
+   * and its value, if one is provided with the -D<NAME>=<VALUE> pattern
+   *
+   * @param _token : raw token parsed from command line input
+   */
   DefinitionOption(const std::string& _token);
 
   std::string defsymbol;    /**< Defined symbol with the stripped -D                                                                                   */
