@@ -31,6 +31,8 @@ if(NOT CMAKE_C_COMPILER_NAMES)
 endif()
 
 if(${CMAKE_GENERATOR} MATCHES "Visual Studio")
+elseif(${CMAKE_GENERATOR} MATCHES "Atmel Studio 7")
+# Do nothing, Atmel Studio resolves its own compiler
 elseif("${CMAKE_GENERATOR}" MATCHES "Green Hills MULTI")
 elseif("${CMAKE_GENERATOR}" MATCHES "Xcode")
   set(CMAKE_C_COMPILER_XCODE_TYPE sourcecode.c.c)
@@ -87,9 +89,11 @@ else()
     "--target=arm-arm-none-eabi -mcpu=cortex-m3"
     )
 endif()
+
 if(CMAKE_C_COMPILER_TARGET)
   set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "-c --target=${CMAKE_C_COMPILER_TARGET}")
 endif()
+
 # Build a small source file to identify the compiler.
 if(NOT CMAKE_C_COMPILER_ID_RUN)
   set(CMAKE_C_COMPILER_ID_RUN 1)

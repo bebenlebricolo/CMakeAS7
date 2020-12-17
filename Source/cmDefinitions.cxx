@@ -100,7 +100,10 @@ std::vector<std::string> cmDefinitions::ClosureKeys(StackIter begin,
 
 void cmDefinitions::Set(const std::string& key, cm::string_view value)
 {
-  this->Map[key] = Def(value);
+  if (key == "CMAKE_PARENT_LIST_FILE") {
+    (void)key.c_str();
+  }
+    this->Map[key] = Def(value);
 }
 
 void cmDefinitions::Unset(const std::string& key)

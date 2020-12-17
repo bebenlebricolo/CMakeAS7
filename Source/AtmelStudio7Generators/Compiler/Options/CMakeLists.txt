@@ -1,0 +1,23 @@
+set(AVR_GCC_COMPILER_OPTIONS_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccCompilerOption.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccDebugOption.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccDefinitionOption.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccMachineOption.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccOptimizationOption.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccLinkerOption.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccWarningOption.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccLanguageStandardOption.cxx
+    PARENT_SCOPE
+)
+
+set(AVR_GCC_COMPILER_OPTIONS_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccCompilerOption.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccDebugOption.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccCompilerOption.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccDefinitionOption.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccMachineOption.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccOptimizationOption.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccLinkerOption.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmAvrGccLanguageStandardOption.h
+    PARENT_SCOPE
+)
