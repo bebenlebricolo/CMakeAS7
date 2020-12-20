@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <deque>
 #include <vector>
+#include <cctype>
 
 namespace cmutils {
 

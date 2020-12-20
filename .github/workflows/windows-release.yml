@@ -14,38 +14,50 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: windows-latest
+    runs-on: windows-2016
 
     steps:
     - uses: actions/checkout@v2
 
+    - name: Update to latest windows 10 sdk
+      shell: powershell
+      run: |
+        Invoke-WebRequest -Uri "https://aka.ms/vs/16/release/vs_buildtools.exe" -OutFile "C:\TEMP\vs_buildtools.exe"
+        C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache --remove Microsoft.VisualStudio.Component.Windows10SDK.17763
+        choco install windows-sdk-10-version-2004-all
+        choco install visualstudio2019buildtools
+        dir 'C:\Program Files (x86)\Windows Kits\10\Include'
+
+      #choco install windows-sdk-10.1
+
     - name: Checkout submodules
       shell: powershell
-      run: git submodule init ; git submodule update
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1
 
     - name: Create Build Environment
       shell: powershell
-      # Some projects don't allow in-source building, so create a separate build directory
-      # We'll use this as our working directory for all subsequent commands
-      run: mkdir ${{runner.workspace}}\\build
+      run: mkdir ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
 
     - name: Configure CMake
-      # Use a bash shell so we can use the same syntax for environment variable
-      # access regardless of the host operating system
       shell: powershell
-      #working-directory: ${{runner.workspace}}/build
-      # Note the current convention is to use the -S and -B options here to specify source
-      # and build directories, but this is only available with CMake 3.13 and higher.
-      # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       run: |
-        cmake "${{runner.workspace}}/CMake-AtmelStudio7-compatibility" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G "Visual Studio 16 2019"
+        cmake ../ -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       shell: powershell
       # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: cmake --build . --config $BUILD_TYPE
-
+      #run: cmake --build . --config $BUILD_TYPE
+      run: |
+        dir
+        cmake --build . --config ${{env.BUILD_TYPE}} --target cmake
+      #msbuild /m /p:Configuration=${{env.BUILD_TYPE}} Source/cmake.vcxproj
 
     #- name: Test
     #  working-directory: ${{runner.workspace}}/build
