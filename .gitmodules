@@ -1,3 +1,6 @@
 [submodule "Source/ExternalLibraries/PugiXML"]
 	path = Source/ExternalLibraries/PugiXML
 	url = https://github.com/zeux/pugixml.git
+[submodule "Source/ExternalLibraries/googletest"]
+	path = Source/ExternalLibraries/googletest
+	url = https://github.com/google/googletest.git
