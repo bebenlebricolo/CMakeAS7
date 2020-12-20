@@ -17,41 +17,6 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout Googletests
-      shell: powershell
-      working-directory: ${{runner.workspace}}
-      run: |
-        git clone https://github.com/google/googletest.git
-        cd googletest
-        git pull --tags
-        echo "fetching tag : ${{env.GOOGLETEST_TAG}}"
-        git checkout tags/${{env.GOOGLETEST_TAG}}
-
-    - name: Configure Googletests
-      shell: powershell
-      working-directory: ${{runner.workspace}}/googletest
-      run: |
-        mkdir build
-        cd build
-        cmake ../ -G "Visual Studio 16 2019"
-
-    - name: Build GoogleTests
-      shell: powershell
-      working-directory: ${{runner.workspace}}/googletest/build
-      run: |
-        cmake --build . --config ${{env.BUILD_TYPE}} --target install
-        $env:GTEST_ROOT = 'C:/Program Files (x86)/googletest-distribution/lib'
-        $env:CMAKE_PREFIX_PATH = 'C:\Program Files (x86)\googletest-distribution'
-
-        echo "GTEST_ROOT = $env:GTEST_ROOT"
-        echo "CMAKE_PREFIX_PATH = $env:CMAKE_PREFIX_PATH"
-
-    - name: Check GoogleTests installation and environment
-      shell: powershell
-      working-directory: ${{runner.workspace}}
-      run: |
-        ls googletest/build/lib
-
     - uses: actions/checkout@v2
 
     - name: Checkout submodules
@@ -64,11 +29,6 @@ jobs:
       # We'll use this as our working directory for all subsequent commands
       run: mkdir ${{runner.workspace}}\\build
 
-    - name: Check branch files
-      shell: powershell
-      working-directory: ${{runner.workspace}}
-      run: ls . ; echo $GITHUB_WORKSPACE
-
     - name: Configure CMake
       # Use a bash shell so we can use the same syntax for environment variable
       # access regardless of the host operating system
@@ -78,7 +38,7 @@ jobs:
       # and build directories, but this is only available with CMake 3.13 and higher.
       # The CMake binaries on the Github Actions machines are (as of this writing) 3.12
       run: |
-        cmake "${{runner.workspace}}/CMake-AtmelStudio7-compatibility" -DGTEST_ROOT:STRING='${{runner.workspace}}/googletest/build/lib' -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G "Visual Studio 16 2019"
+        cmake "${{runner.workspace}}/CMake-AtmelStudio7-compatibility" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G "Visual Studio 16 2019"
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
