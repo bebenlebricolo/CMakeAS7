@@ -36,7 +36,6 @@ add_executable(testAS7DeviceResolver
 target_include_directories(testAS7DeviceResolver PUBLIC
     ${CMAKE_SOURCE_DIR}/Source/Utils
     ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/AS7Toolchains
-    ${GTEST_INCLUDE_DIRS}
 )
 
 if (WIN32)
@@ -45,7 +44,7 @@ if (WIN32)
 endif()
 
 
-target_link_libraries(testAS7DeviceResolver AtmelStudio7Generators cmutils ${GTEST_LIBRARIES})
+target_link_libraries(testAS7DeviceResolver AtmelStudio7Generators cmutils gtest)
 
 set_target_properties(testAS7DeviceResolver
     PROPERTIES
