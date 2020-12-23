@@ -19,14 +19,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Update to latest windows 10 sdk
-      shell: powershell
-      run: |
-        Invoke-WebRequest -Uri "https://aka.ms/vs/16/release/vs_buildtools.exe" -OutFile "C:\TEMP\vs_buildtools.exe"
-        C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache --remove Microsoft.VisualStudio.Component.Windows10SDK.17763
-        choco install windows-sdk-10-version-2004-all
-        choco install visualstudio2019buildtools
-        dir 'C:\Program Files (x86)\Windows Kits\10\Include'
+    #- name: Update to latest windows 10 sdk
+    #  shell: powershell
+    #  run: |
+    #    Invoke-WebRequest -Uri "https://aka.ms/vs/16/release/vs_buildtools.exe" -OutFile "C:\TEMP\vs_buildtools.exe"
+    #    C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache --remove Microsoft.VisualStudio.Component.Windows10SDK.17763
+    #    choco install windows-sdk-10-version-2004-all
+    #    choco install visualstudio2019buildtools
+    #    dir 'C:\Program Files (x86)\Windows Kits\10\Include'
 
       #choco install windows-sdk-10.1
 
@@ -56,7 +56,8 @@ jobs:
       #run: cmake --build . --config $BUILD_TYPE
       run: |
         dir
-        cmake --build . --config ${{env.BUILD_TYPE}} --target cmake
+        cmake --build . --config ${{env.BUILD_TYPE}}
+      #cmake --build . --config ${{env.BUILD_TYPE}} --target cmake
       #msbuild /m /p:Configuration=${{env.BUILD_TYPE}} Source/cmake.vcxproj
 
     #- name: Test
