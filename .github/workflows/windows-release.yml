@@ -60,9 +60,14 @@ jobs:
       #cmake --build . --config ${{env.BUILD_TYPE}} --target cmake
       #msbuild /m /p:Configuration=${{env.BUILD_TYPE}} Source/cmake.vcxproj
 
-    #- name: Test
-    #  working-directory: ${{runner.workspace}}/build
-    #  shell: bash
-    #  # Execute tests defined by the CMake configuration.
-    #  # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-    #  run: ctest -C $BUILD_TYPE
+    - name: Run CTests
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      shell: powershell
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: ctest.exe -C $BUILD_TYPE
+
+    - name: Run GTests
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility
+      shell: powershell
+      run: python Tests/  run_googletests.py build
