@@ -45,6 +45,15 @@ jobs:
         dir
         cmake --build . --config ${{env.BUILD_TYPE}}
 
+    - name: Installing CMake
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      shell: powershell
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      run: |
+        cmake --build . --config ${{env.BUILD_TYPE}} --target "install"
+        dir
+        dir install
+
     # Based on original Gitlab Cmake testing scripts
     - name: Run CTests
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
