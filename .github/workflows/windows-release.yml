@@ -49,7 +49,7 @@ jobs:
       shell: powershell
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       run: |
-        cmake --build . --target install
+        cmake --build . --target install --config ${{env.BUILD_TYPE}}
         dir bin
         dir install
 
@@ -74,4 +74,4 @@ jobs:
       with:
         name: CMakeAS7 build binaries (win x64)
         path: |
-          ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/bin/${{env.BUILD_TYPE}}/CMakeAS7BuildArtifacts_winx64.zip
+          ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/CMakeAS7BuildArtifacts_winx64.zip
