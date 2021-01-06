@@ -9,6 +9,7 @@ env:
   CMAKE_CONFIGURATION: windows_vs2019_x64
   CMAKE_GENERATOR: "Visual Studio 15 2017"
   CMAKE_GENERATOR_PLATFORM: "x64"
+  PARALLEL_CORES: 8
   #CMAKE_GENERATOR_TOOLSET: "v142,version=14.27"
 
 
@@ -42,14 +43,14 @@ jobs:
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       shell: powershell
       run: |
-        cmake --build . --config ${{env.BUILD_TYPE}}
+        cmake --build . --config ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
         dir bin
 
     - name: Install CMake
       shell: powershell
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       run: |
-        cmake --build . --target install --config ${{env.BUILD_TYPE}}
+        cmake --build . --target install --config ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
         dir bin
         dir install
 
@@ -57,21 +58,16 @@ jobs:
     - name: Run CTests
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       shell: powershell
-      run: ctest --output-on-failure -V -S ../.github/ci/ctest_test.cmake -C ${{env.BUILD_TYPE}}
+      run: ctest --output-on-failure -V -S ../.github/ci/ctest_test.cmake -C ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
 
     - name: Run GTests
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility
       shell: powershell
       run: python Tests/run_googletests.py build
 
-    - name: Compress artifacts
-      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
-      shell: powershell
-      run: Compress-Archive -Path ./install -DestinationPath ./install/CMakeAS7BuildArtifacts_winx64.zip
-
     # https://github.com/actions/upload-artifact
     - uses: actions/upload-artifact@v2
       with:
         name: CMakeAS7 build binaries (win x64)
         path: |
-          ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/CMakeAS7BuildArtifacts_winx64.zip
+          ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/*
