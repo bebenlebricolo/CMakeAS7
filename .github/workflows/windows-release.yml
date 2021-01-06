@@ -70,4 +70,4 @@ jobs:
     - name: Run GTests
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility
       shell: powershell
-      run: python Tests/ run_googletests.py build
+      run: python Tests/run_googletests.py build
