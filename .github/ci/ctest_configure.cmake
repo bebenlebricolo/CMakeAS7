@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-include("${CMAKE_CURRENT_LIST_DIR}/gitlab_ci.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/github_ci.cmake")
 
 set(cmake_args
   -C "${CMAKE_CURRENT_LIST_DIR}/configure_$ENV{CMAKE_CONFIGURATION}.cmake")

@@ -6,7 +6,8 @@ include("${CMAKE_CURRENT_LIST_DIR}/github_ci.cmake")
 ctest_read_custom_files("${CTEST_BINARY_DIRECTORY}")
 
 # Pick up from where the configure left off.
-ctest_start(Continuous GROUP GroupContinuous)
+ctest_start(APPEND)
+#ctest_start(Continuous GROUP GroupContinuous)
 
 include(ProcessorCount)
 ProcessorCount(nproc)

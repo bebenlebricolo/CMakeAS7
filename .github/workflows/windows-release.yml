@@ -36,23 +36,13 @@ jobs:
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       run: |
         cmake ../ -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        ctest -VV -S ../.github/ci/ctest_configure.cmake
 
-    - name: Build CMake
+    - name: Build and install CMake
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
-      shell: powershell
-      # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
+        ctest -VV -S ../.github/ci/ctest_build.cmake -DCMAKE_INSTALL_PREFIX=install
         dir
-        cmake --build . --config ${{env.BUILD_TYPE}}
-
-    - name: Installing CMake
-      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
-      shell: powershell
-      # Execute the build.  You can specify a specific target with "--target <NAME>"
-      run: |
-        cmake --build . --config ${{env.BUILD_TYPE}} --target "install"
-        dir
-        dir install
 
     # Based on original Gitlab Cmake testing scripts
     - name: Run CTests

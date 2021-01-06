@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-include("${CMAKE_CURRENT_LIST_DIR}/gitlab_ci.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/github_ci.cmake")
 
 # Read the files from the build directory.
 ctest_read_custom_files("${CTEST_BINARY_DIRECTORY}")
