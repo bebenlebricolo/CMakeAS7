@@ -16,6 +16,7 @@ jobs:
   build:
     runs-on: windows-2016
     steps:
+
     - uses: actions/checkout@v2
 
     - name: Checkout submodules
@@ -35,20 +36,28 @@ jobs:
       shell: powershell
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       run: |
-        cmake ../ -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-        ctest -VV -S ../.github/ci/ctest_configure.cmake
+        cmake ../ -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
-    - name: Build and install CMake
+    - name: Build CMake
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      shell: powershell
+      run: |
+        cmake --build . --config ${{env.BUILD_TYPE}}
+        dir bin
+
+    - name: Install CMake
+      shell: powershell
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       run: |
-        ctest -VV -S ../.github/ci/ctest_build.cmake -DCMAKE_INSTALL_PREFIX=install
-        dir
+        cmake --build . --target install
+        dir bin
+        dir install
 
     # Based on original Gitlab Cmake testing scripts
     - name: Run CTests
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       shell: powershell
-      run: ctest.exe --output-on-failure -V -S ../.github/ci/ctest_test.cmake -C ${{env.BUILD_TYPE}}
+      run: ctest --output-on-failure -V -S ../.github/ci/ctest_test.cmake -C ${{env.BUILD_TYPE}}
 
     - name: Run GTests
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility
@@ -58,7 +67,7 @@ jobs:
     - name: Compress artifacts
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       shell: powershell
-      run: Compress-Archive -Path ./bin/${{env.BUILD_TYPE}}/*.exe -DestinationPath ./bin/${{env.BUILD_TYPE}}/CMakeAS7BuildArtifacts_winx64.zip
+      run: Compress-Archive -Path ./install -DestinationPath ./install/CMakeAS7BuildArtifacts_winx64.zip
 
     # https://github.com/actions/upload-artifact
     - uses: actions/upload-artifact@v2
