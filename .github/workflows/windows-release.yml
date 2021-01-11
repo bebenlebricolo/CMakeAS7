@@ -65,6 +65,15 @@ jobs:
       shell: powershell
       run: python Tests/run_googletests.py build
 
+    # Artifacts folder need to be cleaned because additional dependencies such as PugiXML and GoogleTests
+    # are deployed under include/ and lib/ folders when the `install` target is built
+    - name: Clean deployed artifacts
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install
+      shell: powershell
+      run: |
+        Remove-Item include -Recurse
+        Remove-Item lib -Recurse
+
     # https://github.com/actions/upload-artifact
     - uses: actions/upload-artifact@v2
       with:
