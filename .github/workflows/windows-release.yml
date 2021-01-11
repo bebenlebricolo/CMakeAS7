@@ -74,9 +74,20 @@ jobs:
         Remove-Item include -Recurse
         Remove-Item lib -Recurse
 
+    # Cmake Version is set in Source/CMakeVersion.cmake and used in Source/CMakeInstallDestinations.cmake
+    # In order to properly handle Cmake versioning.
+    # As this process is "Cmake-only" (all variables set are written in CMake's cache, as a result they are not available
+    # to the OS nor the environment), we have to rely on the share/cmake-** naming convention in order to retrieve cmake's current version
+    - name: Extract CMake Version
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/share
+      shell: powershell
+      run: |
+        $CMakeVersion=$(Get-ChildItem cmake-* -Name).Split('-')[1]
+        echo "CMAKE_VERSION=$CMakeVersion" >> $GITHUB_ENV
+
     # https://github.com/actions/upload-artifact
     - uses: actions/upload-artifact@v2
       with:
-        name: CMakeAS7 build binaries (win x64)
+        name: CMakeAS7-$CMAKE_VERSION-winx64
         path: |
           ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/*
