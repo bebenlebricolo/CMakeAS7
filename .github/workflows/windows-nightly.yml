@@ -1,23 +1,6 @@
-name: CMake Windows Release build
+name: CMake Windows Nightly build
 
-on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release number'
-        required: true
-        default: '3.18'
-      changelog:
-        description: 'Change logs for this release'
-        required: false
-      isdraft:
-        description: 'If this release is a draft or not'
-        required: true
-        default: false
-      isprerelease:
-        description: 'If this release is a prerelease (Release-Candidate) or not'
-        required: true
-        default: false
+on: [push]
 
 env:
   BUILD_TYPE: Release
@@ -101,27 +84,11 @@ jobs:
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       shell: powershell
       run: |
-        Compress-Archive -Path ./install/* -DestinationPath ./install/CMakeAS7-${{ github.event.inputs.changelog }}-winx64.zip
+        $CMakeVersion=$(Get-ChildItem install/share/cmake-* -Name).Split('-')[1]
+        Compress-Archive -Path ./install/* -DestinationPath ./install/CMakeAS7-$CMakeVersion-winx64.zip
 
-    - name: Create release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+    # https://github.com/actions/upload-artifact
+    - uses: actions/upload-artifact@v2
       with:
-        tag_name: ${{ github.ref }}
-        release_name: CMakeAS7 Release ${{ github.ref }}
-        body: ${{ github.event.inputs.changelog }}
-        draft: ${{ github.event.inputs.isdraft }}
-        prerelease: ${{ github.event.inputs.isprerelease }}
-
-    - name: Upload Release Asset
-      id: upload_release_asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-        asset_path: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/CMakeAS7-${{ github.event.inputs.changelog }}-winx64.zip
-        asset_name: CMakeAS7-${{ github.event.inputs.changelog }}-winx64.zip
-        asset_content_type: application/zip
+        name: CMakeAS7-BuildArtifacts-winx64
+        path: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/CMakeAS7-*.zip
