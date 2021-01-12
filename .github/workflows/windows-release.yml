@@ -1,0 +1,127 @@
+name: CMake Windows Release build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release number'
+        required: true
+        default: '3.18'
+      changelog:
+        description: 'Change logs for this release'
+        required: false
+      isdraft:
+        description: 'If this release is a draft or not'
+        required: true
+        default: false
+      isprerelease:
+        description: 'If this release is a prerelease (Release-Candidate) or not'
+        required: true
+        default: false
+
+env:
+  BUILD_TYPE: Release
+  REPO_NAME: CMake-AtmelStudio7-compatibility
+  GOOGLETEST_TAG: release-1.10.0
+  CMAKE_CONFIGURATION: windows_vs2019_x64
+  CMAKE_GENERATOR: "Visual Studio 15 2017"
+  CMAKE_GENERATOR_PLATFORM: "x64"
+  PARALLEL_CORES: 8
+  #CMAKE_GENERATOR_TOOLSET: "v142,version=14.27"
+
+
+jobs:
+  build:
+    runs-on: windows-2016
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Checkout submodules
+      shell: powershell
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Create Build Environment
+      shell: powershell
+      run: mkdir ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+
+    - name: Configure CMake
+      shell: powershell
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      run: |
+        cmake ../ -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build CMake
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      shell: powershell
+      run: |
+        cmake --build . --config ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
+        dir bin
+
+    - name: Install CMake
+      shell: powershell
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      run: |
+        cmake --build . --target install --config ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
+        dir bin
+        dir install
+
+    # Based on original Gitlab Cmake testing scripts
+    - name: Run CTests
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      shell: powershell
+      run: ctest --output-on-failure -V -S ../.github/ci/ctest_test.cmake -C ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
+
+    - name: Run GTests
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility
+      shell: powershell
+      run: python Tests/run_googletests.py build
+
+    # Artifacts folder need to be cleaned because additional dependencies such as PugiXML and GoogleTests
+    # are deployed under include/ and lib/ folders when the `install` target is built
+    - name: Clean deployed artifacts
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install
+      shell: powershell
+      run: |
+        Remove-Item include -Recurse
+        Remove-Item lib -Recurse
+
+    # Cmake Version is set in Source/CMakeVersion.cmake and used in Source/CMakeInstallDestinations.cmake
+    # In order to properly handle Cmake versioning.
+    # As this process is "Cmake-only" (all variables set are written in CMake's cache, as a result they are not available
+    # to the OS nor the environment), we have to rely on the share/cmake-** naming convention in order to retrieve cmake's current version
+
+    # Compress artifacts folder to match CMake's artifacts convention
+    - name: Zip artifacts
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      shell: powershell
+      run: |
+        Compress-Archive -Path ./install/* -DestinationPath ./install/CMakeAS7-${{ github.event.inputs.changelog }}-winx64.zip
+
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: CMakeAS7 Release ${{ github.ref }}
+        body: ${{ github.event.inputs.changelog }}
+        draft: ${{ github.event.inputs.isdraft }}
+        prerelease: ${{ github.event.inputs.isprerelease }}
+
+    - name: Upload Release Asset
+      id: upload_release_asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+        asset_path: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/CMakeAS7-${{ github.event.inputs.changelog }}-winx64.zip
+        asset_name: CMakeAS7-${{ github.event.inputs.changelog }}-winx64.zip
+        asset_content_type: application/zip

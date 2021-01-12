@@ -1,6 +1,5 @@
-#include <algorithm>
-
 #include "cmAvrGccDebugOption.h"
+#include <algorithm>
 
 namespace compiler
 {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cmAvrGccOptimizationOption.h"
+#include <algorithm>
 
 namespace compiler {
 
