@@ -10,14 +10,6 @@ on:
       changelog:
         description: 'Change logs for this release'
         required: false
-      isdraft:
-        description: 'If this release is a draft or not'
-        required: true
-        default: false
-      isprerelease:
-        description: 'If this release is a prerelease (Release-Candidate) or not'
-        required: true
-        default: false
 
 env:
   BUILD_TYPE: Release
@@ -101,7 +93,7 @@ jobs:
       working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
       shell: powershell
       run: |
-        Compress-Archive -Path ./install/* -DestinationPath ./install/CMakeAS7-${{ github.event.inputs.changelog }}-winx64.zip
+        Compress-Archive -Path ./install/* -DestinationPath ./install/CMakeAS7-${{ github.event.inputs.version }}-winx64.zip
 
     - name: Create release
       id: create_release
@@ -109,11 +101,11 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
       with:
-        tag_name: ${{ github.ref }}
-        release_name: CMakeAS7 Release ${{ github.ref }}
+        tag_name: ${{ github.event.inputs.version }}
+        release_name: CMakeAS7 Release ${{ github.event.inputs.version }}
         body: ${{ github.event.inputs.changelog }}
-        draft: ${{ github.event.inputs.isdraft }}
-        prerelease: ${{ github.event.inputs.isprerelease }}
+        draft: false
+        prerelease: false
 
     - name: Upload Release Asset
       id: upload_release_asset
@@ -122,6 +114,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-        asset_path: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/CMakeAS7-${{ github.event.inputs.changelog }}-winx64.zip
-        asset_name: CMakeAS7-${{ github.event.inputs.changelog }}-winx64.zip
+        asset_path: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/CMakeAS7-${{ github.event.inputs.version }}-winx64.zip
+        asset_name: CMakeAS7-${{ github.event.inputs.version }}-winx64.zip
         asset_content_type: application/zip
