@@ -103,6 +103,26 @@ cmGlobalAtmelStudio7Generator::GetPlatform(const std::string& name)
   return AvailablePlatforms::Unsupported;
 }
 
+std::string cmGlobalAtmelStudio7Generator::StripPlatformForATSLN(const AvailablePlatforms& platform)
+{
+  std::string out;
+  switch(platform) {
+    case AvailablePlatforms::AVR8:
+    case AvailablePlatforms::AVR32:
+      out = "AVR";
+      break;
+
+    case AvailablePlatforms::ARM32:
+      out = "ARM";
+      break;
+
+    case AvailablePlatforms::Unsupported:
+    default:
+      break;
+  }
+  return out;
+}
+
 cmGlobalAtmelStudio7Generator::AvailablePlatforms
 cmGlobalAtmelStudio7Generator::GetCurrentPlatform() const
 {
@@ -218,7 +238,9 @@ void cmGlobalAtmelStudio7Generator::WriteATSLNHeader(std::ostream& fout)
 
   // Uses Microsoft Visual Studio VS11 format version
   fout << "Microsoft Visual Studio Solution File, Format Version 12.00\n"
-       << "# Atmel Studio Solution File, Format Version 11.00\n";
+       << "# Atmel Studio Solution File, Format Version 11.00\n"
+       << "VisualStudioVersion = 14.0.23107.0\n"
+       << "MinimumVisualStudioVersion = 10.0.40219.1\n";
 }
 
 std::string cmGlobalAtmelStudio7Generator::GetATSLNFile(
@@ -436,6 +458,29 @@ std::vector<cmGlobalGenerator::GeneratedMakeCommand> cmGlobalAtmelStudio7Generat
                                                                                                          std::vector<std::string> const& makeOptions)
 {
   std::vector<GeneratedMakeCommand> makeCommands;
+
+  // Written by the toolchain file
+
+  cmProp compiler;
+  switch (CurrentPlatform) {
+
+    case AvailablePlatforms::AVR8:
+      compiler = this->CMakeInstance->GetState()->GetCacheEntryValue("CMAKE_AVR_GCC_COMPILER");
+      break;
+
+    case AvailablePlatforms::AVR32:
+      compiler = this->CMakeInstance->GetState()->GetCacheEntryValue("CMAKE_AVR_GCC_COMPILER");
+      break;
+
+    case AvailablePlatforms::ARM32:
+      compiler = this->CMakeInstance->GetState()->GetCacheEntryValue("CMAKE_ARM_GCC_COMPILER");
+      break;
+
+    case AvailablePlatforms::Unsupported:
+    default:
+      break;
+  }
+
   // Select the caller- or user-preferred make program, else MSBuild.
   cmProp AtmelStudioPath = this->CMakeInstance->GetState()->GetCacheEntryValue("CMAKE_ATMEL_STUDIO_EXECUTABLE");
   if (!AtmelStudioPath) {
@@ -445,10 +490,15 @@ std::vector<cmGlobalGenerator::GeneratedMakeCommand> cmGlobalAtmelStudio7Generat
     return makeCommands;
   }
 
-  // "C:\Program Files (x86)\Atmel\Studio\7.0\AtmelStudio.exe" GETTING - STARTED14.atsln / build debug / out log.txt "
+  // "C:\Program Files (x86)\Atmel\Studio\7.0\AtmelStudio.exe" GETTING-STARTED14.atsln /build debug /out log.txt "
   GeneratedMakeCommand makeCommand;
-  makeCommand.Add(*AtmelStudioPath);
-  std::string atslnFile = projectDir + "/" + projectName + ".atsln";
+  std::string as7path = cmutils::strings::replace(*AtmelStudioPath, '/', '\\');
+  makeCommand.Add(as7path);
+
+  // To execute this command, CMake will change its directory into the project Directory.
+  // So we can launch the project right from the start without using any path
+  std::string atslnFile = projectName + ".atsln";
+
   makeCommand.Add(atslnFile);
   makeCommand.Add("/build");
   makeCommand.Add(config);
@@ -467,7 +517,20 @@ void cmGlobalAtmelStudio7Generator::WriteTargetsToSolution(
     if (!target->IsInBuildSystem()) {
       continue;
     }
+
     bool written = false;
+
+    cmProp projName = target->GetProperty("GENERATOR_FILE_NAME");
+    if (projName) {
+        cmLocalGenerator* lg = target->GetLocalGenerator();
+        std::string dir = lg->GetCurrentBinaryDirectory();
+        dir = root->MaybeConvertToRelativePath(rootBinaryDir, dir);
+        if (dir == ".") {
+            dir.clear(); // msbuild cannot handle ".\" prefix
+        }
+        this->WriteProject(fout, *projName, dir, target);
+        written = true;
+    }
   }
 }
 
@@ -590,7 +653,7 @@ void cmGlobalAtmelStudio7Generator::WriteProjectConfigurations(
     }
 
     // NOTE : we might remove the platform override here if need be
-    std::string platformName = GetPlatform(CurrentPlatform);
+    std::string platformName = StripPlatformForATSLN(CurrentPlatform);
     fout << "\t\t{" << guid << "}." << i << "|" << platformName
          << ".ActiveCfg = " << dstConfig << "|"
          << (!platformMapping.empty() ? platformMapping : platformName)

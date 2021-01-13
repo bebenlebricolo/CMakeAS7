@@ -73,6 +73,13 @@ public:
    */
   static AvailablePlatforms GetPlatform(const std::string& name);
 
+    /**
+   * @brief Takes an "AvailablePlatform" and generates its compatible representation for ATSLN files
+   * @param platform    : selected platform
+   * @return a stripped version of platform's original string representation
+   */
+  static std::string StripPlatformForATSLN(const AvailablePlatforms& platform);
+
   /**
    * @brief Returns the current platform being used
    */
