@@ -384,6 +384,11 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
     }
   }
 
+  // If device name is still empty, it might be because we are in TryCompile mode and we need to provide a device for AS7 to build something
+  if (device_name.empty()) {
+    device_name = "ATmega328P";
+  }
+
   // Update targeted Device member for further use in subsequent calls to other methods (for instance when building configurations xml...)
   AS7DeviceResolver::Core core = AS7DeviceResolver::resolve_core_from_name(device_name);
   TargetedDevice.DFP_name = AS7DeviceResolver::resolve_device_dfp_name(device_name);
@@ -404,6 +409,8 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
     case AS7DeviceResolver::Core::ATmega:
     case AS7DeviceResolver::Core::ATxmega:
     case AS7DeviceResolver::Core::ATtiny:
+    // Default toolchain is set to AVRGCC8 to help with the TryCompile() step (AS7 needs a toolchain and a device)
+    default:
       toolchain = "AVRGCC8";
       break;
 
@@ -411,8 +418,6 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
       toolchain = "ARMGCC";
       break;
 
-    default:
-      break;
   }
 
   // handles devices with mmcu option
