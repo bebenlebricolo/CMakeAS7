@@ -1,0 +1,1 @@
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";C\TEMP;C:\Program Files (x86)\vswhere.2.8.4\tools", [EnvironmentVariableTarget]::Machine)
