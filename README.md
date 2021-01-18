@@ -13,6 +13,30 @@ To work properly, this fork needs the host computer to have a working installati
 
 Furthermore, Atmel Studio 7 installation location is probed by CMake (both by Modules/**.cmake script files and CMake source code) and is used by the AtmelStudio7 Generator to retrieve important data for AtmelStudio7, for instance targeted device specification sheet.
 
+#### A toolchain file!
+Toolchain files are essential for CMake to understand we want to Cross Compile. Using toolchain files is mandatory for this fork to work as expected, otherwise CMake will try to compile for a desktop configuration and will inevitably fail!
+
+Here is an example of toolchain file that I've customized for another project : [avr-gcc-toolchain.cmake](https://github.com/bebenlebricolo/LabBenchPowerSupply/blob/master/Firmware/Toolchain/avr-gcc-toolchain.cmake).
+Then use it in your root CMakeLists.txt like so :
+```CMake
+cmake_minimum_required(VERSION 3.0)
+# Use AVR GCC toolchain
+set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/Toolchain/avr-gcc-toolchain.cmake)
+```
+
+The aforementioned toolchain file declares very important variables such as :
+```CMake
+# see CMAKE_SYSTEM_NAME for cross compiling and Cmake system version
+# Used by CMake to retrieve the right Modules from Cmake/Modules/Platform/${CMAKE_SYSTEM_NAME}
+set( CMAKE_SYSTEM_NAME "BareMetal" )
+set( CMAKE_SYSTEM_PROCESSOR AVR8 )
+set( CMAKE_SYSTEM_VERSION "Generic" )
+set( CMAKE_SYSTEM_VENDOR_NAME "Atmel" )
+# Used by CMake to use the platform in order to test project's compilation when in the TryCompile() step.
+set (CMAKE_GENERATOR_PLATFORM AVR8)
+```
+**So make sure to include the right toolchain file for your project !**
+
 ---
 
 ## Features
