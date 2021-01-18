@@ -97,7 +97,7 @@ Note : _**changes made within AtmelStudio7 will be lost when the build tree is u
 As this fork is only available for **Windows**, I encourage you to use [**Visual Studio 2019**](https://visualstudio.microsoft.com/fr/downloads/) to build it.
 1. Get a version of [CMake](https://cmake.org/download/) (regular one)
 2. Get a version of [Visual Studio 2019](https://visualstudio.microsoft.com/fr/downloads/)
-3. Get a recent [git version] (https://gitforwindows.org/)
+3. Get a recent [git version](https://gitforwindows.org/)
 4. Clone this repo somewhere `git clone https://github.com/bebenlebricolo/CMake-AtmelStudio7-compatibility.git"`
 4.1. Init all submodules and update them : `git submodule init && git submodule update`
 4. Cd into this repo and make a new `build` directory
