@@ -13,6 +13,8 @@ To work properly, this fork needs the host computer to have a working installati
 
 Furthermore, Atmel Studio 7 installation location is probed by CMake (both by Modules/**.cmake script files and CMake source code) and is used by the AtmelStudio7 Generator to retrieve important data for AtmelStudio7, for instance targeted device specification sheet.
 
+---
+
 ## Features
 ### Full compiler options and flags deduction (AVR GCC only at the moment)
 * Compiler options and flags are parsed from `CMAKE_${LANG}_FLAGS` and `CMAKE_${LANG}_FLAGS_${CONFIG}`.
@@ -57,21 +59,53 @@ This allows to generate the AtmelStudio7 project within a build directory and to
 3) enter the build directory and run the cmake command : `cmake ../ -G "Atmel Studio 7"`
 4) if it went as expected, you'll end up with a `<myproject>.atsln` file somewhere in this folder
 5) double click on this file to start AtmelStudio7.
+6) you should be able to start building your project out of the box (otherwise, feel free to report it as a bug)
 
 #### AtmelStudio7 auto-refresh when .atsln files or .cproj/.cppproj files are modified
 Whenever you regenerate the whole project using this cmake fork, some files from AtmelStudio7 projects will be rewritten.
-AtmelStudio7 IDE will detect this and refresh it's project descritption as a consequence.
-**However, changes made within AtmelStudio7 will be lost when the build tree is updated/regenerated, so make sure to report your changes inside your CMakeLists.txt files before regenerating your project!**
+AtmelStudio7 IDE will detect this and refresh it's project descritption as a consequence. _This feature does not really come from this CMake fork but rather comes from Visual Studio behavior, but it's still a nice thing to know_
+
+Note : _**changes made within AtmelStudio7 will be lost when the build tree is updated/regenerated, so make sure to report your changes inside your CMakeLists.txt files before regenerating your project!**_
+
+---
 
 # Compile cmake AS7 from sources
-As this fork is only available for windows, I encourage you to use Visual Studio 2019 to build it.
-1) Get a version of CMake (regular one)
-2) Get a version of Visual Studio 2019
-3) clone this repo somewhere `git clone https://github.com/bebenlebricolo/CMake-AtmelStudio7-compatibility.git"`
-3.1) init all submodules and update them : `git submodule init && git submodule update`
-4) Cd into this repo and make a new `build` directory
-5) Run the regular CMake tool : `cmake ../`. Normally, Cmake will be able to detect Visual Studio as the main build tool on your machine.
-if not, try to force it like so instead: `cmake ../ -G "Visual Studio 16 2019`.
-Use `cmake -G` without value to check the available generators
-6) Once generation is finished, open Visual Studio and load the CMake.sln file
-7) Choose your build configuration, and build the whole solution (or only cmake project if you want so!)
+As this fork is only available for **Windows**, I encourage you to use [**Visual Studio 2019**](https://visualstudio.microsoft.com/fr/downloads/) to build it.
+1. Get a version of [CMake](https://cmake.org/download/) (regular one)
+2. Get a version of [Visual Studio 2019](https://visualstudio.microsoft.com/fr/downloads/)
+3. Get a recent [git version] (https://gitforwindows.org/)
+4. Clone this repo somewhere `git clone https://github.com/bebenlebricolo/CMake-AtmelStudio7-compatibility.git"`
+4.1. Init all submodules and update them : `git submodule init && git submodule update`
+4. Cd into this repo and make a new `build` directory
+5. Run the regular CMake tool : `cmake ../`. Normally, Cmake will be able to detect Visual Studio as the main build tool on your machine.
+if not, try to force it like so instead: `cmake ../ -G "Visual Studio 16 2019"`.
+_**Hint: use `cmake -G` without value to check the available generators**_
+#### Visual Studio IDE build
+6. Once generation is finished, open Visual Studio and load the CMake.sln file
+7. Choose your build configuration, and build the whole solution (or only cmake project if you want so!)
+8. To install cmake, select the INSTALL project in Visual Studio's Solution Explorer tab (See the _Note_ under)
+#### Command line build tools with cmake
+Alternatively, CMake can be built and installed using those 2 steps (once generation is done)
+6. Run the following cmake build command from the `build` folder : `cmake --build . --config "Release"`
+7. Run the following cmake install command if you want to install cmake right after building it:
+`cmake --build . --target install --config "Release"`
+
+##### Note about the installation directory
+The install command will try to install cmake at `C:\Program Files(x86)\Cmake` by default, which may conflict with the regular cmake installation. To solve this issue, you can force cmake to install somewhere else, providing the cmake install directory at configuration time : `-DCMAKE_INSTALL_PREFIX=<yourpath>`.
+[More information about CMAKE_INSTALL_PREFIX variable](https://cmake.org/cmake/help/latest/variable/CMAKE_INSTALL_PREFIX.html#variable:CMAKE_INSTALL_PREFIX)
+
+For instance, configuration step could look like this instead :
+`cmake ../ -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=Release`
+This will set the right variable in Cmake cache to point the installation step to the build/install directory when the `install` target is built
+
+# I want to understand the code for this fork (dev)
+If, like me, you want to understand the code written specifically for this fork, here is a "snapshot" of the sections I've had to modify in order to add Atmel Studio 7 support to CMake.
+
+* **Source/AtmelStudio7Generators** : Here lie the core components used by Cmake to generate a proper AtmelStudio7 compatible solution. Have a look to its [Readme.md](Source/AtmelStudio7Generators/Readme.md) for a more detailed overview.
+* **Source/ExternalLibraries** : This folder is used to reference submodules as dependencies. It goes a bit out of the original CMake's philosophy (which is basically to reimplement everything). I though it was OK to take a bit of slack from the original philosophy and use external components that do the job just as well as a custom implementation. At the moment here are the project used :
+  * [GoogleTest Unit testing framework](https://github.com/google/googletest). Used to implement and run unit tests easily, with a bit more support for conventional unit testing tools that what CTests actually provides.
+  * [PugiXML](https://github.com/zeux/pugixml) : Used to generate XML files (AtmelStudio7 heavily relies on XML files to describe its projects [.cproj, .cppproj, .asmproj]).
+* **Source/Utils** : This folder contains basic utils to perform very simple string manipulations. This arguably partially overlaps some custom tools already provided by CMake's project, but as CMake sometimes relies on dedicated cmString objects, I decided to make a STL compliant project instead. Another choice could have been to link with boost ...
+* **Modules/Platform/BareMetal/Atmel** : Here are the modules used to "script" cmake's behavior while building the project's internal representation. Those modules are essentially used to determine the buid tools and compiler suites required in order select and validate the tools used to build a project.
+
+
