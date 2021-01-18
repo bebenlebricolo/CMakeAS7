@@ -1,0 +1,94 @@
+name: CMake Windows Nightly build
+
+on: [push]
+
+env:
+  BUILD_TYPE: Release
+  REPO_NAME: CMake-AtmelStudio7-compatibility
+  GOOGLETEST_TAG: release-1.10.0
+  CMAKE_CONFIGURATION: windows_vs2019_x64
+  CMAKE_GENERATOR: "Visual Studio 15 2017"
+  CMAKE_GENERATOR_PLATFORM: "x64"
+  PARALLEL_CORES: 8
+  #CMAKE_GENERATOR_TOOLSET: "v142,version=14.27"
+
+
+jobs:
+  build:
+    runs-on: windows-2016
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Checkout submodules
+      shell: powershell
+      run: |
+        git submodule init
+        git submodule update
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Create Build Environment
+      shell: powershell
+      run: mkdir ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+
+    - name: Configure CMake
+      shell: powershell
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      run: |
+        cmake ../ -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build CMake
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      shell: powershell
+      run: |
+        cmake --build . --config ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
+        dir bin
+
+    - name: Install CMake
+      shell: powershell
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      run: |
+        cmake --build . --target install --config ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
+        dir bin
+        dir install
+
+    # Based on original Gitlab Cmake testing scripts
+    - name: Run CTests
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      shell: powershell
+      run: ctest --output-on-failure -V -S ../.github/ci/ctest_test.cmake -C ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
+
+    - name: Run GTests
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility
+      shell: powershell
+      run: python Tests/run_googletests.py build
+
+    # Artifacts folder need to be cleaned because additional dependencies such as PugiXML and GoogleTests
+    # are deployed under include/ and lib/ folders when the `install` target is built
+    - name: Clean deployed artifacts
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install
+      shell: powershell
+      run: |
+        Remove-Item include -Recurse
+        Remove-Item lib -Recurse
+
+    # Cmake Version is set in Source/CMakeVersion.cmake and used in Source/CMakeInstallDestinations.cmake
+    # In order to properly handle Cmake versioning.
+    # As this process is "Cmake-only" (all variables set are written in CMake's cache, as a result they are not available
+    # to the OS nor the environment), we have to rely on the share/cmake-** naming convention in order to retrieve cmake's current version
+
+    # Compress artifacts folder to match CMake's artifacts convention
+    - name: Zip artifacts
+      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      shell: powershell
+      run: |
+        $CMakeVersion=$(Get-ChildItem install/share/cmake-* -Name).Split('-')[1]
+        Compress-Archive -Path ./install/* -DestinationPath ./install/CMakeAS7-$CMakeVersion-winx64.zip
+
+    # https://github.com/actions/upload-artifact
+    - uses: actions/upload-artifact@v2
+      with:
+        name: CMakeAS7-BuildArtifacts-winx64
+        path: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/CMakeAS7-*.zip

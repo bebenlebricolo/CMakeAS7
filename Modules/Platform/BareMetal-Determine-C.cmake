@@ -1,0 +1,8 @@
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "AVR8")
+    include (Platform/BareMetal/Atmel/AVR8-C)
+    __avr8_determine_compiler(C)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "AVR32")
+    message("AVR32 compiler support is not ready yet!")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM")
+    message("ARM compiler not yet implemented!")
+endif()
