@@ -991,10 +991,10 @@ if (HDF5_FOUND)
     add_library(HDF5::HDF5 INTERFACE IMPORTED)
     string(REPLACE "-D" "" _hdf5_definitions "${HDF5_DEFINITIONS}")
     set_target_properties(HDF5::HDF5 PROPERTIES
-      INTERFACE_LINK_LIBRARIES "${HDF5_LIBRARIES}"
       INTERFACE_INCLUDE_DIRECTORIES "${HDF5_INCLUDE_DIRS}"
       INTERFACE_COMPILE_DEFINITIONS "${_hdf5_definitions}")
     unset(_hdf5_definitions)
+    target_link_libraries(HDF5::HDF5 INTERFACE ${HDF5_LIBRARIES})
   endif ()
 
   foreach (hdf5_lang IN LISTS HDF5_LANGUAGE_BINDINGS)
@@ -1026,7 +1026,7 @@ if (HDF5_FOUND)
           # Error if we still don't have the location.
           message(SEND_ERROR
             "HDF5 was found, but a different variable was set which contains "
-            "its location.")
+            "the location of the `hdf5::${hdf5_target_name}` library.")
         endif ()
         add_library("hdf5::${hdf5_target_name}" UNKNOWN IMPORTED)
         string(REPLACE "-D" "" _hdf5_definitions "${HDF5_${hdf5_lang}_DEFINITIONS}")
@@ -1057,12 +1057,14 @@ if (HDF5_FOUND)
       continue ()
     endif ()
 
+    set(hdf5_alt_target_name "")
     if (hdf5_lang STREQUAL "C")
       set(hdf5_target_name "hdf5_hl")
     elseif (hdf5_lang STREQUAL "CXX")
       set(hdf5_target_name "hdf5_hl_cpp")
     elseif (hdf5_lang STREQUAL "Fortran")
       set(hdf5_target_name "hdf5_hl_fortran")
+      set(hdf5_alt_target_name "hdf5hl_fortran")
     else ()
       continue ()
     endif ()
@@ -1081,11 +1083,13 @@ if (HDF5_FOUND)
           set(_hdf5_location "${HDF5_${hdf5_lang}_HL_LIBRARY}")
         elseif (DEFINED "HDF5_${hdf5_lang}_LIBRARY_${hdf5_target_name}")
           set(_hdf5_location "${HDF5_${hdf5_lang}_LIBRARY_${hdf5_target_name}}")
+        elseif (hdf5_alt_target_name AND DEFINED "HDF5_${hdf5_lang}_LIBRARY_${hdf5_alt_target_name}")
+          set(_hdf5_location "${HDF5_${hdf5_lang}_LIBRARY_${hdf5_alt_target_name}}")
         else ()
           # Error if we still don't have the location.
           message(SEND_ERROR
             "HDF5 was found, but a different variable was set which contains "
-            "its location.")
+            "the location of the `hdf5::${hdf5_target_name}` library.")
         endif ()
         add_library("hdf5::${hdf5_target_name}" UNKNOWN IMPORTED)
         string(REPLACE "-D" "" _hdf5_definitions "${HDF5_${hdf5_lang}_HL_DEFINITIONS}")

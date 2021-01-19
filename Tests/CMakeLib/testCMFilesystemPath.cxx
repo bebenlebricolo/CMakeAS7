@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <cm/filesystem>
-#include <cm/iomanip>
 
 namespace {
 
@@ -604,6 +603,9 @@ bool testDecomposition()
     }
 #if defined(_WIN32)
     if (fs::path("c:/a/b").parent_path() != "c:/a") {
+      result = false;
+    }
+    if (fs::path("c:a").parent_path() != "c:") {
       result = false;
     }
     if (fs::path("c:/").parent_path() != "c:/") {

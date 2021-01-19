@@ -235,8 +235,8 @@ cmake_xdgdata_dir_default="`cmake_install_dest_default XDGDATA ${cmake_xdgdata_d
 
 CMAKE_KNOWN_C_COMPILERS="cc gcc clang xlc icc tcc"
 CMAKE_KNOWN_CXX_COMPILERS="aCC xlC CC g++ clang++ c++ icc como "
-CMAKE_KNOWN_MAKE_PROCESSORS="gmake make"
-CMAKE_KNOWN_NINJA_PROCESSORS="ninja-build ninja"
+CMAKE_KNOWN_MAKE_PROCESSORS="gmake make smake"
+CMAKE_KNOWN_NINJA_PROCESSORS="ninja-build ninja samu"
 
 CMAKE_PROBLEMATIC_FILES="\
   CMakeCache.txt \
@@ -289,7 +289,6 @@ CMAKE_CXX_SOURCES="\
   cmBuildCommand \
   cmCMakeMinimumRequired \
   cmCMakePath \
-  cmCMakePathCommand \
   cmCMakePolicyCommand \
   cmCPackPropertiesGenerator \
   cmCacheManager \
@@ -302,6 +301,7 @@ CMAKE_CXX_SOURCES="\
   cmComputeLinkDepends \
   cmComputeLinkInformation \
   cmComputeTargetDepends \
+  cmConsoleBuf \
   cmConditionEvaluator \
   cmConfigureFileCommand \
   cmContinueCommand \
@@ -1674,6 +1674,10 @@ else
       # but we do not need to do that because we bootstrap using POSIX APIs.
       uv_c_flags="${uv_c_flags} -D__EXTENSIONS__ -D_XOPEN_SOURCE=600"
       libs="${libs} -lkstat -lnsl -lsendfile -lsocket -lrt"
+      ;;
+    *QNX*)
+      uv_c_flags="${uv_c_flags} -D_XOPEN_SOURCE=700"
+      libs="${libs} -lsocket"
       ;;
   esac
 fi

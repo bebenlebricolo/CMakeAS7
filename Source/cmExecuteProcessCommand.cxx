@@ -6,9 +6,13 @@
 #include <cctype> /* isspace */
 #include <cstdio>
 #include <iostream>
+#include <map>
 #include <memory>
+#include <sstream>
+#include <utility>
 #include <vector>
 
+#include <cm/string_view>
 #include <cmext/algorithm>
 #include <cmext/string_view>
 
@@ -63,6 +67,7 @@ bool cmExecuteProcessCommand(std::vector<std::string> const& args,
     bool EchoOutputVariable = false;
     bool EchoErrorVariable = false;
     std::string Encoding;
+    std::string CommandErrorIsFatal;
   };
 
   static auto const parser =
@@ -86,7 +91,8 @@ bool cmExecuteProcessCommand(std::vector<std::string> const& args,
             &Arguments::ErrorStripTrailingWhitespace)
       .Bind("ENCODING"_s, &Arguments::Encoding)
       .Bind("ECHO_OUTPUT_VARIABLE"_s, &Arguments::EchoOutputVariable)
-      .Bind("ECHO_ERROR_VARIABLE"_s, &Arguments::EchoErrorVariable);
+      .Bind("ECHO_ERROR_VARIABLE"_s, &Arguments::EchoErrorVariable)
+      .Bind("COMMAND_ERROR_IS_FATAL"_s, &Arguments::CommandErrorIsFatal);
 
   std::vector<std::string> unparsedArguments;
   std::vector<std::string> keywordsMissingValue;
@@ -128,6 +134,14 @@ bool cmExecuteProcessCommand(std::vector<std::string> const& args,
   if (!arguments.Timeout.empty()) {
     if (sscanf(arguments.Timeout.c_str(), "%lg", &timeout) != 1) {
       status.SetError(" called with TIMEOUT value that could not be parsed.");
+      return false;
+    }
+  }
+
+  if (!arguments.CommandErrorIsFatal.empty()) {
+    if (arguments.CommandErrorIsFatal != "ANY"_s &&
+        arguments.CommandErrorIsFatal != "LAST"_s) {
+      status.SetError("COMMAND_ERROR_IS_FATAL option can be ANY or LAST");
       return false;
     }
   }
@@ -360,6 +374,104 @@ bool cmExecuteProcessCommand(std::vector<std::string> const& args,
         status.GetMakefile().AddDefinition(
           arguments.ResultsVariable, "Process terminated due to timeout");
         break;
+    }
+  }
+
+  auto queryProcessStatusByIndex = [&cp](int index) -> std::string {
+    std::string processStatus;
+    switch (cmsysProcess_GetStateByIndex(cp, static_cast<int>(index))) {
+      case kwsysProcess_StateByIndex_Exited: {
+        int exitCode = cmsysProcess_GetExitValueByIndex(cp, index);
+        if (exitCode) {
+          processStatus = "Child return code: " + std::to_string(exitCode);
+        }
+      } break;
+      case kwsysProcess_StateByIndex_Exception: {
+        processStatus = cmStrCat(
+          "Abnormal exit with child return code: ",
+          cmsysProcess_GetExceptionStringByIndex(cp, static_cast<int>(index)));
+        break;
+      }
+      case kwsysProcess_StateByIndex_Error:
+      default:
+        processStatus = "Error getting the child return code";
+        break;
+    }
+    return processStatus;
+  };
+
+  if (arguments.CommandErrorIsFatal == "ANY"_s) {
+    bool ret = true;
+    switch (cmsysProcess_GetState(cp)) {
+      case cmsysProcess_State_Exited: {
+        std::map<int, std::string> failureIndices;
+        for (int i = 0; i < static_cast<int>(arguments.Commands.size()); ++i) {
+          std::string processStatus = queryProcessStatusByIndex(i);
+          if (!processStatus.empty()) {
+            failureIndices[i] = processStatus;
+          }
+          if (!failureIndices.empty()) {
+            std::ostringstream oss;
+            oss << "failed command indexes:\n";
+            for (auto const& e : failureIndices) {
+              oss << "  " << e.first + 1 << ": \"" << e.second << "\"\n";
+            }
+            status.SetError(oss.str());
+            ret = false;
+          }
+        }
+      } break;
+      case cmsysProcess_State_Exception:
+        status.SetError(
+          cmStrCat("abnormal exit: ", cmsysProcess_GetExceptionString(cp)));
+        ret = false;
+        break;
+      case cmsysProcess_State_Error:
+        status.SetError(cmStrCat("error getting child return code: ",
+                                 cmsysProcess_GetErrorString(cp)));
+        ret = false;
+        break;
+      case cmsysProcess_State_Expired:
+        status.SetError("Process terminated due to timeout");
+        ret = false;
+        break;
+    }
+
+    if (!ret) {
+      cmSystemTools::SetFatalErrorOccured();
+      return false;
+    }
+  }
+
+  if (arguments.CommandErrorIsFatal == "LAST"_s) {
+    bool ret = true;
+    switch (cmsysProcess_GetState(cp)) {
+      case cmsysProcess_State_Exited: {
+        int lastIndex = static_cast<int>(arguments.Commands.size() - 1);
+        const std::string processStatus = queryProcessStatusByIndex(lastIndex);
+        if (!processStatus.empty()) {
+          status.SetError("last command failed");
+          ret = false;
+        }
+      } break;
+      case cmsysProcess_State_Exception:
+        status.SetError(
+          cmStrCat("Abnormal exit: ", cmsysProcess_GetExceptionString(cp)));
+        ret = false;
+        break;
+      case cmsysProcess_State_Error:
+        status.SetError(cmStrCat("Error getting child return code: ",
+                                 cmsysProcess_GetErrorString(cp)));
+        ret = false;
+        break;
+      case cmsysProcess_State_Expired:
+        status.SetError("Process terminated due to timeout");
+        ret = false;
+        break;
+    }
+    if (!ret) {
+      cmSystemTools::SetFatalErrorOccured();
+      return false;
     }
   }
 

@@ -22,13 +22,15 @@
 class cmGlobalAtmelStudio7Generator::Factory : public cmGlobalGeneratorFactory
 {
 public:
+
   std::unique_ptr<cmGlobalGenerator> CreateGlobalGenerator(
-    const std::string& name, cmake* cm) const override
+    const std::string& name, bool allowArch, cmake* cm) const override
   {
+    (void)allowArch;
     if (name == cmGlobalAtmelStudio7Generator::TruncatedGeneratorName ||
-        name == cmGlobalAtmelStudio7Generator::GeneratorName) {
-      return std::unique_ptr<cmGlobalAtmelStudio7Generator>(
-        new cmGlobalAtmelStudio7Generator(cm, name));
+        name == cmGlobalAtmelStudio7Generator::GeneratorName)
+    {
+      return std::unique_ptr<cmGlobalAtmelStudio7Generator>( new cmGlobalAtmelStudio7Generator(cm, name));
     }
     return std::unique_ptr<cmGlobalGenerator>();
   }
@@ -318,9 +320,10 @@ bool cmGlobalAtmelStudio7Generator::FindMakeProgram(cmMakefile*)
 std::string cmGlobalAtmelStudio7Generator::GetGUID(std::string const& name)
 {
   std::string const& guidStoreName = name + "_GUID_CMAKE";
-  if (const char* storedGUID =
-        this->CMakeInstance->GetCacheDefinition(guidStoreName)) {
-    return std::string(storedGUID);
+  cmProp storedGUID = this->CMakeInstance->GetCacheDefinition(guidStoreName);
+  if (nullptr != storedGUID)
+  {
+    return std::string(*storedGUID);
   }
   // Compute a GUID that is deterministic but unique to the build tree.
   std::string input =
@@ -502,6 +505,7 @@ std::vector<cmGlobalGenerator::GeneratedMakeCommand> cmGlobalAtmelStudio7Generat
   makeCommand.Add(atslnFile);
   makeCommand.Add("/build");
   makeCommand.Add(config);
+  makeCommand.Add("/out buildOutput.txt");
 
   makeCommands.push_back(makeCommand);
 

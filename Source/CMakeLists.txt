@@ -2,9 +2,12 @@
 # file Copyright.txt or https://cmake.org/licensing for details.
 
 # To ensure maximum portability across various compilers and platforms
-# deactivate any compiler extensions
-set(CMAKE_C_EXTENSIONS FALSE)
-set(CMAKE_CXX_EXTENSIONS FALSE)
+# deactivate any compiler extensions.  Skip this for QNX, where additional
+# work is needed to build without compiler extensions.
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "QNX")
+  set(CMAKE_C_EXTENSIONS FALSE)
+  set(CMAKE_CXX_EXTENSIONS FALSE)
+endif()
 
 include(CheckIncludeFile)
 # Check if we can build support for ELF parsing.
@@ -184,6 +187,8 @@ set(SRCS
   cmCLocaleEnvironmentScope.cxx
   cmCMakePath.h
   cmCMakePath.cxx
+  cmCMakePresetsFile.cxx
+  cmCMakePresetsFile.h
   cmCommandArgumentParserHelper.cxx
   cmCommonTargetGenerator.cxx
   cmCommonTargetGenerator.h
@@ -195,6 +200,8 @@ set(SRCS
   cmComputeLinkInformation.h
   cmComputeTargetDepends.h
   cmComputeTargetDepends.cxx
+  cmConsoleBuf.h
+  cmConsoleBuf.cxx
   cmCPackPropertiesGenerator.h
   cmCPackPropertiesGenerator.cxx
   cmCryptoHash.cxx
@@ -501,8 +508,6 @@ set(SRCS
   cmCMakeLanguageCommand.h
   cmCMakeMinimumRequired.cxx
   cmCMakeMinimumRequired.h
-  cmCMakePathCommand.h
-  cmCMakePathCommand.cxx
   cmCMakePolicyCommand.cxx
   cmCMakePolicyCommand.h
   cmConditionEvaluator.cxx
@@ -955,6 +960,7 @@ set(CTEST_SRCS cmCTest.cxx
   CTest/cmCTestResourceAllocator.cxx
   CTest/cmCTestResourceSpec.cxx
   CTest/cmCTestLaunch.cxx
+  CTest/cmCTestLaunchReporter.cxx
   CTest/cmCTestMemCheckCommand.cxx
   CTest/cmCTestMemCheckHandler.cxx
   CTest/cmCTestMultiProcessHandler.cxx

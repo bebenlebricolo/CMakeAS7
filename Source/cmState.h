@@ -55,6 +55,8 @@ public:
   cmStateSnapshot CreateBaseSnapshot();
   cmStateSnapshot CreateBuildsystemDirectorySnapshot(
     cmStateSnapshot const& originSnapshot);
+  cmStateSnapshot CreateDeferCallSnapshot(
+    cmStateSnapshot const& originSnapshot, std::string const& fileName);
   cmStateSnapshot CreateFunctionCallSnapshot(
     cmStateSnapshot const& originSnapshot, std::string const& fileName);
   cmStateSnapshot CreateMacroCallSnapshot(
@@ -84,6 +86,8 @@ public:
   bool SaveCache(const std::string& path, cmMessenger* messenger);
 
   bool DeleteCache(const std::string& path);
+
+  bool IsCacheLoaded() const;
 
   std::vector<std::string> GetCacheEntryKeys() const;
   cmProp GetCacheEntryValue(std::string const& key) const;

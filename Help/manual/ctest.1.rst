@@ -1142,6 +1142,20 @@ Additional configuration settings include:
   * `CTest Script`_ variable: none
   * :module:`CTest` module variable: ``DRMEMORY_COMMAND_OPTIONS``
 
+``CudaSanitizerCommand``
+  Specify a ``MemoryCheckCommand`` that is known to be a command-line
+  compatible with cuda-memcheck or compute-sanitizer.
+
+  * `CTest Script`_ variable: none
+  * :module:`CTest` module variable: ``CUDA_SANITIZER_COMMAND``
+
+``CudaSanitizerCommandOptions``
+  Specify command-line options to the ``CudaSanitizerCommand`` tool.
+  They will be placed prior to the test command line.
+
+  * `CTest Script`_ variable: none
+  * :module:`CTest` module variable: ``CUDA_SANITIZER_COMMAND_OPTIONS``
+
 .. _`CTest Submit Step`:
 
 CTest Submit Step

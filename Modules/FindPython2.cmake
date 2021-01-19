@@ -10,6 +10,10 @@ FindPython2
 Find Python 2 interpreter, compiler and development environment (include
 directories and libraries).
 
+When a version is requested, it can be specified as a simple value or as a
+range. For a detailed description of version range usage and capabilities,
+refer to the :command:`find_package` command.
+
 The following components are supported:
 
 * ``Interpreter``: search for Python 2 interpreter
@@ -130,6 +134,9 @@ This module will set the following variables in your project
   System has the Python 2 development artifacts for Python embedding.
 ``Python2_INCLUDE_DIRS``
   The Python 2 include directories.
+``Python2_LINK_OPTIONS``
+  The Python 2 link options. Some configurations require specific link options
+  for a correct build and execution.
 ``Python2_LIBRARIES``
   The Python 2 libraries.
 ``Python2_LIBRARY_DIRS``

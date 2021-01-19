@@ -576,15 +576,15 @@ QWidget* QCMakeCacheModelDelegate::createEditor(
   if (type == QCMakeProperty::PATH) {
     QCMakePathEditor* editor =
       new QCMakePathEditor(p, var.data(Qt::DisplayRole).toString());
-    QObject::connect(editor, SIGNAL(fileDialogExists(bool)), this,
-                     SLOT(setFileDialogFlag(bool)));
+    QObject::connect(editor, &QCMakePathEditor::fileDialogExists, this,
+                     &QCMakeCacheModelDelegate::setFileDialogFlag);
     return editor;
   }
   if (type == QCMakeProperty::FILEPATH) {
     QCMakeFilePathEditor* editor =
       new QCMakeFilePathEditor(p, var.data(Qt::DisplayRole).toString());
-    QObject::connect(editor, SIGNAL(fileDialogExists(bool)), this,
-                     SLOT(setFileDialogFlag(bool)));
+    QObject::connect(editor, &QCMakePathEditor::fileDialogExists, this,
+                     &QCMakeCacheModelDelegate::setFileDialogFlag);
     return editor;
   }
   if (type == QCMakeProperty::STRING &&
@@ -640,6 +640,19 @@ bool QCMakeCacheModelDelegate::editorEvent(QEvent* e,
     this->recordChange(model, index);
   }
   return success;
+}
+
+bool QCMakeCacheModelDelegate::eventFilter(QObject* object, QEvent* evt)
+{
+  // FIXME: This filter avoids a crash when opening a file dialog
+  // with the '...' button on a cache entry line in the GUI.
+  // Previously this filter was commented as a workaround for Qt issue 205903,
+  // but that was fixed in Qt 4.5.0 and the crash still occurs as of Qt 5.14
+  // without this filter.  This needs further investigation.
+  if (evt->type() == QEvent::FocusOut && this->FileDialogFlag) {
+    return false;
+  }
+  return QItemDelegate::eventFilter(object, evt);
 }
 
 void QCMakeCacheModelDelegate::setModelData(QWidget* editor,

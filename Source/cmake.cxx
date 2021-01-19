@@ -13,6 +13,7 @@
 #include <utility>
 
 #include <cm/memory>
+#include <cm/optional>
 #include <cm/string_view>
 #if defined(_WIN32) && !defined(__CYGWIN__) && !defined(CMAKE_BOOT_MINGW)
 #  include <cm/iterator>
@@ -27,6 +28,7 @@
 
 #include "cm_sys_stat.h"
 
+#include "cmCMakePresetsFile.h"
 #include "cmCommands.h"
 #include "cmDocumentation.h"
 #include "cmDocumentationEntry.h"
@@ -285,7 +287,100 @@ void cmake::CleanupCommandsAndMacros()
   this->CurrentSnapshot = this->State->Reset();
   this->State->RemoveUserDefinedCommands();
   this->CurrentSnapshot.SetDefaultDefinitions();
+  // FIXME: InstalledFiles probably belongs in the global generator.
+  this->InstalledFiles.clear();
 }
+
+#ifndef CMAKE_BOOTSTRAP
+void cmake::SetWarningFromPreset(const std::string& name,
+                                 const cm::optional<bool>& warning,
+                                 const cm::optional<bool>& error)
+{
+  if (warning) {
+    if (*warning) {
+      this->DiagLevels[name] = std::max(this->DiagLevels[name], DIAG_WARN);
+    } else {
+      this->DiagLevels[name] = DIAG_IGNORE;
+    }
+  }
+  if (error) {
+    if (*error) {
+      this->DiagLevels[name] = DIAG_ERROR;
+    } else {
+      this->DiagLevels[name] = std::min(this->DiagLevels[name], DIAG_WARN);
+    }
+  }
+}
+
+void cmake::ProcessPresetVariables()
+{
+  for (auto const& var : this->UnprocessedPresetVariables) {
+    if (!var.second) {
+      continue;
+    }
+    cmStateEnums::CacheEntryType type = cmStateEnums::UNINITIALIZED;
+    if (!var.second->Type.empty()) {
+      type = cmState::StringToCacheEntryType(var.second->Type);
+    }
+    this->ProcessCacheArg(var.first, var.second->Value, type);
+  }
+}
+
+void cmake::PrintPresetVariables()
+{
+  bool first = true;
+  for (auto const& var : this->UnprocessedPresetVariables) {
+    if (!var.second) {
+      continue;
+    }
+    cmStateEnums::CacheEntryType type = cmStateEnums::UNINITIALIZED;
+    if (!var.second->Type.empty()) {
+      type = cmState::StringToCacheEntryType(var.second->Type);
+    }
+    if (first) {
+      std::cout << "Preset CMake variables:\n\n";
+      first = false;
+    }
+    std::cout << "  " << var.first;
+    if (type != cmStateEnums::UNINITIALIZED) {
+      std::cout << ':' << cmState::CacheEntryTypeToString(type);
+    }
+    std::cout << "=\"" << var.second->Value << "\"\n";
+  }
+  if (!first) {
+    std::cout << '\n';
+  }
+  this->UnprocessedPresetVariables.clear();
+}
+
+void cmake::ProcessPresetEnvironment()
+{
+  for (auto const& var : this->UnprocessedPresetEnvironment) {
+    if (var.second) {
+      cmSystemTools::PutEnv(cmStrCat(var.first, '=', *var.second));
+    }
+  }
+}
+
+void cmake::PrintPresetEnvironment()
+{
+  bool first = true;
+  for (auto const& var : this->UnprocessedPresetEnvironment) {
+    if (!var.second) {
+      continue;
+    }
+    if (first) {
+      std::cout << "Preset environment variables:\n\n";
+      first = false;
+    }
+    std::cout << "  " << var.first << "=\"" << *var.second << "\"\n";
+  }
+  if (!first) {
+    std::cout << '\n';
+  }
+  this->UnprocessedPresetEnvironment.clear();
+}
+#endif
 
 // Parse the args
 bool cmake::SetCacheArgs(const std::vector<std::string>& args)
@@ -309,28 +404,10 @@ bool cmake::SetCacheArgs(const std::vector<std::string>& args)
       std::string value;
       cmStateEnums::CacheEntryType type = cmStateEnums::UNINITIALIZED;
       if (cmState::ParseCacheEntry(entry, var, value, type)) {
-        // The value is transformed if it is a filepath for example, so
-        // we can't compare whether the value is already in the cache until
-        // after we call AddCacheEntry.
-        bool haveValue = false;
-        std::string cachedValue;
-        if (this->WarnUnusedCli) {
-          if (cmProp v = this->State->GetInitializedCacheValue(var)) {
-            haveValue = true;
-            cachedValue = *v;
-          }
-        }
-
-        this->AddCacheEntry(var, value.c_str(),
-                            "No help, variable specified on the command line.",
-                            type);
-
-        if (this->WarnUnusedCli) {
-          if (!haveValue ||
-              cachedValue != *this->State->GetInitializedCacheValue(var)) {
-            this->WatchUnusedCli(var);
-          }
-        }
+#ifndef CMAKE_BOOTSTRAP
+        this->UnprocessedPresetVariables.erase(var);
+#endif
+        this->ProcessCacheArg(var, value, type);
       } else {
         cmSystemTools::Error("Parse error in command line argument: " + arg +
                              "\n" + "Should be: VAR:type=value\n");
@@ -410,6 +487,9 @@ bool cmake::SetCacheArgs(const std::vector<std::string>& args)
 
       // now remove them from the cache
       for (std::string const& currentEntry : entriesToDelete) {
+#ifndef CMAKE_BOOTSTRAP
+        this->UnprocessedPresetVariables.erase(currentEntry);
+#endif
         this->State->RemoveCacheEntry(currentEntry);
       }
     } else if (cmHasLiteralPrefix(arg, "-C")) {
@@ -461,6 +541,33 @@ bool cmake::SetCacheArgs(const std::vector<std::string>& args)
   }
 
   return true;
+}
+
+void cmake::ProcessCacheArg(const std::string& var, const std::string& value,
+                            cmStateEnums::CacheEntryType type)
+{
+  // The value is transformed if it is a filepath for example, so
+  // we can't compare whether the value is already in the cache until
+  // after we call AddCacheEntry.
+  bool haveValue = false;
+  std::string cachedValue;
+  if (this->WarnUnusedCli) {
+    if (cmProp v = this->State->GetInitializedCacheValue(var)) {
+      haveValue = true;
+      cachedValue = *v;
+    }
+  }
+
+  this->AddCacheEntry(var, value.c_str(),
+                      "No help, variable specified on the command line.",
+                      type);
+
+  if (this->WarnUnusedCli) {
+    if (!haveValue ||
+        cachedValue != *this->State->GetInitializedCacheValue(var)) {
+      this->WatchUnusedCli(var);
+    }
+  }
 }
 
 void cmake::ReadListFile(const std::vector<std::string>& args,
@@ -623,9 +730,12 @@ void cmake::SetArgs(const std::vector<std::string>& args)
 {
   bool haveToolset = false;
   bool havePlatform = false;
+  bool haveBArg = false;
 #if !defined(CMAKE_BOOTSTRAP)
   std::string profilingFormat;
   std::string profilingOutput;
+  std::string presetName;
+  bool listPresets = false;
 #endif
   for (unsigned int i = 1; i < args.size(); ++i) {
     std::string const& arg = args[i];
@@ -669,6 +779,7 @@ void cmake::SetArgs(const std::vector<std::string>& args)
       path = cmSystemTools::CollapseFullPath(path);
       cmSystemTools::ConvertToUnixSlashes(path);
       this->SetHomeOutputDirectory(path);
+      haveBArg = true;
     } else if ((i < args.size() - 2) &&
                cmHasLiteralPrefix(arg, "--check-build-system")) {
       this->CheckBuildSystemArgument = args[++i];
@@ -831,32 +942,29 @@ void cmake::SetArgs(const std::vector<std::string>& args)
         }
         value = args[i];
       }
-      auto gen = this->CreateGlobalGenerator(value);
-      if (!gen) {
-        std::string kdevError;
-        if (value.find("KDevelop3", 0) != std::string::npos) {
-          kdevError = "\nThe KDevelop3 generator is not supported anymore.";
-        }
-
-        cmSystemTools::Error(
-          cmStrCat("Could not create named generator ", value, kdevError));
-        this->PrintGeneratorList();
+      if (!this->CreateAndSetGlobalGenerator(value, true)) {
         return;
       }
-      this->SetGlobalGenerator(std::move(gen));
 #if !defined(CMAKE_BOOTSTRAP)
-    } else if (cmHasLiteralPrefix(arg, "--profiling-format")) {
+    } else if (cmHasLiteralPrefix(arg, "--profiling-format=")) {
       profilingFormat = arg.substr(strlen("--profiling-format="));
       if (profilingFormat.empty()) {
         cmSystemTools::Error("No format specified for --profiling-format");
       }
-    } else if (cmHasLiteralPrefix(arg, "--profiling-output")) {
+    } else if (cmHasLiteralPrefix(arg, "--profiling-output=")) {
       profilingOutput = arg.substr(strlen("--profiling-output="));
       profilingOutput = cmSystemTools::CollapseFullPath(profilingOutput);
       cmSystemTools::ConvertToUnixSlashes(profilingOutput);
       if (profilingOutput.empty()) {
         cmSystemTools::Error("No path specified for --profiling-output");
       }
+    } else if (cmHasLiteralPrefix(arg, "--preset=")) {
+      presetName = arg.substr(strlen("--preset="));
+      if (presetName.empty()) {
+        cmSystemTools::Error("No preset specified for --preset");
+      }
+    } else if (cmHasLiteralPrefix(arg, "--list-presets")) {
+      listPresets = true;
 #endif
     }
     // no option assume it is the path to the source or an existing build
@@ -900,9 +1008,15 @@ void cmake::SetArgs(const std::vector<std::string>& args)
 
   const bool haveSourceDir = !this->GetHomeDirectory().empty();
   const bool haveBinaryDir = !this->GetHomeOutputDirectory().empty();
+  const bool havePreset =
+#ifdef CMAKE_BOOTSTRAP
+    false;
+#else
+    !presetName.empty();
+#endif
 
   if (this->CurrentWorkingMode == cmake::NORMAL_MODE && !haveSourceDir &&
-      !haveBinaryDir) {
+      !haveBinaryDir && !havePreset) {
     this->IssueMessage(
       MessageType::WARNING,
       "No source or binary directory provided. Both will be assumed to be "
@@ -916,6 +1030,95 @@ void cmake::SetArgs(const std::vector<std::string>& args)
   if (!haveBinaryDir) {
     this->SetHomeOutputDirectory(cmSystemTools::GetCurrentWorkingDirectory());
   }
+
+#if !defined(CMAKE_BOOTSTRAP)
+  if (listPresets || !presetName.empty()) {
+    cmCMakePresetsFile settingsFile;
+    auto result = settingsFile.ReadProjectPresets(this->GetHomeDirectory());
+    if (result != cmCMakePresetsFile::ReadFileResult::READ_OK) {
+      cmSystemTools::Error(
+        cmStrCat("Could not read presets from ", this->GetHomeDirectory(),
+                 ": ", cmCMakePresetsFile::ResultToString(result)));
+      return;
+    }
+    if (listPresets) {
+      this->PrintPresetList(settingsFile);
+      return;
+    }
+    auto preset = settingsFile.Presets.find(presetName);
+    if (preset == settingsFile.Presets.end()) {
+      cmSystemTools::Error(cmStrCat("No such preset in ",
+                                    this->GetHomeDirectory(), ": \"",
+                                    presetName, '"'));
+      this->PrintPresetList(settingsFile);
+      return;
+    }
+    if (preset->second.Unexpanded.Hidden) {
+      cmSystemTools::Error(cmStrCat("Cannot use hidden preset in ",
+                                    this->GetHomeDirectory(), ": \"",
+                                    presetName, '"'));
+      this->PrintPresetList(settingsFile);
+      return;
+    }
+    auto const& expandedPreset = preset->second.Expanded;
+    if (!expandedPreset) {
+      cmSystemTools::Error(cmStrCat("Could not evaluate preset \"",
+                                    preset->second.Unexpanded.Name,
+                                    "\": Invalid macro expansion"));
+      return;
+    }
+
+    if (!this->State->IsCacheLoaded() && !haveBArg) {
+      this->SetHomeOutputDirectory(expandedPreset->BinaryDir);
+    }
+    if (!this->GlobalGenerator) {
+      if (!this->CreateAndSetGlobalGenerator(expandedPreset->Generator,
+                                             false)) {
+        return;
+      }
+    }
+    this->UnprocessedPresetVariables = expandedPreset->CacheVariables;
+    this->UnprocessedPresetEnvironment = expandedPreset->Environment;
+
+    if (!expandedPreset->ArchitectureStrategy ||
+        expandedPreset->ArchitectureStrategy ==
+          cmCMakePresetsFile::ArchToolsetStrategy::Set) {
+      if (!this->GeneratorPlatformSet) {
+        this->SetGeneratorPlatform(expandedPreset->Architecture);
+      }
+    }
+    if (!expandedPreset->ToolsetStrategy ||
+        expandedPreset->ToolsetStrategy ==
+          cmCMakePresetsFile::ArchToolsetStrategy::Set) {
+      if (!this->GeneratorToolsetSet) {
+        this->SetGeneratorToolset(expandedPreset->Toolset);
+      }
+    }
+
+    this->SetWarningFromPreset("dev", expandedPreset->WarnDev,
+                               expandedPreset->ErrorDev);
+    this->SetWarningFromPreset("deprecated", expandedPreset->WarnDeprecated,
+                               expandedPreset->ErrorDeprecated);
+    if (expandedPreset->WarnUninitialized == true) {
+      this->SetWarnUninitialized(true);
+    }
+    if (expandedPreset->WarnUnusedCli == false) {
+      this->SetWarnUnusedCli(false);
+    }
+    if (expandedPreset->WarnSystemVars == true) {
+      this->SetCheckSystemVars(true);
+    }
+    if (expandedPreset->DebugOutput == true) {
+      this->SetDebugOutputOn(true);
+    }
+    if (expandedPreset->DebugTryCompile == true) {
+      this->DebugTryCompileOn();
+    }
+    if (expandedPreset->DebugFind == true) {
+      this->SetDebugFindOutputOn(true);
+    }
+  }
+#endif
 }
 
 cmake::LogLevel cmake::StringToLogLevel(const std::string& levelStr)
@@ -984,7 +1187,7 @@ void cmake::PrintTraceFormatVersion()
       Json::StreamWriterBuilder builder;
       builder["indentation"] = "";
       version["major"] = 1;
-      version["minor"] = 0;
+      version["minor"] = 1;
       val["version"] = version;
       msg = Json::writeString(builder, val);
 #endif
@@ -1218,7 +1421,7 @@ createExtraGenerator(
 }
 
 std::unique_ptr<cmGlobalGenerator> cmake::CreateGlobalGenerator(
-  const std::string& gname)
+  const std::string& gname, bool allowArch)
 {
   std::pair<std::unique_ptr<cmExternalMakefileProjectGenerator>, std::string>
     extra = createExtraGenerator(this->ExtraGenerators, gname);
@@ -1228,7 +1431,7 @@ std::unique_ptr<cmGlobalGenerator> cmake::CreateGlobalGenerator(
 
   std::unique_ptr<cmGlobalGenerator> generator;
   for (const auto& g : this->Generators) {
-    generator = g->CreateGlobalGenerator(name, this);
+    generator = g->CreateGlobalGenerator(name, allowArch, this);
     if (generator) {
       break;
     }
@@ -1240,6 +1443,78 @@ std::unique_ptr<cmGlobalGenerator> cmake::CreateGlobalGenerator(
 
   return generator;
 }
+
+bool cmake::CreateAndSetGlobalGenerator(const std::string& name,
+                                        bool allowArch)
+{
+  auto gen = this->CreateGlobalGenerator(name, allowArch);
+  if (!gen) {
+    std::string kdevError;
+    std::string vsError;
+    if (name.find("KDevelop3", 0) != std::string::npos) {
+      kdevError = "\nThe KDevelop3 generator is not supported anymore.";
+    }
+    if (!allowArch && cmHasLiteralPrefix(name, "Visual Studio ") &&
+        name.length() >= cmStrLen("Visual Studio xx xxxx ")) {
+      vsError = "\nUsing platforms in Visual Studio generator names is not "
+                "supported in CMakePresets.json.";
+    }
+
+    cmSystemTools::Error(
+      cmStrCat("Could not create named generator ", name, kdevError, vsError));
+    this->PrintGeneratorList();
+    return false;
+  }
+
+  this->SetGlobalGenerator(std::move(gen));
+  return true;
+}
+
+#ifndef CMAKE_BOOTSTRAP
+void cmake::PrintPresetList(const cmCMakePresetsFile& file) const
+{
+  std::vector<GeneratorInfo> generators;
+  this->GetRegisteredGenerators(generators, false);
+
+  std::vector<cmCMakePresetsFile::UnexpandedPreset> presets;
+  for (auto const& p : file.PresetOrder) {
+    auto const& preset = file.Presets.at(p);
+    if (!preset.Unexpanded.Hidden && preset.Expanded &&
+        std::find_if(generators.begin(), generators.end(),
+                     [&preset](const GeneratorInfo& info) {
+                       return info.name == preset.Unexpanded.Generator;
+                     }) != generators.end()) {
+      presets.push_back(preset.Unexpanded);
+    }
+  }
+
+  if (presets.empty()) {
+    return;
+  }
+
+  std::cout << "Available presets:\n\n";
+
+  auto longestPresetName =
+    std::max_element(presets.begin(), presets.end(),
+                     [](const cmCMakePresetsFile::UnexpandedPreset& a,
+                        const cmCMakePresetsFile::UnexpandedPreset& b) {
+                       return a.Name.length() < b.Name.length();
+                     });
+  auto longestLength = longestPresetName->Name.length();
+
+  for (auto const& preset : presets) {
+    std::cout << "  \"" << preset.Name << '"';
+    auto const& description = preset.DisplayName;
+    if (!description.empty()) {
+      for (std::size_t i = 0; i < longestLength - preset.Name.length(); ++i) {
+        std::cout << ' ';
+      }
+      std::cout << " - " << description;
+    }
+    std::cout << '\n';
+  }
+}
+#endif
 
 void cmake::SetHomeDirectory(const std::string& dir)
 {
@@ -1410,6 +1685,8 @@ int cmake::HandleDeleteCacheVariables(const std::string& var)
             this->State->GetCacheEntryProperty(save.key, "HELPSTRING")) {
         save.help = *help;
       }
+    } else {
+      save.type = cmStateEnums::CacheEntryType::UNINITIALIZED;
     }
     saved.push_back(std::move(save));
   }
@@ -1802,6 +2079,9 @@ int cmake::Run(const std::vector<std::string>& args, bool noconfigure)
   if (cmSystemTools::GetErrorOccuredFlag()) {
     return -1;
   }
+  if (this->GetWorkingMode() == HELP_MODE) {
+    return 0;
+  }
 
   // Log the trace format version to the desired output
   if (this->GetTrace()) {
@@ -1830,11 +2110,19 @@ int cmake::Run(const std::vector<std::string>& args, bool noconfigure)
     this->AddCMakePaths();
   }
 
+#ifndef CMAKE_BOOTSTRAP
+  this->ProcessPresetVariables();
+  this->ProcessPresetEnvironment();
+#endif
   // Add any cache args
   if (!this->SetCacheArgs(args)) {
     cmSystemTools::Error("Problem processing arguments. Aborting.\n");
     return -1;
   }
+#ifndef CMAKE_BOOTSTRAP
+  this->PrintPresetVariables();
+  this->PrintPresetEnvironment();
+#endif
 
   // In script mode we terminate after running the script.
   if (this->GetWorkingMode() != NORMAL_MODE) {
@@ -2001,10 +2289,9 @@ std::string cmake::StripExtension(const std::string& file) const
   return file;
 }
 
-const char* cmake::GetCacheDefinition(const std::string& name) const
+cmProp cmake::GetCacheDefinition(const std::string& name) const
 {
-  cmProp p = this->State->GetInitializedCacheValue(name);
-  return p ? p->c_str() : nullptr;
+  return this->State->GetInitializedCacheValue(name);
 }
 
 void cmake::AddScriptingCommands()

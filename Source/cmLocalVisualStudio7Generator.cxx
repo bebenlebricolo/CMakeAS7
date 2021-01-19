@@ -275,10 +275,9 @@ cmVS7FlagTable cmLocalVisualStudio7GeneratorFortranFlagTable[] = {
   { "SuppressStartupBanner", "nologo", "SuppressStartupBanner", "true", 0 },
   { "SourceFileFormat", "fixed", "Use Fixed Format", "fileFormatFixed", 0 },
   { "SourceFileFormat", "free", "Use Free Format", "fileFormatFree", 0 },
-  { "DebugInformationFormat", "Zi", "full debug", "debugEnabled", 0 },
   { "DebugInformationFormat", "debug:full", "full debug", "debugEnabled", 0 },
-  { "DebugInformationFormat", "Z7", "c7 compat", "debugOldStyleInfo", 0 },
-  { "DebugInformationFormat", "Zd", "line numbers", "debugLineInfoOnly", 0 },
+  { "DebugInformationFormat", "debug:minimal", "line numbers",
+    "debugLineInfoOnly", 0 },
   { "Optimization", "Od", "disable optimization", "optimizeDisabled", 0 },
   { "Optimization", "O1", "min space", "optimizeMinSpace", 0 },
   { "Optimization", "O3", "full optimize", "optimizeFull", 0 },
@@ -583,7 +582,7 @@ void cmLocalVisualStudio7Generator::WriteConfiguration(
 {
   std::string mfcFlag;
   if (cmProp p = this->Makefile->GetDefinition("CMAKE_MFC_FLAG")) {
-    mfcFlag = *p;
+    mfcFlag = cmGeneratorExpression::Evaluate(*p, this, configName);
   } else {
     mfcFlag = "0";
   }
@@ -1081,11 +1080,13 @@ void cmLocalVisualStudio7Generator::OutputBuildTool(
       if (stackVal) {
         fout << "\t\t\t\tStackReserveSize=\"" << *stackVal << "\"\n";
       }
-      temp = cmStrCat(
-        target->GetDirectory(configName, cmStateEnums::ImportLibraryArtifact),
-        '/', targetNames.ImportLibrary);
-      fout << "\t\t\t\tImportLibrary=\""
-           << this->ConvertToXMLOutputPathSingle(temp) << "\"";
+      if (!targetNames.ImportLibrary.empty()) {
+        temp = cmStrCat(target->GetDirectory(
+                          configName, cmStateEnums::ImportLibraryArtifact),
+                        '/', targetNames.ImportLibrary);
+        fout << "\t\t\t\tImportLibrary=\""
+             << this->ConvertToXMLOutputPathSingle(temp) << "\"";
+      }
       if (this->FortranProject) {
         fout << "\n\t\t\t\tLinkDLL=\"true\"";
       }

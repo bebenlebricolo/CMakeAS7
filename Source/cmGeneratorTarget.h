@@ -417,6 +417,8 @@ public:
   // until we have per-target object file properties.
   void GetLanguages(std::set<std::string>& languages,
                     std::string const& config) const;
+  bool IsLanguageUsed(std::string const& language,
+                      std::string const& config) const;
 
   bool IsCSharpOnly() const;
 
@@ -713,6 +715,10 @@ public:
   bool GetImplibGNUtoMS(std::string const& config, std::string const& gnuName,
                         std::string& out, const char* newExt = nullptr) const;
 
+  /** Can only ever return true if GetSourceFilePaths() was called before.
+      Otherwise, this is indeterminate and false will be assumed/returned!  */
+  bool HasContextDependentSources() const;
+
   bool IsExecutableWithExports() const;
 
   /** Return whether or not the target has a DLL import library.  */
@@ -845,6 +851,8 @@ private:
   mutable std::set<std::string> VisitedConfigsForObjects;
   mutable std::map<cmSourceFile const*, std::string> Objects;
   std::set<cmSourceFile const*> ExplicitObjectName;
+
+  // "config/language" is the key
   mutable std::map<std::string, std::vector<std::string>> SystemIncludesCache;
 
   mutable std::string ExportMacro;
@@ -857,12 +865,12 @@ private:
 
   bool NeedImportLibraryName(std::string const& config) const;
 
-  const char* GetFilePrefixInternal(std::string const& config,
-                                    cmStateEnums::ArtifactType artifact,
-                                    const std::string& language = "") const;
-  const char* GetFileSuffixInternal(std::string const& config,
-                                    cmStateEnums::ArtifactType artifact,
-                                    const std::string& language = "") const;
+  cmProp GetFilePrefixInternal(std::string const& config,
+                               cmStateEnums::ArtifactType artifact,
+                               const std::string& language = "") const;
+  cmProp GetFileSuffixInternal(std::string const& config,
+                               cmStateEnums::ArtifactType artifact,
+                               const std::string& language = "") const;
 
   std::string GetFullNameInternal(const std::string& config,
                                   cmStateEnums::ArtifactType artifact) const;
@@ -1069,8 +1077,14 @@ private:
   mutable bool DebugLinkDirectoriesDone;
   mutable bool DebugPrecompileHeadersDone;
   mutable bool DebugSourcesDone;
-  mutable bool LinkImplementationLanguageIsContextDependent;
   mutable bool UtilityItemsDone;
+  enum class Tribool
+  {
+    False = 0x0,
+    True = 0x1,
+    Indeterminate = 0x2
+  };
+  mutable Tribool SourcesAreContextDependent;
 
   bool ComputePDBOutputDir(const std::string& kind, const std::string& config,
                            std::string& out) const;

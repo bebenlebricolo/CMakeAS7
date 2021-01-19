@@ -368,10 +368,13 @@ public:
   {
     return "1.10";
   }
-  static std::string RequiredNinjaVersionForCleanDeadTool() { return "1.10"; }
   static std::string RequiredNinjaVersionForMultipleOutputs()
   {
     return "1.10";
+  }
+  static std::string RequiredNinjaVersionForMetadataOnRegeneration()
+  {
+    return "1.10.2";
   }
   bool SupportsConsolePool() const;
   bool SupportsImplicitOuts() const;
@@ -536,8 +539,8 @@ private:
   bool NinjaSupportsDyndeps = false;
   bool NinjaSupportsRestatTool = false;
   bool NinjaSupportsUnconditionalRecompactTool = false;
-  bool NinjaSupportsCleanDeadTool = false;
   bool NinjaSupportsMultipleOutputs = false;
+  bool NinjaSupportsMetadataOnRegeneration = false;
 
 private:
   void InitOutputPathPrefix();
@@ -545,6 +548,7 @@ private:
   std::string OutputPathPrefix;
   std::string TargetAll;
   std::string CMakeCacheFile;
+  bool DisableCleandead = false;
 
   struct ByConfig
   {

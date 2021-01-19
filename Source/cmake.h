@@ -27,7 +27,11 @@
 #include "cmStateTypes.h"
 
 #if !defined(CMAKE_BOOTSTRAP)
+#  include <cm/optional>
+
 #  include <cm3p/json/value.h>
+
+#  include "cmCMakePresetsFile.h"
 #endif
 
 class cmExternalMakefileProjectGeneratorFactory;
@@ -88,13 +92,22 @@ public:
   enum WorkingMode
   {
     NORMAL_MODE, ///< Cmake runs to create project files
-                 /** \brief Script mode (started by using -P).
-                  *
-                  * In script mode there is no generator and no cache. Also,
-                  * languages are not enabled, so add_executable and things do
-                  * nothing.
-                  */
+
+    /** \brief Script mode (started by using -P).
+     *
+     * In script mode there is no generator and no cache. Also,
+     * languages are not enabled, so add_executable and things do
+     * nothing.
+     */
     SCRIPT_MODE,
+
+    /** \brief Help mode
+     *
+     * Used to print help for things that can only be determined after finding
+     * the source directory, for example, the list of presets.
+     */
+    HELP_MODE,
+
     /** \brief A pkg-config like mode
      *
      * In this mode cmake just searches for a package and prints the results to
@@ -219,7 +232,15 @@ public:
 
   //! Create a GlobalGenerator
   std::unique_ptr<cmGlobalGenerator> CreateGlobalGenerator(
-    const std::string& name);
+    const std::string& name, bool allowArch = true);
+
+  //! Create a GlobalGenerator and set it as our own
+  bool CreateAndSetGlobalGenerator(const std::string& name, bool allowArch);
+
+#ifndef CMAKE_BOOTSTRAP
+  //! Print list of presets
+  void PrintPresetList(const cmCMakePresetsFile& file) const;
+#endif
 
   //! Return the global generator assigned to this instance of cmake
   cmGlobalGenerator* GetGlobalGenerator()
@@ -299,7 +320,7 @@ public:
   /**
    * Given a variable name, return its value (as a string).
    */
-  const char* GetCacheDefinition(const std::string&) const;
+  cmProp GetCacheDefinition(const std::string&) const;
   //! Add an entry into the cache
   void AddCacheEntry(const std::string& key, const char* value,
                      const char* helpString, int type);
@@ -329,8 +350,21 @@ public:
   bool GetIsInTryCompile() const;
   void SetIsInTryCompile(bool b);
 
+#ifndef CMAKE_BOOTSTRAP
+  void SetWarningFromPreset(const std::string& name,
+                            const cm::optional<bool>& warning,
+                            const cm::optional<bool>& error);
+  void ProcessPresetVariables();
+  void PrintPresetVariables();
+  void ProcessPresetEnvironment();
+  void PrintPresetEnvironment();
+#endif
+
   //! Parse command line arguments that might set cache values
   bool SetCacheArgs(const std::vector<std::string>&);
+
+  void ProcessCacheArg(const std::string& var, const std::string& value,
+                       cmStateEnums::CacheEntryType type);
 
   using ProgressCallbackType = std::function<void(const std::string&, float)>;
   /**
@@ -625,6 +659,12 @@ private:
   std::unique_ptr<cmFileTimeCache> FileTimeCache;
   std::string GraphVizFile;
   InstalledFilesMap InstalledFiles;
+#ifndef CMAKE_BOOTSTRAP
+  std::map<std::string, cm::optional<cmCMakePresetsFile::CacheVariable>>
+    UnprocessedPresetVariables;
+  std::map<std::string, cm::optional<std::string>>
+    UnprocessedPresetEnvironment;
+#endif
 
 #if !defined(CMAKE_BOOTSTRAP)
   std::unique_ptr<cmVariableWatch> VariableWatch;

@@ -135,6 +135,11 @@ bool cmState::DeleteCache(const std::string& path)
   return this->CacheManager->DeleteCache(path);
 }
 
+bool cmState::IsCacheLoaded() const
+{
+  return this->CacheManager->IsCacheLoaded();
+}
+
 std::vector<std::string> cmState::GetCacheEntryKeys() const
 {
   return this->CacheManager->GetCacheEntryKeys();
@@ -835,6 +840,21 @@ cmStateSnapshot cmState::CreateBuildsystemDirectorySnapshot(
   snapshot.InitializeFromParent();
   snapshot.SetDirectoryDefinitions();
   return snapshot;
+}
+
+cmStateSnapshot cmState::CreateDeferCallSnapshot(
+  cmStateSnapshot const& originSnapshot, std::string const& fileName)
+{
+  cmStateDetail::PositionType pos =
+    this->SnapshotData.Push(originSnapshot.Position, *originSnapshot.Position);
+  pos->SnapshotType = cmStateEnums::DeferCallType;
+  pos->Keep = false;
+  pos->ExecutionListFile = this->ExecutionListFiles.Push(
+    originSnapshot.Position->ExecutionListFile, fileName);
+  assert(originSnapshot.Position->Vars.IsValid());
+  pos->BuildSystemDirectory->DirectoryEnd = pos;
+  pos->PolicyScope = originSnapshot.Position->Policies;
+  return { this, pos };
 }
 
 cmStateSnapshot cmState::CreateFunctionCallSnapshot(

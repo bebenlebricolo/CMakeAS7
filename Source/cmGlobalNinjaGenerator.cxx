@@ -240,6 +240,12 @@ void cmGlobalNinjaGenerator::WriteBuild(std::ostream& os,
     }
   }
 
+  if (build.Variables.count("dyndep") > 0) {
+    // The ninja 'cleandead' operation does not account for outputs
+    // discovered by 'dyndep' bindings.  Avoid removing them.
+    this->DisableCleandead = true;
+  }
+
   os << buildStr << arguments << assignments << "\n";
 }
 
@@ -501,6 +507,7 @@ void cmGlobalNinjaGenerator::Generate()
   this->InitOutputPathPrefix();
   this->TargetAll = this->NinjaOutputPath("all");
   this->CMakeCacheFile = this->NinjaOutputPath("CMakeCache.txt");
+  this->DisableCleandead = false;
 
   this->PolicyCMP0058 =
     this->LocalGenerators[0]->GetMakefile()->GetPolicyStatus(
@@ -532,10 +539,11 @@ void cmGlobalNinjaGenerator::Generate()
   this->CloseBuildFileStreams();
 
 #ifdef _WIN32
-  // The ninja tools will not be able to update metadata on Windows
+  // Older ninja tools will not be able to update metadata on Windows
   // when we are re-generating inside an existing 'ninja' invocation
   // because the outer tool has the files open for write.
-  if (!this->GetCMakeInstance()->GetRegenerateDuringBuild())
+  if (this->NinjaSupportsMetadataOnRegeneration ||
+      !this->GetCMakeInstance()->GetRegenerateDuringBuild())
 #endif
   {
     this->CleanMetaData();
@@ -573,18 +581,9 @@ void cmGlobalNinjaGenerator::CleanMetaData()
 
   // Skip some ninja tools if they need 'build.ninja' but it is missing.
   bool const missingBuildManifest = expectBuildManifest &&
-    (this->NinjaSupportsCleanDeadTool ||
-     this->NinjaSupportsUnconditionalRecompactTool) &&
+    this->NinjaSupportsUnconditionalRecompactTool &&
     !cmSystemTools::FileExists("build.ninja");
 
-  // The `cleandead` tool needs to know about all outputs in the build we just
-  // wrote out. Ninja-Multi doesn't have a single `build.ninja` we can use that
-  // is the union of all generated configurations, so we can't run it reliably
-  // in that case.
-  if (this->NinjaSupportsCleanDeadTool && expectBuildManifest &&
-      !missingBuildManifest) {
-    run_ninja_tool({ "cleandead" });
-  }
   // The `recompact` tool loads the manifest. As above, we don't have a single
   // `build.ninja` to load for this in Ninja-Multi. This may be relaxed in the
   // future pending further investigation into how Ninja works upstream
@@ -671,9 +670,6 @@ void cmGlobalNinjaGenerator::CheckNinjaFeatures()
       }
     }
   }
-  this->NinjaSupportsCleanDeadTool = !cmSystemTools::VersionCompare(
-    cmSystemTools::OP_LESS, this->NinjaVersion.c_str(),
-    RequiredNinjaVersionForCleanDeadTool().c_str());
   this->NinjaSupportsUnconditionalRecompactTool =
     !cmSystemTools::VersionCompare(
       cmSystemTools::OP_LESS, this->NinjaVersion.c_str(),
@@ -684,6 +680,9 @@ void cmGlobalNinjaGenerator::CheckNinjaFeatures()
   this->NinjaSupportsMultipleOutputs = !cmSystemTools::VersionCompare(
     cmSystemTools::OP_LESS, this->NinjaVersion.c_str(),
     RequiredNinjaVersionForMultipleOutputs().c_str());
+  this->NinjaSupportsMetadataOnRegeneration = !cmSystemTools::VersionCompare(
+    cmSystemTools::OP_LESS, this->NinjaVersion.c_str(),
+    RequiredNinjaVersionForMetadataOnRegeneration().c_str());
 }
 
 bool cmGlobalNinjaGenerator::CheckLanguages(
@@ -1222,6 +1221,7 @@ void cmGlobalNinjaGenerator::AppendTargetDependsClosure(
     for (auto const& dep_target : this->GetTargetDirectDepends(target)) {
       if (!dep_target->IsInBuildSystem() ||
           (target->GetType() != cmStateEnums::UTILITY &&
+           dep_target->GetType() != cmStateEnums::UTILITY &&
            this->EnableCrossConfigBuild() && !dep_target.IsCross())) {
         continue;
       }
@@ -1252,7 +1252,9 @@ void cmGlobalNinjaGenerator::AddTargetAlias(const std::string& alias,
   std::string outputPath = this->NinjaOutputPath(alias);
   std::string buildAlias = this->BuildAlias(outputPath, config);
   cmNinjaDeps outputs;
-  this->AppendTargetOutputs(target, outputs, config, DependOnTargetArtifact);
+  if (config != "all") {
+    this->AppendTargetOutputs(target, outputs, config, DependOnTargetArtifact);
+  }
   // Mark the target's outputs as ambiguous to ensure that no other target
   // uses the output as an alias.
   for (std::string const& output : outputs) {
@@ -2531,14 +2533,14 @@ bool cmGlobalNinjaMultiGenerator::OpenBuildFileStreams()
     return false;
   }
 
-  if (!this->DefaultFileConfig.empty()) {
-    if (!this->OpenFileStream(this->DefaultFileStream, NINJA_BUILD_FILE)) {
-      return false;
-    }
-    *this->DefaultFileStream
-      << "# Build using rules for '" << this->DefaultFileConfig << "'.\n\n"
-      << "include " << GetNinjaImplFilename(this->DefaultFileConfig) << "\n\n";
+  if (!this->OpenFileStream(this->DefaultFileStream, NINJA_BUILD_FILE)) {
+    return false;
   }
+  *this->DefaultFileStream << "# Build using rules for '"
+                           << this->DefaultFileConfig << "'.\n\n"
+                           << "include "
+                           << GetNinjaImplFilename(this->DefaultFileConfig)
+                           << "\n\n";
 
   // Write a comment about this file.
   *this->CommonFileStream

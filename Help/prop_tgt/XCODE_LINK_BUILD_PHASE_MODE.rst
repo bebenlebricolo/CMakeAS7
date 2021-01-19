@@ -1,6 +1,8 @@
 XCODE_LINK_BUILD_PHASE_MODE
 ---------------------------
 
+.. versionadded:: 3.19
+
 When using the :generator:`Xcode` generator, libraries to be linked will be
 specified in the Xcode project file using either the "Link Binary With
 Libraries" build phase or directly as linker flags.  The former allows Xcode
@@ -29,6 +31,7 @@ Possible values are:
 * ``KNOWN_LOCATION``
   The "Link Binary With Libraries" build phase will be used to link to another
   target under the same conditions as with ``BUILT_ONLY`` and also:
+
   - Imported library targets except those of type ``UNKNOWN``.
   - Any non-target library specified directly with a path.
 

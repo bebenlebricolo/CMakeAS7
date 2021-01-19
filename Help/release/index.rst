@@ -7,14 +7,13 @@ CMake Release Notes
   This file should include the adjacent "dev.txt" file
   in development versions but not in release versions.
 
-.. include:: dev.txt
-
 Releases
 ========
 
 .. toctree::
    :maxdepth: 1
 
+   3.19 <3.19>
    3.18 <3.18>
    3.17 <3.17>
    3.16 <3.16>

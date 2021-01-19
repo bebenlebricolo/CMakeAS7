@@ -327,7 +327,7 @@ class cmMakefile;
          "add_test() supports arbitrary characters in test names.", 3, 19, 0, \
          cmPolicies::WARN)                                                    \
   SELECT(POLICY, CMP0111,                                                     \
-         "An imported target with a missing location fails during "           \
+         "An imported target missing its location property fails during "     \
          "generation.",                                                       \
          3, 19, 0, cmPolicies::WARN)                                          \
   SELECT(POLICY, CMP0112,                                                     \
@@ -337,7 +337,10 @@ class cmMakefile;
   SELECT(POLICY, CMP0113,                                                     \
          "Makefile generators do not repeat custom commands from target "     \
          "dependencies.",                                                     \
-         3, 19, 0, cmPolicies::WARN)
+         3, 19, 0, cmPolicies::WARN)                                          \
+  SELECT(POLICY, CMP0114,                                                     \
+         "ExternalProject step targets fully adopt their steps.", 3, 19, 0,   \
+         cmPolicies::WARN)
 
 #define CM_SELECT_ID(F, A1, A2, A3, A4, A5, A6) F(A1)
 #define CM_FOR_EACH_POLICY_ID(POLICY)                                         \

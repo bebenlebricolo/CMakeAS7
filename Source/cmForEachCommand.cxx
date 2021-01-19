@@ -90,7 +90,7 @@ bool cmForEachFunctionBlocker::ArgumentsMatch(cmListFileFunction const& lff,
                                               cmMakefile& mf) const
 {
   std::vector<std::string> expandedArguments;
-  mf.ExpandArguments(lff.Arguments, expandedArguments);
+  mf.ExpandArguments(lff.Arguments(), expandedArguments);
   return expandedArguments.empty() ||
     expandedArguments.front() == this->Args.front();
 }
@@ -363,6 +363,12 @@ bool TryParseInteger(cmExecutionStatus& status, const std::string& str, int& i)
   } catch (std::invalid_argument&) {
     std::ostringstream e;
     e << "Invalid integer: '" << str << "'";
+    status.SetError(e.str());
+    cmSystemTools::SetFatalErrorOccured();
+    return false;
+  } catch (std::out_of_range&) {
+    std::ostringstream e;
+    e << "Integer out of range: '" << str << "'";
     status.SetError(e.str());
     cmSystemTools::SetFatalErrorOccured();
     return false;
