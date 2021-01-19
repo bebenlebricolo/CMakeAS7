@@ -505,6 +505,7 @@ std::vector<cmGlobalGenerator::GeneratedMakeCommand> cmGlobalAtmelStudio7Generat
   makeCommand.Add(atslnFile);
   makeCommand.Add("/build");
   makeCommand.Add(config);
+  makeCommand.Add("/out buildOutput.txt");
 
   makeCommands.push_back(makeCommand);
 
