@@ -7,6 +7,30 @@ It basically provides the ability to use a pre-existing Cmake build tree, direct
 
 [Here is a link to the original CMake README for common topics](README_CMAKE.md)
 
+## How to use it
+### Installing/Extracting Cmake AS7
+First, download the [last stable release](https://github.com/bebenlebricolo/CMake-AtmelStudio7-compatibility/releases) from the release section of this repository.
+Then, extract the package somewhere, and add the path to cmake.exe (found inside bin/ folder of the extracted release) into your User Path environment variable or System Path.
+_Note: adding this build of cmake in any of your Path environment may mask the regular cmake build, **make sure they are not conflicting before updating your Path!**_
+
+This build of cmake supports one more Generator, targeting Atmel Studio 7.0 IDE.
+You can see a list of available Generators by writing the following command `cmake -G`.
+
+_Note 2: my antivirus flags this cmake build when I try to use it for the first time. There is no virus packed inside but as this is the first time those builds are discovered by an antivirus, it has to be analysed first before letting you go with it. You can upload the release .zip file to [VirusTotal](https://www.virustotal.com/gui/) to perform a benchmark of antiviruses on the package, to ensure everything's clean about it!_
+
+### Configure your AVR project
+0. Navigate to your project directory and make sure a CMakeLists.txt is located in this folder.
+1. Create a new directory - for instance `build` - and cd into it.
+2. run the command : `cmake ../ -G "Atmel Studio 7.0"`. You can add your own definitions on top of it if you want so.
+   _For instance, a more complete command could look like this : `cmake ../ -G "Atmel Studio 7.0" -DCMAKE_BUILD_TYPE=Release"`. If omitted, all configurations are parsed and they will all be used to generate AS7 project files._
+3. Wait for it to finish testing your installation and generate files
+  3.1. Sometimes, AS7 fails to start correctly (the IDE is launch in command line mode to build simple projects ; this is part of the tools validation process of CMake). This may cause the command line to hang.
+  _Note : this is normal for the command line process to take a moment before responding ; CMake has to launch an external process, wait for its completion and return to normal mode, which could take a bit of time._
+  **If such a case occurs, simply delete every generated files from the `build` directory, and start over.**
+4. Generation is done, you can open the output .atsln file and start developping with Atmel Studio 7!
+
+
+
 ## Requirements
 #### A working Atmel Studio 7 installation
 To work properly, this fork needs the host computer to have a working installation of AtmelStudio7 IDE before attempting to generate project descriptions. This is part of the CMake's compiler and toolchain validation processes, in which CMake will try to probe build tools and compilers with simple test files and see if they are successfully built.
