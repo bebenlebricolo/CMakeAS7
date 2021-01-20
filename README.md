@@ -22,14 +22,14 @@ _Note 2: my antivirus flags this cmake build when I try to use it for the first 
 0. Navigate to your project directory and make sure a CMakeLists.txt is located in this folder.
 1. Create a new directory - for instance `build` - and cd into it.
 2. run the command : `cmake ../ -G "Atmel Studio 7.0"`. You can add your own definitions on top of it if you want so.
-   _For instance, a more complete command could look like this : `cmake ../ -G "Atmel Studio 7.0" -DCMAKE_BUILD_TYPE=Release"`. If omitted, all configurations are parsed and they will all be used to generate AS7 project files._
+   _For instance, a more complete command could look like this :
+   `cmake ../ -G "Atmel Studio 7.0" -DCMAKE_BUILD_TYPE=Release"`.
+    If omitted, all configurations are parsed and they will all be used to generate AS7 project files._
 3. Wait for it to finish testing your installation and generate files
   3.1. Sometimes, AS7 fails to start correctly (the IDE is launch in command line mode to build simple projects ; this is part of the tools validation process of CMake). This may cause the command line to hang.
   _Note : this is normal for the command line process to take a moment before responding ; CMake has to launch an external process, wait for its completion and return to normal mode, which could take a bit of time._
   **If such a case occurs, simply delete every generated files from the `build` directory, and start over.**
 4. Generation is done, you can open the output .atsln file and start developping with Atmel Studio 7!
-
-
 
 ## Requirements
 #### A working Atmel Studio 7 installation
@@ -60,6 +60,8 @@ set( CMAKE_SYSTEM_VENDOR_NAME "Atmel" )
 set (CMAKE_GENERATOR_PLATFORM AVR8)
 ```
 **So make sure to include the right toolchain file for your project !**
+
+Also, you can check the [CMake-Atmel-toolchains](https://github.com/bebenlebricolo/CMake-Atmel-toolchains) project for updates and toolchains.
 
 ---
 
