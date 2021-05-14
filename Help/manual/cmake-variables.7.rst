@@ -278,6 +278,7 @@ Variables that Describe the System
    /variable/ANDROID
    /variable/APPLE
    /variable/BORLAND
+   /variable/CMAKE_ANDROID_NDK_VERSION
    /variable/CMAKE_CL_64
    /variable/CMAKE_COMPILER_2005
    /variable/CMAKE_HOST_APPLE
@@ -336,6 +337,7 @@ Variables that Control the Build
    /variable/CMAKE_ANDROID_ARM_MODE
    /variable/CMAKE_ANDROID_ARM_NEON
    /variable/CMAKE_ANDROID_ASSETS_DIRECTORIES
+   /variable/CMAKE_ANDROID_EXCEPTIONS
    /variable/CMAKE_ANDROID_GUI
    /variable/CMAKE_ANDROID_JAR_DEPENDENCIES
    /variable/CMAKE_ANDROID_JAR_DIRECTORIES
@@ -349,6 +351,7 @@ Variables that Control the Build
    /variable/CMAKE_ANDROID_PROCESS_MAX
    /variable/CMAKE_ANDROID_PROGUARD
    /variable/CMAKE_ANDROID_PROGUARD_CONFIG_PATH
+   /variable/CMAKE_ANDROID_RTTI
    /variable/CMAKE_ANDROID_SECURE_PROPS_PATH
    /variable/CMAKE_ANDROID_SKIP_ANT_STEP
    /variable/CMAKE_ANDROID_STANDALONE_TOOLCHAIN
@@ -386,6 +389,7 @@ Variables that Control the Build
    /variable/CMAKE_DEFAULT_BUILD_TYPE
    /variable/CMAKE_DEFAULT_CONFIGS
    /variable/CMAKE_DISABLE_PRECOMPILE_HEADERS
+   /variable/CMAKE_DEPENDS_USE_COMPILER
    /variable/CMAKE_ENABLE_EXPORTS
    /variable/CMAKE_EXE_LINKER_FLAGS
    /variable/CMAKE_EXE_LINKER_FLAGS_CONFIG
@@ -467,6 +471,7 @@ Variables that Control the Build
    /variable/CMAKE_TRY_COMPILE_TARGET_TYPE
    /variable/CMAKE_UNITY_BUILD
    /variable/CMAKE_UNITY_BUILD_BATCH_SIZE
+   /variable/CMAKE_UNITY_BUILD_UNIQUE_ID
    /variable/CMAKE_USE_RELATIVE_PATHS
    /variable/CMAKE_VISIBILITY_INLINES_HIDDEN
    /variable/CMAKE_VS_GLOBALS
@@ -523,6 +528,7 @@ Variables for Languages
    /variable/CMAKE_LANG_ARCHIVE_APPEND
    /variable/CMAKE_LANG_ARCHIVE_CREATE
    /variable/CMAKE_LANG_ARCHIVE_FINISH
+   /variable/CMAKE_LANG_BYTE_ORDER
    /variable/CMAKE_LANG_COMPILER
    /variable/CMAKE_LANG_COMPILER_EXTERNAL_TOOLCHAIN
    /variable/CMAKE_LANG_COMPILER_ID

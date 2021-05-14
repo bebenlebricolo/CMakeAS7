@@ -12,6 +12,8 @@
 #include "LexerParser/cmGccDepfileLexer.h"
 
 #ifdef _WIN32
+#  include <cctype>
+
 #  include "cmsys/Encoding.h"
 #endif
 
@@ -27,23 +29,30 @@ bool cmGccDepfileLexerHelper::readFile(const char* filePath)
   if (!file) {
     return false;
   }
-  newEntry();
+  this->newEntry();
   yyscan_t scanner;
   cmGccDepfile_yylex_init(&scanner);
   cmGccDepfile_yyset_extra(this, scanner);
   cmGccDepfile_yyrestart(file, scanner);
   cmGccDepfile_yylex(scanner);
   cmGccDepfile_yylex_destroy(scanner);
-  sanitizeContent();
+  this->sanitizeContent();
   fclose(file);
-  return true;
+  return this->HelperState != State::Failed;
 }
 
 void cmGccDepfileLexerHelper::newEntry()
 {
+  if (this->HelperState == State::Rule && !this->Content.empty()) {
+    if (!this->Content.back().rules.empty() &&
+        !this->Content.back().rules.back().empty()) {
+      this->HelperState = State::Failed;
+    }
+    return;
+  }
   this->HelperState = State::Rule;
   this->Content.emplace_back();
-  newRule();
+  this->newRule();
 }
 
 void cmGccDepfileLexerHelper::newRule()
@@ -56,20 +65,22 @@ void cmGccDepfileLexerHelper::newRule()
 
 void cmGccDepfileLexerHelper::newDependency()
 {
-  // printf("NEW DEP\n");
+  if (this->HelperState == State::Failed) {
+    return;
+  }
   this->HelperState = State::Dependency;
-  if (this->Content.back().paths.empty() ||
-      !this->Content.back().paths.back().empty()) {
-    this->Content.back().paths.emplace_back();
+  auto& entry = this->Content.back();
+  if (entry.paths.empty() || !entry.paths.back().empty()) {
+    entry.paths.emplace_back();
   }
 }
 
 void cmGccDepfileLexerHelper::newRuleOrDependency()
 {
   if (this->HelperState == State::Rule) {
-    newRule();
-  } else {
-    newDependency();
+    this->newRule();
+  } else if (this->HelperState == State::Dependency) {
+    this->newDependency();
   }
 }
 
@@ -93,6 +104,8 @@ void cmGccDepfileLexerHelper::addToCurrentPath(const char* s)
       }
       dst = &dep->paths.back();
     } break;
+    case State::Failed:
+      return;
   }
   dst->append(s);
 }
@@ -112,11 +125,21 @@ void cmGccDepfileLexerHelper::sanitizeContent()
     if (it->rules.empty()) {
       it = this->Content.erase(it);
     } else {
-      // Remove empty paths
+      // Remove empty paths and normalize windows paths
       for (auto pit = it->paths.begin(); pit != it->paths.end();) {
         if (pit->empty()) {
           pit = it->paths.erase(pit);
         } else {
+#if defined(_WIN32)
+          // Unescape the colon following the drive letter.
+          // Some versions of GNU compilers can escape this character.
+          // c\:\path must be transformed to c:\path
+          if (pit->size() >= 3 && std::toupper((*pit)[0]) >= 'A' &&
+              std::toupper((*pit)[0]) <= 'Z' && (*pit)[1] == '\\' &&
+              (*pit)[2] == ':') {
+            pit->erase(1, 1);
+          }
+#endif
           ++pit;
         }
       }
