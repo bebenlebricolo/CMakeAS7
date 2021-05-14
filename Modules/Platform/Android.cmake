@@ -1,3 +1,9 @@
+# Include the NDK hook.
+# It can be used by NDK to inject necessary fixes for an earlier cmake.
+if(CMAKE_ANDROID_NDK)
+  include(${CMAKE_ANDROID_NDK}/build/cmake/hooks/pre/Android.cmake OPTIONAL)
+endif()
+
 include(Platform/Linux)
 
 set(ANDROID 1)
@@ -21,4 +27,16 @@ set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG "")
 # prefixing library names with '-l'.
 if(CMAKE_VS_PLATFORM_NAME STREQUAL "Tegra-Android")
   set(CMAKE_LINK_LIBRARY_FLAG "")
+endif()
+
+# Commonly used Android toolchain files that pre-date CMake upstream support
+# set CMAKE_SYSTEM_VERSION to 1.  Avoid interfering with them.
+if(CMAKE_SYSTEM_VERSION EQUAL 1)
+  return()
+endif()
+
+# Include the NDK hook.
+# It can be used by NDK to inject necessary fixes for an earlier cmake.
+if(CMAKE_ANDROID_NDK)
+  include(${CMAKE_ANDROID_NDK}/build/cmake/hooks/post/Android.cmake OPTIONAL)
 endif()

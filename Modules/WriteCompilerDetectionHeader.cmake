@@ -5,6 +5,10 @@
 WriteCompilerDetectionHeader
 ----------------------------
 
+.. deprecated:: 3.20
+  This module is available only if policy :policy:`CMP0120`
+  is not set to ``NEW``.  Do not use it in new code.
+
 .. versionadded:: 3.1
 
 This module provides the function ``write_compiler_detection_header()``.
@@ -80,19 +84,28 @@ Possible compiler identifiers are documented with the
 Available features in this version of CMake are listed in the
 :prop_gbl:`CMAKE_C_KNOWN_FEATURES` and
 :prop_gbl:`CMAKE_CXX_KNOWN_FEATURES` global properties.
-The ``{c,cxx}_std_*`` meta-features are ignored if requested.
-
 See the :manual:`cmake-compile-features(7)` manual for information on
 compile features.
 
-``BARE_FEATURES`` will define the compatibility macros with the name used in
-newer versions of the language standard, so the code can use the new feature
-name unconditionally.
+.. versionadded:: 3.2
+  Added ``MSVC`` and ``AppleClang`` compiler support.
 
-``ALLOW_UNKNOWN_COMPILERS`` and ``ALLOW_UNKNOWN_COMPILER_VERSIONS`` cause
-the module to generate conditions that treat unknown compilers as simply
-lacking all features.  Without these options the default behavior is to
-generate a ``#error`` for unknown compilers and versions.
+.. versionadded:: 3.6
+  Added ``Intel`` compiler support.
+
+.. versionchanged:: 3.8
+  The ``{c,cxx}_std_*`` meta-features are ignored if requested.
+
+.. versionadded:: 3.8
+  ``ALLOW_UNKNOWN_COMPILERS`` and ``ALLOW_UNKNOWN_COMPILER_VERSIONS`` cause
+  the module to generate conditions that treat unknown compilers as simply
+  lacking all features.  Without these options the default behavior is to
+  generate a ``#error`` for unknown compilers and versions.
+
+.. versionadded:: 3.12
+  ``BARE_FEATURES`` will define the compatibility macros with the name used in
+  newer versions of the language standard, so the code can use the new feature
+  name unconditionally.
 
 Feature Test Macros
 ===================
@@ -232,7 +245,144 @@ library:
     PRIVATE
       CompatSupport_DEPRECATED=
   )
+
+.. _`WCDH Example Usage`:
+
+Example Usage
+=============
+
+.. note::
+
+  This section was migrated from the :manual:`cmake-compile-features(7)`
+  manual since it relies on the ``WriteCompilerDetectionHeader`` module
+  which is removed by policy :policy:`CMP0120`.
+
+Compile features may be preferred if available, without creating a hard
+requirement.  For example, a library may provide alternative
+implementations depending on whether the ``cxx_variadic_templates``
+feature is available:
+
+.. code-block:: c++
+
+  #if Foo_COMPILER_CXX_VARIADIC_TEMPLATES
+  template<int I, int... Is>
+  struct Interface;
+
+  template<int I>
+  struct Interface<I>
+  {
+    static int accumulate()
+    {
+      return I;
+    }
+  };
+
+  template<int I, int... Is>
+  struct Interface
+  {
+    static int accumulate()
+    {
+      return I + Interface<Is...>::accumulate();
+    }
+  };
+  #else
+  template<int I1, int I2 = 0, int I3 = 0, int I4 = 0>
+  struct Interface
+  {
+    static int accumulate() { return I1 + I2 + I3 + I4; }
+  };
+  #endif
+
+Such an interface depends on using the correct preprocessor defines for the
+compiler features.  CMake can generate a header file containing such
+defines using the :module:`WriteCompilerDetectionHeader` module.  The
+module contains the ``write_compiler_detection_header`` function which
+accepts parameters to control the content of the generated header file:
+
+.. code-block:: cmake
+
+  write_compiler_detection_header(
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/foo_compiler_detection.h"
+    PREFIX Foo
+    COMPILERS GNU
+    FEATURES
+      cxx_variadic_templates
+  )
+
+Such a header file may be used internally in the source code of a project,
+and it may be installed and used in the interface of library code.
+
+For each feature listed in ``FEATURES``, a preprocessor definition
+is created in the header file, and defined to either ``1`` or ``0``.
+
+Additionally, some features call for additional defines, such as the
+``cxx_final`` and ``cxx_override`` features. Rather than being used in
+``#ifdef`` code, the ``final`` keyword is abstracted by a symbol
+which is defined to either ``final``, a compiler-specific equivalent, or
+to empty.  That way, C++ code can be written to unconditionally use the
+symbol, and compiler support determines what it is expanded to:
+
+.. code-block:: c++
+
+  struct Interface {
+    virtual void Execute() = 0;
+  };
+
+  struct Concrete Foo_FINAL {
+    void Execute() Foo_OVERRIDE;
+  };
+
+In this case, ``Foo_FINAL`` will expand to ``final`` if the
+compiler supports the keyword, or to empty otherwise.
+
+In this use-case, the project code may wish to enable a particular language
+standard if available from the compiler. The :prop_tgt:`CXX_STANDARD`
+target property may be set to the desired language standard for a particular
+target, and the :variable:`CMAKE_CXX_STANDARD` variable may be set to
+influence all following targets:
+
+.. code-block:: cmake
+
+  write_compiler_detection_header(
+    FILE "${CMAKE_CURRENT_BINARY_DIR}/foo_compiler_detection.h"
+    PREFIX Foo
+    COMPILERS GNU
+    FEATURES
+      cxx_final cxx_override
+  )
+
+  # Includes foo_compiler_detection.h and uses the Foo_FINAL symbol
+  # which will expand to 'final' if the compiler supports the requested
+  # CXX_STANDARD.
+  add_library(foo foo.cpp)
+  set_property(TARGET foo PROPERTY CXX_STANDARD 11)
+
+  # Includes foo_compiler_detection.h and uses the Foo_FINAL symbol
+  # which will expand to 'final' if the compiler supports the feature,
+  # even though CXX_STANDARD is not set explicitly.  The requirement of
+  # cxx_constexpr causes CMake to set CXX_STANDARD internally, which
+  # affects the compile flags.
+  add_library(foo_impl foo_impl.cpp)
+  target_compile_features(foo_impl PRIVATE cxx_constexpr)
+
+The ``write_compiler_detection_header`` function also creates compatibility
+code for other features which have standard equivalents.  For example, the
+``cxx_static_assert`` feature is emulated with a template and abstracted
+via the ``<PREFIX>_STATIC_ASSERT`` and ``<PREFIX>_STATIC_ASSERT_MSG``
+function-macros.
 #]=======================================================================]
+
+# Guard against inclusion by absolute path.
+cmake_policy(GET CMP0120 _WCDH_policy)
+if(_WCDH_policy STREQUAL "NEW")
+  message(FATAL_ERROR "The WriteCompilerDetectionHeader module has been removed by policy CMP0120.")
+elseif(_WCDH_policy STREQUAL "")
+  message(AUTHOR_WARNING
+    "The WriteCompilerDetectionHeader module will be removed by policy CMP0120.  "
+    "Projects should be ported away from the module, perhaps by bundling a copy "
+    "of the generated header or using a third-party alternative."
+    )
+endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/CMakeCompilerIdDetection.cmake)
 

@@ -256,8 +256,6 @@ if(BUILD_TESTING)
 
   if(NOT CMake_TEST_EXTERNAL_CMAKE)
     add_subdirectory(CMakeLib)
-
-    add_subdirectory(CMakeServerLib)
   endif()
   add_subdirectory(CMakeOnly)
   add_subdirectory(RunCMake)
@@ -430,6 +428,10 @@ if(BUILD_TESTING)
         message(STATUS "Skip VSGNUFortran for ifort dual cpu mac build")
         set(CMAKE_SKIP_VSGNUFortran TRUE)
       endif()
+    endif()
+    if(CMAKE_Fortran_COMPILER_ID STREQUAL IntelLLVM)
+      message(STATUS "Skip VSGNUFortran for ifx until DLLEXPORT support is implemented")
+      set(CMAKE_SKIP_VSGNUFortran TRUE)
     endif()
     if((CMAKE_C_COMPILER MATCHES lsb)
         AND (CMAKE_Fortran_COMPILER MATCHES ifort))
@@ -1155,6 +1157,26 @@ if(BUILD_TESTING)
                                      "components-depend1"
                                      "components-depend2"
                                      "compression")
+      # Run additional tests if dpkg-shlibdeps is available (and is new enough version)
+      find_program(SHLIBDEPS_EXECUTABLE NAMES dpkg-shlibdeps)
+      if(SHLIBDEPS_EXECUTABLE)
+        # Check version of the dpkg-shlibdeps tool
+        execute_process(COMMAND ${CMAKE_COMMAND} -E env LC_ALL=C ${SHLIBDEPS_EXECUTABLE} --version
+          OUTPUT_VARIABLE _TMP_VERSION
+          ERROR_QUIET
+          OUTPUT_STRIP_TRAILING_WHITESPACE)
+        if(_TMP_VERSION MATCHES "dpkg-shlibdeps version ([0-9]+\\.[0-9]+\\.[0-9]+)")
+          set(SHLIBDEPS_EXECUTABLE_VERSION "${CMAKE_MATCH_1}")
+        else()
+          unset(SHLIBDEPS_EXECUTABLE_VERSION)
+        endif()
+        if(NOT SHLIBDEPS_EXECUTABLE_VERSION VERSION_LESS 1.19 OR
+          (NOT SHLIBDEPS_EXECUTABLE_VERSION VERSION_LESS 1.17 AND NOT CMAKE_BINARY_DIR MATCHES ".*[ ].*"))
+            list(APPEND DEB_CONFIGURATIONS_TO_TEST "shlibdeps-with-private-lib-failure"
+                                                   "shlibdeps-with-private-lib-success")
+        endif()
+      endif()
+
       set(CPackGen "DEB")
       set(CPackRun_CPackGen "-DCPackGen=${CPackGen}")
 
@@ -1279,21 +1301,6 @@ if(BUILD_TESTING)
     # This test runs a lot of processes.  Do not make them compete
     # for resources with other tests.
     set_property(TEST CMakeTestAllGenerators PROPERTY RUN_SERIAL 1)
-  endif()
-
-  if(NOT DEFINED CTEST_RUN_CMakeTestMultipleConfigures)
-    set(CTEST_RUN_CMakeTestMultipleConfigures ON)
-  endif()
-
-  if(CTEST_RUN_CMakeTestMultipleConfigures)
-    add_test(CMakeTestMultipleConfigures ${CMAKE_CMAKE_COMMAND}
-        -D dir=${CMake_BINARY_DIR}/Tests/CMakeTestMultipleConfigures
-        -D gen=${CMAKE_GENERATOR}
-        -D CMake_SOURCE_DIR=${CMake_SOURCE_DIR}
-        -P ${CMake_SOURCE_DIR}/Tests/CMakeTestMultipleConfigures/RunCMake.cmake
-      )
-    list(APPEND TEST_BUILD_DIRS
-      "${CMake_BINARY_DIR}/Tests/CMakeTestMultipleConfigures")
   endif()
 
   if(NOT CMake_TEST_EXTERNAL_CMAKE)
@@ -1427,6 +1434,7 @@ if(BUILD_TESTING)
             GTK2
             Iconv
             ICU
+            Intl
             JPEG
             JsonCpp
             LAPACK
@@ -1944,7 +1952,7 @@ if(BUILD_TESTING)
     if(NOT CMAKE_C_COMPILER_ID STREQUAL "Clang" OR NOT "x${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "xGNU")
       ADD_TEST_MACRO(ForceInclude foo)
     endif()
-    if(NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    if(NOT CMAKE_C_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_C_COMPILER_ID STREQUAL "IntelLLVM")
       ADD_TEST_MACRO(PrecompiledHeader foo)
     endif()
     set(MSVCRuntimeLibrary_BUILD_OPTIONS -DCMake_TEST_CUDA=${CMake_TEST_CUDA})
@@ -2010,11 +2018,18 @@ if(BUILD_TESTING)
         endif()
       endif()
 
-      # For the Watcom WMake generator, avoid the MFC test by default.
       if(CTEST_RUN_MFC)
+        # For the Watcom WMake generator, avoid the MFC test by default.
         if("${CMAKE_GENERATOR}" MATCHES "WMake")
           message(STATUS
             "using the Watcom WMake generator, avoiding MFC test")
+          set(CTEST_RUN_MFC OFF)
+        elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "IntelLLVM")
+          # clang-cl cannot deal with implicit dependencies in UTF16 files
+          # (see #18311).  IntelLLVM inherits this behavior from Clang.
+          # TODO: maybe clang should also skip the MFC test
+          message(STATUS
+            "using generator other than Visual Studio with clang-cl, avoiding MFC test")
           set(CTEST_RUN_MFC OFF)
         endif()
       endif()
@@ -2926,13 +2941,6 @@ if(BUILD_TESTING)
   ADD_TEST_MACRO(CMakeCommands.link_directories)
   ADD_TEST_MACRO(CMakeCommands.target_link_directories)
 
-  # The cmake server-mode test requires python for a simple client.
-  find_package(PythonInterp QUIET)
-  if(PYTHON_EXECUTABLE)
-    set(Server_BUILD_OPTIONS -DPYTHON_EXECUTABLE:FILEPATH=${PYTHON_EXECUTABLE})
-    ADD_TEST_MACRO(Server Server)
-  endif()
-
   configure_file(
     "${CMake_SOURCE_DIR}/Tests/CTestTestCrash/test.cmake.in"
     "${CMake_BINARY_DIR}/Tests/CTestTestCrash/test.cmake"
@@ -2947,7 +2955,7 @@ if(BUILD_TESTING)
       PASS_REGULAR_EXPRESSION "Failed")
   else()
     set_tests_properties(CTestTestCrash PROPERTIES
-      PASS_REGULAR_EXPRESSION "(Illegal|SegFault|Subprocess aborted)")
+      PASS_REGULAR_EXPRESSION "(Illegal|SegFault|Subprocess aborted|SIGTRAP)")
   endif()
 
   configure_file(
@@ -3402,6 +3410,9 @@ if(BUILD_TESTING)
               ${build_generator_args}
               --build-project helloJavaNativeHeaders
               --build-run-dir "${CMake_BINARY_DIR}/Tests/JavaNativeHeaders/"
+              --build-target install
+              --build-options
+              "-DCMAKE_INSTALL_PREFIX:PATH=${CMake_BINARY_DIR}/Tests/JavaNativeHeaders/Install"
               --test-command ${CMAKE_CTEST_COMMAND} -V -C $<CONFIG>)
             list(APPEND TEST_BUILD_DIRS "${CMake_BINARY_DIR}/Tests/JavaNativeHeaders")
           endif()

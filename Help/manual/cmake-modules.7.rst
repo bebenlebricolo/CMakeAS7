@@ -15,7 +15,6 @@ These modules are loaded using the :command:`include` command.
 .. toctree::
    :maxdepth: 1
 
-   /module/AddFileDependencies
    /module/AndroidTestUtilities
    /module/BundleUtilities
    /module/CheckCCompilerFlag
@@ -75,7 +74,6 @@ These modules are loaded using the :command:`include` command.
    /module/CTestUseLaunchers
    /module/Dart
    /module/DeployQt4
-   /module/Documentation
    /module/ExternalData
    /module/ExternalProject
    /module/FeatureSummary
@@ -98,11 +96,8 @@ These modules are loaded using the :command:`include` command.
    /module/TestForSTDNamespace
    /module/UseEcos
    /module/UseJava
-   /module/UseJavaClassFilelist
-   /module/UseJavaSymlinks
    /module/UseSWIG
    /module/UsewxWidgets
-   /module/WriteCompilerDetectionHeader
 
 Find Modules
 ^^^^^^^^^^^^
@@ -276,15 +271,20 @@ Deprecated Utility Modules
 .. toctree::
    :maxdepth: 1
 
+   /module/AddFileDependencies
    /module/CMakeDetermineVSServicePack
    /module/CMakeExpandImportedTargets
    /module/CMakeForceCompiler
    /module/CMakeParseArguments
+   /module/Documentation
    /module/MacroAddFileDependencies
    /module/TestCXXAcceptsFlag
+   /module/UseJavaClassFilelist
+   /module/UseJavaSymlinks
    /module/UsePkgConfig
    /module/Use_wxWindows
    /module/WriteBasicConfigVersionFile
+   /module/WriteCompilerDetectionHeader
 
 Deprecated Find Modules
 =======================

@@ -6,6 +6,17 @@ on ``cmake.org``.  See also the `CMake Source Code Guide`_.
 
 .. _`CMake Source Code Guide`: ../../Help/dev/source.rst
 
+File Table
+----------
+
+The set of package files distributed on ``cmake.org`` varies by CMake version.
+Clients providing automatic download functionality may query the set of
+package files available using a special file that lists them:
+
+* `File Table v1`_ Documentation
+
+.. _`File Table v1`: files-v1.rst
+
 Docker
 ------
 
@@ -39,7 +50,7 @@ Each ``<os>/<arch>/`` directory contains the following:
         -f cmake-src/Utilities/Release/linux/x86_64/Dockerfile cmake-src
     $ docker container create --name cmake-build cmake:build
     $ docker cp cmake-build:/out .
-    $ ls out/cmake-*-Linux-x86_64.*
+    $ ls out/cmake-*-linux-x86_64.*
 
   On Windows, the ``win/x86`` specifications support both the ``x86_64``
   and ``i386`` architectures selected via ``--build-arg ARCH=...``.
@@ -58,8 +69,8 @@ Each ``<os>/<arch>/`` directory contains the following:
 
     FROM cmake:test-base
     COPY cmake-src /opt/cmake/src/cmake
-    ADD out/cmake-<ver>-Linux-x86_64.tar.gz /opt/
-    ENV PATH=/opt/cmake-<ver>-Linux-x86_64/bin:$PATH
+    ADD out/cmake-<ver>-linux-x86_64.tar.gz /opt/
+    ENV PATH=/opt/cmake-<ver>-linux-x86_64/bin:$PATH
 
   Build the test image and run it to drive testing:
 
