@@ -156,6 +156,14 @@ private:
    */
   std::vector<std::string> GetIncludes(std::string const& config,
                                        std::string const& lang) const;
+  /**
+   * @brief Retrieves target defines for a given configuration, for a specific language.
+   * @param config  :   build configuration used as a reference
+   * @param lang    :   targeted language
+   * @return a vector of defines, which can be empty in case of failure.
+   */
+  std::vector<std::string> GetDefines(std::string const& config,
+                                       std::string const& lang) const;
 
 private:
   bool InSourceBuild;

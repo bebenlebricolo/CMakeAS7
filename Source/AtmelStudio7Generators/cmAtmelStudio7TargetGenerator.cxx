@@ -159,6 +159,19 @@ std::vector<std::string> cmAtmelStudio7TargetGenerator::GetIncludes(const std::s
   return includes;
 }
 
+std::vector<std::string> cmAtmelStudio7TargetGenerator::GetDefines(const std::string& config, const std::string& lang) const
+{
+  std::vector<std::string> out;
+  std::set<std::string> probed_defines;
+  this->LocalGenerator->GetTargetDefines(this->GeneratorTarget, config, lang, probed_defines);
+
+  for (const std::string& define : probed_defines) {
+    std::string def = cmutils::strings::replace(define, '/', '\\');
+    out.push_back(def);
+  }
+  return out;
+}
+
 std::vector<std::string> cmAtmelStudio7TargetGenerator::ConvertStringRange(const cmStringRange& range) const
 {
   std::vector<std::string> out;
@@ -238,6 +251,15 @@ std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGe
 
 void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& parent, const std::string& build_type)
 {
+  // Clears translator before adding data into it
+  translator.toolchain.avrgcc.clear();
+  translator.toolchain.avrgcccpp.clear();
+  translator.toolchain.assembler.clear();
+  translator.toolchain.linker.clear();
+  // Don't clear the archiver member of translator.toolchain because it is actually needed by Atmel Studio to be able to
+  // Pack built libraries into their proper files.
+  // If -r flag is not present in archiver_flags, Atmel Studio fails with the "make : no rules to make <target> needed by all:"
+
   pugi::xml_node property_group_node = parent.append_child("PropertyGroup");
   std::string conditionnal_str = " '$(Configuration)' == '" + build_type + "' ";
   property_group_node.append_attribute("Condition").set_value(conditionnal_str.c_str());
@@ -289,6 +311,8 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
   // they are not parsed from compiler options alone.
   for (const auto& lang : enabledLanguages) {
     auto includesList = this->GetIncludes(build_type, lang);
+    auto definesList = this->GetDefines(build_type, lang);
+
     for (const auto& singleInclude : includesList) {
       if (lang == "CXX") {
         translator.toolchain.avrgcccpp.directories.include_paths.push_back(singleInclude);
@@ -296,6 +320,15 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
         translator.toolchain.avrgcc.directories.include_paths.push_back(singleInclude);
       }
     }
+
+    for (const auto& define : definesList) {
+      if (lang == "CXX") {
+        translator.toolchain.avrgcccpp.symbols.def_symbols.push_back(define);
+      } else if (lang == "C") {
+        translator.toolchain.avrgcc.symbols.def_symbols.push_back(define);
+      }
+    }
+
   }
 
   // Configure linker
