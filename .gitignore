@@ -12,3 +12,9 @@ CMakeUserPresets.json
 
 # Visual Studio Code
 .vscode/
+
+[Bb]uild*/
+[Dd]ebug*/
+[Rr]elease*/
+[Bb]in*/
+[Oo]ut*/
