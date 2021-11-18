@@ -16,6 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 #include <gtest/gtest.h>
 
@@ -221,7 +222,7 @@ TEST_F(FlagParsingFixture, test_generate_xml)
   // Prepend delcaration node will look like this : <?xml version="1.0" encoding="utf-8"?>
   pugi::xml_node project_node = doc.append_child(pugi::node_element);
   toolchain_translator.generate_xml(project_node);
-  doc.save_file(R"(C:\temp\testfile.xml)", "  ");
+  doc.save_file(std::filesystem::temp_dir() / "CMakeLibTests" / "AtmelStudio7Tools" / "testfile.xml");
 
 }
 

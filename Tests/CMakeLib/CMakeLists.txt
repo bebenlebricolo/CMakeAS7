@@ -1,3 +1,6 @@
+cmake_minimum_required(VERSION 3.18)
+project (CMakeLibTests CXX)
+
 include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}
   ${CMake_BINARY_DIR}/Source
@@ -78,5 +81,5 @@ add_subdirectory(PseudoMemcheck)
 add_executable(testAffinity testAffinity.cxx)
 target_link_libraries(testAffinity CMakeLib)
 
-add_subdirectory(testCmUtils)
-add_subdirectory(testCmAtmelStudioTools)
+add_subdirectory(testCmUtils ${CMAKE_CURRENT_BINARY_DIR}/"testCmUtils")
+add_subdirectory(testCmAtmelStudioTools ${CMAKE_CURRENT_BINARY_DIR}/"testCmAtmelStudioTools" )
