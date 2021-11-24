@@ -9,7 +9,6 @@
 #ifndef SetupConfiguration_h
 #define SetupConfiguration_h
 
-#include <objbase.h>
 
 // Constants
 //
@@ -22,6 +21,7 @@
 #endif
 
 #if defined(_WIN32) && !defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
+#include <objbase.h>
 
 #ifndef _Outptr_result_maybenull_
 #define _Outptr_result_maybenull_
