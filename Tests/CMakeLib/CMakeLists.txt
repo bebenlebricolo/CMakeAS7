@@ -81,5 +81,5 @@ add_subdirectory(PseudoMemcheck)
 add_executable(testAffinity testAffinity.cxx)
 target_link_libraries(testAffinity CMakeLib)
 
-add_subdirectory(testCmUtils ${CMAKE_CURRENT_BINARY_DIR}/"testCmUtils")
-add_subdirectory(testCmAtmelStudioTools ${CMAKE_CURRENT_BINARY_DIR}/"testCmAtmelStudioTools" )
+add_subdirectory(testCmUtils ${CMAKE_CURRENT_BINARY_DIR}/testCmUtils)
+add_subdirectory(testCmAtmelStudioTools ${CMAKE_CURRENT_BINARY_DIR}/testCmAtmelStudioTools )

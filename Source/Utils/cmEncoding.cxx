@@ -67,6 +67,7 @@ static EncodingProperties default_properties()
   prop.encoding = Encoding::ASCII;
   prop.max_frame_length = 8U;
   prop.name = "ASCII";
+  return prop;
 }
 
 EncodingProperties get_encoding_properties(Encoding encoding)

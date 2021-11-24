@@ -823,11 +823,12 @@ if (WIN32)
     # GetVersion to work properly on Windows 8 and above.
     set(MANIFEST_FILE ${CMAKE_CURRENT_SOURCE_DIR}/cmake.version.manifest)
 
-    add_subdirectory(ExternalLibraries)
-    add_subdirectory(AtmelStudio7Generators)
   endif()
 
-  endif ()
+endif ()
+
+add_subdirectory(ExternalLibraries)
+add_subdirectory(AtmelStudio7Generators)
 
 # Add Utils as extra sources
 add_subdirectory(Utils)
