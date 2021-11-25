@@ -23,7 +23,11 @@ if (WIN32)
     target_compile_options(testAtmelStudioTools PRIVATE "/W4")
 endif()
 
-target_link_libraries(testAtmelStudioTools AtmelStudio7Generators cmutils gtest )
+if(WIN32)
+    target_link_libraries(testAtmelStudioTools AtmelStudio7Generators cmutils gtest )
+else()
+    target_link_libraries(testAtmelStudioTools AtmelStudio7Generators cmutils gtest pthread)
+endif()
 
 set_target_properties(testAtmelStudioTools
     PROPERTIES
@@ -48,7 +52,12 @@ if (WIN32)
 endif()
 
 
-target_link_libraries(testAS7DeviceResolver AtmelStudio7Generators cmutils gtest)
+if(WIN32)
+    target_link_libraries(testAS7DeviceResolver AtmelStudio7Generators cmutils gtest)
+else()
+    target_link_libraries(testAS7DeviceResolver AtmelStudio7Generators cmutils gtest pthread)
+endif()
+
 
 set_target_properties(testAS7DeviceResolver
     PROPERTIES
