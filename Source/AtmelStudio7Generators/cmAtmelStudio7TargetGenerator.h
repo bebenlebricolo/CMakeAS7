@@ -222,7 +222,7 @@ private:
    * @param     range : Cmake's StringRange object
    * @return a collection of strings
    */
-  std::vector<std::string> cmAtmelStudio7TargetGenerator::ConvertStringRange(const cmStringRange& range) const;
+  std::vector<std::string> ConvertStringRange(const cmStringRange& range) const;
 
   // TODO : Move this function elsewhere : this method has little to do with TargetGenerator and is more related to XML manipulations than anything else.
   /**
