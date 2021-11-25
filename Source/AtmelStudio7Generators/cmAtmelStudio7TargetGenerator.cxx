@@ -29,7 +29,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cmGeneratorExpression.h"
 #include "cmGeneratorTarget.h"
 #include "cmGlobalAtmelStudio7Generator.h"
-#include "cmGlobalVisualStudioVersionedGenerator.h"
 #include "cmLinkLineDeviceComputer.h"
 #include "cmLocalAtmelStudio7Generator.h"
 #include "cmMakefile.h"
@@ -41,6 +40,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "AS7DeviceResolver.h"
 #include "AS7ToolchainTranslator.h"
 #include "pugixml.hpp"
+
+#define CMAKE_CHECK_BUILD_SYSTEM_TARGET "ZERO_CHECK"
 
 cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
   cmGeneratorTarget* target, cmGlobalAtmelStudio7Generator* gg)
@@ -328,7 +329,6 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
         translator.toolchain.avrgcc.symbols.def_symbols.push_back(define);
       }
     }
-
   }
 
   // Configure linker
@@ -463,7 +463,6 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
     case AS7DeviceResolver::Core::ATSAM:
       toolchain = "ARMGCC";
       break;
-
   }
 
   // handles devices with mmcu option
@@ -556,7 +555,7 @@ void cmAtmelStudio7TargetGenerator::BuildSimulatorConfiguration(pugi::xml_node& 
 
 void cmAtmelStudio7TargetGenerator::BuildProjectReferenceItemGroup(pugi::xml_node& parent)
 {
-  cmGlobalVisualStudioGenerator::OrderedTargetDependSet& target_dependencies = GetTargetDependencies();
+  cmGlobalVisualStudioGenerator::OrderedTargetDependSet target_dependencies = GetTargetDependencies();
 
   auto item_group_node = parent.append_child("ItemGroup");
 
@@ -589,8 +588,7 @@ void cmAtmelStudio7TargetGenerator::BuildProjectReferenceItemGroup(pugi::xml_nod
 
 cmGlobalVisualStudioGenerator::OrderedTargetDependSet cmAtmelStudio7TargetGenerator::GetTargetDependencies() const
 {
-  cmGlobalGenerator::TargetDependSet const& unordered =
-    this->GlobalGenerator->GetTargetDirectDepends(this->GeneratorTarget);
+  cmGlobalGenerator::TargetDependSet const& unordered = this->GlobalGenerator->GetTargetDirectDepends(this->GeneratorTarget);
   cmGlobalVisualStudioGenerator::OrderedTargetDependSet depends(unordered, CMAKE_CHECK_BUILD_SYSTEM_TARGET);
   return depends;
 }
