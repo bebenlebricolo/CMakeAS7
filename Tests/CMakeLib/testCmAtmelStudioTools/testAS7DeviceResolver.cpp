@@ -49,7 +49,7 @@ TEST(DeviceNamingConventionTest, test_Attiny_names)
     {"attiny416auto"    ,"ATtiny416auto"},
     {"attiny85"         ,"ATtiny85"},
     {"attiny104"        ,"ATtiny104"},
-    {"attiny3214"    ,"ATtiny3214"},
+    {"attiny3214"       ,"ATtiny3214"},
   };
 
   for (auto& elem : data)
@@ -82,10 +82,10 @@ TEST(DeviceNamingConventionTest, test_Atxmega_names)
 {
   const std::vector<std::pair<std::string, std::string>> data =
   {
-    {"atxmega128a1u" ,"ATxmega128A1U"},
-    {"atxmega256a3bu"  ,"ATxmega256A3BU"},
-    {"atxmega32a4u" ,"ATxmega32A4U"},
-    {"atxmega64a1"  ,"ATxmega64A1"},
+    {"atxmega128a1u"  ,"ATxmega128A1U"},
+    {"atxmega256a3bu" ,"ATxmega256A3BU"},
+    {"atxmega32a4u"   ,"ATxmega32A4U"},
+    {"atxmega64a1"    ,"ATxmega64A1"},
   };
 
   for (auto& elem : data)
@@ -100,9 +100,9 @@ TEST(DeviceNamingConventionTest, test_At32UC_names)
 {
   const std::vector<std::pair<std::string, std::string>> data =
   {
-    {"at32uc3a3256s" ,"AT32UC3A3256S"},
-    {"at32uc3a464"  ,"AT32UC3A464"},
-    {"at32uc3a4256s" ,"AT32UC3A4256S"},
+    {"at32uc3a3256s"  ,"AT32UC3A3256S"},
+    {"at32uc3a464"    ,"AT32UC3A464"},
+    {"at32uc3a4256s"  ,"AT32UC3A4256S"},
     {"at32uc3a4128s"  ,"AT32UC3A4128S"},
   };
 
@@ -146,11 +146,11 @@ TEST(DeviceNamingConventionTest, test_SAM_names_from_defines)
 TEST(DeviceNamingConventionTest, test_mmcu_option_parsing)
 {
   const std::vector<std::pair<std::string, std::string>> data = {
-    { "-mmcu=atmega328p", "ATmega328P" },
-    { "atmega328pb", "ATmega328PB" },
-    { "-mmcu=attiny85", "ATtiny85" },
-    { "atxmega256a3bu", "ATxmega256A3BU" },
-    { "ata6617c", "ATA6617C" }
+    { "-mmcu=atmega328p"  , "ATmega328P" },
+    { "atmega328pb"       , "ATmega328PB" },
+    { "-mmcu=attiny85"    , "ATtiny85" },
+    { "atxmega256a3bu"    , "ATxmega256A3BU" },
+    { "ata6617c"          , "ATA6617C" }
   };
 
   for (auto& elem : data) {
@@ -177,26 +177,26 @@ TEST(DeviceNamingConventionTest, test_definition_collection_resolving)
 TEST(DeviceNamingConventionTest, test_DFP_resolution)
 {
   std::vector<std::pair<std::string,std::string>> data = {
-    { "ATSAM3A4C", "SAM3A_DFP" },
-    { "ATSAM4N8C", "SAM4N_DFP" },
-    { "ATSAMD10D14AM", "SAMD10_DFP" },
-    { "ATSAME51N19A", "SAME51_DFP" },
-    { "ATSAMG51G18", "SAMG_DFP" },
+    { "ATSAM3A4C"     , "SAM3A_DFP" },
+    { "ATSAM4N8C"     , "SAM4N_DFP" },
+    { "ATSAMD10D14AM" , "SAMD10_DFP" },
+    { "ATSAME51N19A"  , "SAME51_DFP" },
+    { "ATSAMG51G18"   , "SAMG_DFP" },
 
-    { "ATmega328PB", "ATmega_DFP" },
-    { "ATtiny85", "ATtiny_DFP" },
-    { "ATa6613c", "ATautomotive_DFP" },
-    { "ATtiny416auto", "ATautomotive_DFP" }, //  Special case
+    { "ATmega328PB"   , "ATmega_DFP" },
+    { "ATtiny85"      , "ATtiny_DFP" },
+    { "ATa6613c"      , "ATautomotive_DFP" },
+    { "ATtiny416auto" , "ATautomotive_DFP" }, //  Special case
 
-    { "ATxmega32A4U", "XMEGAA_DFP" },
-    { "ATxmega64B1", "XMEGAB_DFP" },
-    { "ATxmega64D3", "XMEGAD_DFP" },
-    { "ATxmega16E5", "XMEGAE_DFP" },
+    { "ATxmega32A4U"  , "XMEGAA_DFP" },
+    { "ATxmega64B1"   , "XMEGAB_DFP" },
+    { "ATxmega64D3"   , "XMEGAD_DFP" },
+    { "ATxmega16E5"   , "XMEGAE_DFP" },
 
-    { "AT32UC3A4256S", "UC3A_DFP" },
-    { "AT32UC3B0512", "UC3B_DFP" },
-    { "ATUC128D3", "UC3D_DFP" },
-    { "ATUC128L3", "UC3L_DFP" },
+    { "AT32UC3A4256S" , "UC3A_DFP" },
+    { "AT32UC3B0512"  , "UC3B_DFP" },
+    { "ATUC128D3"     , "UC3D_DFP" },
+    { "ATUC128L3"     , "UC3L_DFP" },
 
   };
 
@@ -218,7 +218,7 @@ TEST(DeviceNamingConventionTest, test_version_finder)
   };
 
   auto temp_folder = std::filesystem::temp_directory_path();
-  auto base_path = temp_folder.string() + "\\AS7DeviceResolverTests";
+  auto base_path = temp_folder / "AS7DeviceResolverTests";
 
   if (!std::filesystem::exists(base_path)) {
     ASSERT_TRUE(std::filesystem::create_directory(base_path));
@@ -226,8 +226,8 @@ TEST(DeviceNamingConventionTest, test_version_finder)
 
   // Create folders
   for (auto& dir : data) {
-    if (!std::filesystem::exists(base_path + "\\" + dir)) {
-      ASSERT_TRUE(std::filesystem::create_directory(base_path + "\\" + dir));
+    if (!std::filesystem::exists(base_path / dir)) {
+      ASSERT_TRUE(std::filesystem::create_directory(base_path / dir));
     }
   }
 
