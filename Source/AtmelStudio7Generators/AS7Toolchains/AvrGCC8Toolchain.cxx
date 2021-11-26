@@ -250,6 +250,12 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   tool->warnings.pedantic_warnings_as_errors = parser.has_option("-pedantic-errors");
   tool->warnings.inhibit_all_warnings = parser.has_option("-w");
 
+  tool->miscellaneous.other_flags += get_unsupported_options(parser,
+                                                             compiler::CompilerOption::Type::Warning,
+                                                             tool->get_supported_warning_options());
+  tool->miscellaneous.other_flags += " ";
+
+
   tool->miscellaneous.do_not_delete_temporary_files = parser.has_option("-save-temps");
   tool->miscellaneous.verbose = parser.has_option("-v");
   tool->miscellaneous.support_ansi_programs = parser.has_option("-ansi");
@@ -259,13 +265,14 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   for (auto& opt : language_standards) {
     compiler::LanguageStandardOption* lstd = static_cast<compiler::LanguageStandardOption*>(opt.get());
     if (lstd->lang.to_string() == lang) {
-      tool->miscellaneous.other_flags = lstd->get_token() + " ";
+      tool->miscellaneous.other_flags += lstd->get_token() + " ";
     }
   }
 
   tool->miscellaneous.other_flags += get_unsupported_options(parser,
                                                              compiler::CompilerOption::Type::Generic,
                                                              get_all_supported_options());
+  tool->miscellaneous.other_flags += " ";
 
   linker.general.do_not_use_default_libraries = parser.has_option("-nostartfile");
   linker.general.do_not_use_default_libraries = parser.has_option("-nodefaultlibs");

@@ -231,7 +231,7 @@ TEST(DeviceNamingConventionTest, test_version_finder)
     }
   }
 
-  ASSERT_EQ(AS7DeviceResolver::get_max_packs_version(base_path), "5.0.0");
+  ASSERT_EQ(AS7DeviceResolver::get_max_packs_version(base_path.string()), "5.0.0");
 }
 
 }

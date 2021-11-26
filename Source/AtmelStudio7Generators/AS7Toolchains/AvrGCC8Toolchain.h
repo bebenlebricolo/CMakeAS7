@@ -161,14 +161,17 @@ struct AS7AvrGcc8_Base : public BasicRepresentation
    */
   struct
   {
-    bool all_warnings = true;                 /**< -Wall              */
-    bool extra_warnings = true;               /**< -Wextra            */
-    bool undefined = false;                   /**< -Wundef            */
-    bool warnings_as_error = false;           /**< -Werror            */
-    bool check_syntax_only = false;           /**< -fsyntax-only      */
-    bool pedantic = false;                    /**< -pedantic          */
-    bool pedantic_warnings_as_errors = false; /**< -pedantic-errors   */
-    bool inhibit_all_warnings = false;        /**< -w                 */
+    bool all_warnings = true;                 /**< -Wall                                                            */
+    bool extra_warnings = true;               /**< -Wextra                                                          */
+    bool undefined = false;                   /**< -Wundef                                                          */
+    bool warnings_as_error = false;           /**< -Werror                                                          */
+    bool check_syntax_only = false;           /**< -fsyntax-only                                                    */
+    bool pedantic = false;                    /**< -pedantic                                                        */
+    bool pedantic_warnings_as_errors = false; /**< -pedantic-errors                                                 */
+    bool inhibit_all_warnings = false;        /**< -w                                                               */
+    std::string other_warnings;               /**< Any other warning flag passed to the compiler
+                                                   This one does not appear in the generated xml as extra warnings
+                                                   but instead they are packed under the miscellaneous flags        */
   } warnings;
 
   /**
