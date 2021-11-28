@@ -57,7 +57,7 @@ public:
     void parse_flags(const std::string& flags);
 
     using ShrdOption = std::shared_ptr<CompilerOption>;
-    using OptionsVec = std::vector<std::shared_ptr<CompilerOption>>;
+    using OptionsVec = std::vector<ShrdOption>;
 
     /**
      * @brief Returns the adequate vector of options (each option being wrapped in a shared_ptr)

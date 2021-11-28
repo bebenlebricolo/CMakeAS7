@@ -106,6 +106,15 @@ struct CompilerOption
   virtual std::string generate(const bool atmel_studio_compat = true);
 
   /**
+   * @brief Implements a comparison operator for max element research
+   *
+   * @param other  : another compiler option against which to compare
+   * @return true  : this structure is lesser than the other
+   * @return false : this structur is greater or equal to the other
+   */
+  virtual bool operator<(const CompilerOption& other);
+
+  /**
      * @brief returns the underlying type of this compiler flag, when polymorphism is used
      *        This is useful when another object creates a flag from a token and does not know what
      *        kind of flag it is. So using the created pointer GetType() method will help to select an appropriate
