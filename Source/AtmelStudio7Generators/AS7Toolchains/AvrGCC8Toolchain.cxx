@@ -166,6 +166,7 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   } else {
     tool = &avrgcccpp;
   }
+  tool->clear();
 
   // TODO : Use the device resolver to perform device deduction. note that the TargetedDevice code from TargetGenerator
   // first has to be moved closer for this to be enabled. For now, default -mmcu handling is proposed
@@ -200,9 +201,19 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   }
 
   // Extract optimizations
+  // This extraction requires more work as we need to compare optimization options to one another
+  // in order to extract the most relevant one
   {
-    const auto& optimizations = parser.get_options(compiler::CompilerOption::Type::Optimization);
-    const auto& max_opt = std::max_element(optimizations.begin(), optimizations.end());
+    const compiler::cmAvrGccCompiler::OptionsVec& optimizations = parser.get_options(compiler::CompilerOption::Type::Optimization);
+    const auto& max_opt = std::max_element(optimizations.begin(),
+                                           optimizations.end(),
+                                           [](const compiler::cmAvrGccCompiler::ShrdOption& opt1,
+                                              const compiler::cmAvrGccCompiler::ShrdOption& opt2)
+                                              {
+                                                const auto* copt1 = dynamic_cast<compiler::OptimizationOption*>(opt1.get());
+                                                const auto* copt2 = dynamic_cast<compiler::OptimizationOption*>(opt2.get());
+                                                return  *copt1 < *copt2;
+                                              });
 
     // Default optimization
     if (max_opt == optimizations.end()) {
