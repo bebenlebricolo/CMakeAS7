@@ -204,7 +204,7 @@ TEST(AvrGccCompilerFlagsParsing, test_compiler_flags_factory_optimization_flags)
 
 TEST(AvrGcc8Representation, convert_from_compiler_abstraction_all_ok)
 {
-  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
+  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra", "-pedantic", "-pedantic-errors"
                                            "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
                                            "-fpedantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
                                            "-nostdinc", "-fpack-struct", "-mshort-calls", "-std=c11" };
@@ -219,14 +219,52 @@ TEST(AvrGcc8Representation, convert_from_compiler_abstraction_all_ok)
   AvrToolchain::AS7AvrGCC8 toolchain;
   pugi::xml_node node;
   toolchain.convert_from(compiler_abstraction);
-  ASSERT_TRUE(toolchain.avrgcc.general.change_default_chartype_unsigned);
-  ASSERT_TRUE(toolchain.avrgcc.general.change_stack_pointer_without_disabling_interrupt);
+
+  // Checking the general abstraction of avrgcc
   ASSERT_TRUE(toolchain.avrgcc.general.subroutine_function_prologue);
+  ASSERT_TRUE(toolchain.avrgcc.general.change_stack_pointer_without_disabling_interrupt);
+  ASSERT_TRUE(toolchain.avrgcc.general.change_default_chartype_unsigned);
+  ASSERT_FALSE(toolchain.avrgcc.general.change_default_bitfield_unsigned);
+
+  // Checking preprocessor abstraction of avrgcc
+  ASSERT_FALSE(toolchain.avrgcc.preprocessor.do_not_search_system_directories);
+  ASSERT_FALSE(toolchain.avrgcc.preprocessor.preprocess_only);
+
+  // Checking symbols abstraction of avrgcc
+  ASSERT_TRUE(toolchain.avrgcc.symbols.def_symbols.empty());
+
+  // Checking directories abstraction of avrgcc
+  ASSERT_TRUE(toolchain.avrgcc.directories.include_paths.empty());
+
+  // Checking optimizations abstraction of avrgcc
   ASSERT_EQ(toolchain.avrgcc.optimizations.level, "None (-O0)");
-  ASSERT_TRUE(toolchain.avrgcc.optimizations.pack_structure_members);
-  ASSERT_FALSE(toolchain.avrgcc.optimizations.prepare_data_for_garbage_collection);
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.other_flags.empty());
   ASSERT_TRUE(toolchain.avrgcc.optimizations.prepare_function_for_garbage_collection);
+  ASSERT_FALSE(toolchain.avrgcc.optimizations.prepare_data_for_garbage_collection);
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.pack_structure_members);
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.allocate_bytes_needed_for_enum);
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.use_short_calls);
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.debug_level.empty());
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.other_debugging_flags.empty());
+
+  // Checking warning abstraction of avrgcc
+  ASSERT_TRUE(toolchain.avrgcc.warnings.all_warnings);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.extra_warnings);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.undefined);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.warnings_as_error);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.check_syntax_only);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.pedantic);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.pedantic_warnings_as_errors);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.inhibit_all_warnings);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.other_warnings.empty());
+
+  // Checking miscellaneous abstraction of avrgcc
+  ASSERT_FALSE(toolchain.avrgcc.miscellaneous.other_flags.empty());
+  ASSERT_TRUE(toolchain.avrgcc.miscellaneous.verbose);
+  ASSERT_TRUE(toolchain.avrgcc.miscellaneous.support_ansi_programs);
+  ASSERT_TRUE(toolchain.avrgcc.miscellaneous.do_not_delete_temporary_files);
   compare_misc(toolchain.avrgcc.miscellaneous.other_flags, "-std=c11 -fpedantic -fpedantic-errors");
+
 }
 
 TEST(AvrGcc8Representation, convert_from_compiler_abstraction_misc_flags_redirection)
