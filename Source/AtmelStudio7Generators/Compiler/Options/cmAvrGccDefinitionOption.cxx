@@ -24,6 +24,13 @@ bool DefinitionOption::can_create(const std::string& _token)
   return (!_token.empty()) && (_token[1] == 'D');
 }
 
+std::string DefinitionOption::generate(const bool atmel_studio_compat)
+{
+  (void) atmel_studio_compat;
+  return defsymbol + "=" + value;
+}
+
+
 
 DefinitionOption::DefinitionOption()
     : CompilerOption(Type::Definition)

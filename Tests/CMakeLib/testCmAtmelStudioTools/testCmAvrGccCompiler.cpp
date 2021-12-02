@@ -237,7 +237,7 @@ TEST(AvrGcc8Representation, convert_from_compiler_abstraction_all_ok)
 
   // Checking symbols abstraction of avrgcc
   ASSERT_FALSE(toolchain.avrgcc.symbols.def_symbols.empty());
-  //ASSERT_EQ(toolchain.avrgcc.symbols.def_symbols, "TEST_DEFINITION=33");
+  ASSERT_EQ(toolchain.avrgcc.symbols.def_symbols, std::vector<std::string>({"TEST_DEFINITION=33"}));
 
   // Checking directories abstraction of avrgcc
   ASSERT_TRUE(toolchain.avrgcc.directories.include_paths.empty());
