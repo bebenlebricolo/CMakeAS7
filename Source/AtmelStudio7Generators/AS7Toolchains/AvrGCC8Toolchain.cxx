@@ -196,7 +196,7 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
     const auto& definitions = parser.get_options(compiler::CompilerOption::Type::Definition);
     for (const auto& def : definitions) {
       auto* def_ptr = dynamic_cast<compiler::DefinitionOption*>(def.get());
-      tool->symbols.def_symbols.push_back(def_ptr->defsymbol);
+      tool->symbols.def_symbols.push_back(def_ptr->generate(true));
     }
   }
 
