@@ -81,6 +81,8 @@ set (CMAKE_GENERATOR_PLATFORM AVR8)
 * 8 bit AVR deduction (using the -mmcu compiler option)
 * 32 bit AVR deduction (using the relevant -DXXX symbol passed to the toolchain)
 * ARM32 SAM devices deduction (using the relevant -DXXX symbol passed to the toolchain)
+Note : the chip specification deduction feature looks into the local AtmelStudio7 installation directory and windows register keys in order to retrieve specific data and configuration for each device. Devices are deduced using some naming conventions, the internal logic can be found within the [AS7DeviceResolver.cxx](Source/AtmelStudio7Generators/AS7Toolchains/AS7DeviceResolver.cxx).
+Note 2 : device deduction is one of the first steps used by this project. Device deduction however does not mean that we can generate the full project description for every device that AtmelStudio7 supports at the moment, as it implies much more work in order to completely match the internal project file structure for every device.
 
 ### 8 bit AVR cores full options support: all specific compiler options are supported for AVR 8 devices
 * ATmega series (e.g : ATmega328[P,PB], ATmega128)
@@ -156,4 +158,4 @@ If, like me, you want to understand the code written specifically for this fork,
 * **Source/Utils** : This folder contains basic utils to perform very simple string manipulations. This arguably partially overlaps some custom tools already provided by CMake's project, but as CMake sometimes relies on dedicated cmString objects, I decided to make a STL compliant project instead. Another choice could have been to link with boost ...
 * **Modules/Platform/BareMetal/Atmel** : Here are the modules used to "script" cmake's behavior while building the project's internal representation. Those modules are essentially used to determine the buid tools and compiler suites required in order select and validate the tools used to build a project.
 
-
+## Testing strategy
