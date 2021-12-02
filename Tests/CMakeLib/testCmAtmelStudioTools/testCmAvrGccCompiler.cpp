@@ -204,13 +204,18 @@ TEST(AvrGccCompilerFlagsParsing, test_compiler_flags_factory_optimization_flags)
 
 TEST(AvrGcc8Representation, convert_from_compiler_abstraction_all_ok)
 {
-  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra", "-pedantic", "-pedantic-errors"
+  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra", "-Werror", "-pedantic", "-pedantic-errors",
                                            "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
                                            "-fpedantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
                                            "-nostdinc", "-fpack-struct", "-mshort-calls", "-std=c11" };
   for (auto& f : flags)
   {
-    EXPECT_TRUE(compiler::CompilerOptionFactory::is_valid(f));
+    bool valid = compiler::CompilerOptionFactory::is_valid(f);
+    EXPECT_TRUE(valid);
+    if (!valid)
+    {
+      std::cout << "invalid flag is : " << f.c_str() << "\n";
+    }
   }
 
   compiler::cmAvrGccCompiler compiler_abstraction;
@@ -227,11 +232,12 @@ TEST(AvrGcc8Representation, convert_from_compiler_abstraction_all_ok)
   ASSERT_FALSE(toolchain.avrgcc.general.change_default_bitfield_unsigned);
 
   // Checking preprocessor abstraction of avrgcc
-  ASSERT_FALSE(toolchain.avrgcc.preprocessor.do_not_search_system_directories);
+  ASSERT_TRUE(toolchain.avrgcc.preprocessor.do_not_search_system_directories);
   ASSERT_FALSE(toolchain.avrgcc.preprocessor.preprocess_only);
 
   // Checking symbols abstraction of avrgcc
-  ASSERT_TRUE(toolchain.avrgcc.symbols.def_symbols.empty());
+  ASSERT_FALSE(toolchain.avrgcc.symbols.def_symbols.empty());
+  //ASSERT_EQ(toolchain.avrgcc.symbols.def_symbols, "TEST_DEFINITION=33");
 
   // Checking directories abstraction of avrgcc
   ASSERT_TRUE(toolchain.avrgcc.directories.include_paths.empty());
@@ -242,27 +248,28 @@ TEST(AvrGcc8Representation, convert_from_compiler_abstraction_all_ok)
   ASSERT_TRUE(toolchain.avrgcc.optimizations.prepare_function_for_garbage_collection);
   ASSERT_FALSE(toolchain.avrgcc.optimizations.prepare_data_for_garbage_collection);
   ASSERT_TRUE(toolchain.avrgcc.optimizations.pack_structure_members);
-  ASSERT_TRUE(toolchain.avrgcc.optimizations.allocate_bytes_needed_for_enum);
+  ASSERT_FALSE(toolchain.avrgcc.optimizations.allocate_bytes_needed_for_enum);
   ASSERT_TRUE(toolchain.avrgcc.optimizations.use_short_calls);
-  ASSERT_TRUE(toolchain.avrgcc.optimizations.debug_level.empty());
+  ASSERT_FALSE(toolchain.avrgcc.optimizations.debug_level.empty());
+  ASSERT_EQ(toolchain.avrgcc.optimizations.debug_level, "Maximum (-g3)");
   ASSERT_TRUE(toolchain.avrgcc.optimizations.other_debugging_flags.empty());
 
   // Checking warning abstraction of avrgcc
   ASSERT_TRUE(toolchain.avrgcc.warnings.all_warnings);
   ASSERT_TRUE(toolchain.avrgcc.warnings.extra_warnings);
-  ASSERT_TRUE(toolchain.avrgcc.warnings.undefined);
+  ASSERT_FALSE(toolchain.avrgcc.warnings.undefined);
   ASSERT_TRUE(toolchain.avrgcc.warnings.warnings_as_error);
-  ASSERT_TRUE(toolchain.avrgcc.warnings.check_syntax_only);
+  ASSERT_FALSE(toolchain.avrgcc.warnings.check_syntax_only);
   ASSERT_TRUE(toolchain.avrgcc.warnings.pedantic);
   ASSERT_TRUE(toolchain.avrgcc.warnings.pedantic_warnings_as_errors);
-  ASSERT_TRUE(toolchain.avrgcc.warnings.inhibit_all_warnings);
+  ASSERT_FALSE(toolchain.avrgcc.warnings.inhibit_all_warnings);
   ASSERT_TRUE(toolchain.avrgcc.warnings.other_warnings.empty());
 
   // Checking miscellaneous abstraction of avrgcc
   ASSERT_FALSE(toolchain.avrgcc.miscellaneous.other_flags.empty());
-  ASSERT_TRUE(toolchain.avrgcc.miscellaneous.verbose);
-  ASSERT_TRUE(toolchain.avrgcc.miscellaneous.support_ansi_programs);
-  ASSERT_TRUE(toolchain.avrgcc.miscellaneous.do_not_delete_temporary_files);
+  ASSERT_FALSE(toolchain.avrgcc.miscellaneous.verbose);
+  ASSERT_FALSE(toolchain.avrgcc.miscellaneous.support_ansi_programs);
+  ASSERT_FALSE(toolchain.avrgcc.miscellaneous.do_not_delete_temporary_files);
   compare_misc(toolchain.avrgcc.miscellaneous.other_flags, "-std=c11 -fpedantic -fpedantic-errors");
 
 }
