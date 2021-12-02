@@ -4,7 +4,7 @@ on: [push]
 
 env:
   BUILD_TYPE: Release
-  REPO_NAME: CMake-AtmelStudio7-compatibility
+  REPO_NAME: CMakeAS7
   GOOGLETEST_TAG: release-1.10.0
   CMAKE_CONFIGURATION: windows_vs2019_x64
   CMAKE_GENERATOR: "Visual Studio 15 2017"
@@ -31,16 +31,16 @@ jobs:
 
     - name: Create Build Environment
       shell: powershell
-      run: mkdir ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      run: mkdir ${{runner.workspace}}/CMakeAS7/build
 
     - name: Configure CMake
       shell: powershell
-      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      working-directory: ${{runner.workspace}}/CMakeAS7/build
       run: |
         cmake ../ -DCMAKE_INSTALL_PREFIX=install -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build CMake
-      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      working-directory: ${{runner.workspace}}/CMakeAS7/build
       shell: powershell
       run: |
         cmake --build . --config ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
@@ -48,27 +48,29 @@ jobs:
 
     - name: Install CMake
       shell: powershell
-      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      working-directory: ${{runner.workspace}}/CMakeAS7/build
       run: |
         cmake --build . --target install --config ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
         dir bin
         dir install
 
     # Based on original Gitlab Cmake testing scripts
+    # Run GTests first as there is much more chance we break those ones
+    - name: Run GTests
+      working-directory: ${{runner.workspace}}/CMakeAS7
+      shell: powershell
+      run: python Tests/run_googletests.py build
+
     - name: Run CTests
-      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      working-directory: ${{runner.workspace}}/CMakeAS7/build
       shell: powershell
       run: ctest --output-on-failure -V -S ../.github/ci/ctest_test.cmake -C ${{env.BUILD_TYPE}} -j ${{env.PARALLEL_CORES}}
 
-    - name: Run GTests
-      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility
-      shell: powershell
-      run: python Tests/run_googletests.py build
 
     # Artifacts folder need to be cleaned because additional dependencies such as PugiXML and GoogleTests
     # are deployed under include/ and lib/ folders when the `install` target is built
     - name: Clean deployed artifacts
-      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install
+      working-directory: ${{runner.workspace}}/CMakeAS7/build/install
       shell: powershell
       run: |
         Remove-Item include -Recurse
@@ -81,7 +83,7 @@ jobs:
 
     # Compress artifacts folder to match CMake's artifacts convention
     - name: Zip artifacts
-      working-directory: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build
+      working-directory: ${{runner.workspace}}/CMakeAS7/build
       shell: powershell
       run: |
         $CMakeVersion=$(Get-ChildItem install/share/cmake-* -Name).Split('-')[1]
@@ -91,4 +93,4 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: CMakeAS7-BuildArtifacts-winx64
-        path: ${{runner.workspace}}/CMake-AtmelStudio7-compatibility/build/install/CMakeAS7-*.zip
+        path: ${{runner.workspace}}/CMakeAS7/build/install/CMakeAS7-*.zip
