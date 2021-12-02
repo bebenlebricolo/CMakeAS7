@@ -21,7 +21,8 @@ namespace compiler
 
 bool WarningOption::can_create(const std::string& _token)
 {
-  return (!_token.empty()) && (_token[1] == 'W');
+  return (!_token.empty()) &&
+          ((_token[1] == 'W') || (_token[1] == 'p'));
 }
 
 WarningOption::WarningOption()
