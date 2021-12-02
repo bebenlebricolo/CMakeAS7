@@ -191,7 +191,7 @@ TEST(AvrGccCompilerFlagsParsing, test_debug_default_flags)
 
 TEST(AvrGccCompilerFlagsParsing, test_compiler_flags_factory_optimization_flags)
 {
-  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra", "-fpedantic", "-O2" };
+  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra", "-pedantic", "-O2" };
   for (auto& f : flags) {
     EXPECT_TRUE(compiler::CompilerOptionFactory::is_valid(f));
   }
