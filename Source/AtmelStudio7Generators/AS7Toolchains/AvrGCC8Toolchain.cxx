@@ -166,7 +166,6 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   } else {
     tool = &avrgcccpp;
   }
-  tool->clear();
 
   // TODO : Use the device resolver to perform device deduction. note that the TargetedDevice code from TargetGenerator
   // first has to be moved closer for this to be enabled. For now, default -mmcu handling is proposed
@@ -302,6 +301,7 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
                                                               linker.get_supported_options());
 
   assembler.debugging.debug_level = parser.has_option("-Wa,-g") ? "Default (-Wa,-g)" : "";
+  tool->clear();
 }
 
 void xml_append_inline(pugi::xml_node& parent, const std::string& node_name, const std::string& value = "")
