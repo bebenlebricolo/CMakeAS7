@@ -140,7 +140,7 @@ void cmAtmelStudio7TargetGenerator::Generate()
   BuildFileStream.Close();
 }
 
-void cmAtmelStudio7TargetGenerator::AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value)
+void AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value)
 {
   pugi::xml_node node = parent.append_child(node_name.c_str());
   if (0 != value.size()) {
@@ -355,6 +355,19 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
   translator.generate_xml(avr_gcc_node);
 }
 
+
+static void add_source_compile_node(pugi::xml_node& item_group_node, const cmGeneratorTarget::AllConfigSource& s)
+{
+  const char* toolname = "Compile";
+  pugi::xml_node compile_node = item_group_node.append_child(toolname);
+  std::string path = s.Source->GetFullPath().c_str();
+
+  // Convert regular slashes to Windows backslashes
+  std::replace(path.begin(), path.end(), '/', '\\');
+  compile_node.append_attribute("Include") = path.c_str();
+  AppendInlinedNodeChildPcData(compile_node, "SubType", "compile");
+}
+
 void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent)
 {
   // collect up group information
@@ -366,21 +379,30 @@ void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent
   //
   for (cmGeneratorTarget::AllConfigSource const& si : sources) {
     const char* tool = nullptr;
-    switch (si.Kind) {
-      case cmGeneratorTarget::SourceKindObjectSource: {
+    switch (si.Kind)
+    {
+      // Headers and sources both need to be present in the final project description
+      // So that the files show up in Atmel Studio
+      case cmGeneratorTarget::SourceKindObjectSource:
+      {
         const std::string& lang = si.Source->GetLanguage();
-
-        if (lang == "C" || lang == "CXX") {
-          tool = "Compile";
-          pugi::xml_node compile_node = item_group_node.append_child(tool);
-          std::string path = si.Source->GetFullPath().c_str();
-
-          // Convert regular slashes to Windows backslashes
-          std::replace(path.begin(), path.end(), '/', '\\');
-          compile_node.append_attribute("Include") = path.c_str();
-          AppendInlinedNodeChildPcData(compile_node, "SubType", "compile");
+        if (lang == "C" || lang == "CXX")
+        {
+          add_source_compile_node(item_group_node, si);
         }
       } break;
+
+      case cmGeneratorTarget::SourceKindHeader: {
+        const std::string& extension = si.Source->GetExtension();
+
+        // Headers, for an unknown reason, are not recognized as C or CXX language files
+        // So we need to check the extension instead (...)
+        if (extension == "h")
+        {
+          add_source_compile_node(item_group_node, si); 
+        }
+      } break;
+
 
       // NOTE : External Object source kind is not supported for now, investigations needed
       case cmGeneratorTarget::SourceKindExternalObject:
