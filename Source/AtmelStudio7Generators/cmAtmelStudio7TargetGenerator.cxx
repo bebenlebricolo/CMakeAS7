@@ -344,6 +344,9 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
     }
     cmLocalGenerator* lg = dependent_target->GetLocalGenerator();
     translator.toolchain.linker.libraries.libraries.push_back(dependent_target->GetName());
+
+    // Including built libraries with the right configuration for automatic linking
+    // features
     if (lg != nullptr) {
       std::string build_directory = lg->GetCurrentBinaryDirectory() + "/" + build_type;
       translator.toolchain.linker.libraries.search_path.push_back(cmutils::strings::replace(build_directory, "/", "\\"));
