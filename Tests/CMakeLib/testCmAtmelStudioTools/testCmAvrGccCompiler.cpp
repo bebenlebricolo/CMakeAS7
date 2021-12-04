@@ -311,9 +311,16 @@ TEST_F(FlagParsingFixture, test_generate_xml)
   pugi::xml_document doc;
   // Prepend delcaration node will look like this : <?xml version="1.0" encoding="utf-8"?>
   pugi::xml_node project_node = doc.append_child(pugi::node_element);
+  project_node.set_name("Testing Xml generation");
   toolchain_translator.generate_xml(project_node);
-  doc.save_file((std::filesystem::temp_directory_path() / "CMakeLibTests" / "AtmelStudio7Tools" / "testfile.xml").c_str());
+  auto out_dir = std::filesystem::temp_directory_path() / "CMakeLibTests" / "AtmelStudio7Tools";
 
+  if(!std::filesystem::exists(out_dir))
+  {
+    ASSERT_TRUE(std::filesystem::create_directories(out_dir));
+  }
+
+  ASSERT_TRUE(doc.save_file((out_dir / "testfile.xml").c_str()));
 }
 
 
