@@ -126,7 +126,7 @@ void cmAtmelStudio7TargetGenerator::Generate()
     BuildConfigurationXmlGroup(project_node, config);
   }
 
-  // Compile item group which lists sources to be built as part of this target
+  // Compile item group which lists sources to be built as part of this target
   BuildCompileItemGroup(project_node);
 
   // Add projects references
@@ -300,10 +300,10 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
 
   // Handle include paths
   std::string as7_installation_folder = this->GlobalGenerator->GetAtmelStudio7InstallationFolder();
-  std::string dfp_dir = TargetedDevice.get_dfp_path(as7_installation_folder + "\\packs");
+  std::string dfp_dir = TargetedDevice.get_dfp_path(as7_installation_folder + "\\packs\\");
   TargetedDevice.version = AS7DeviceResolver::get_max_packs_version(dfp_dir);
 
-  std::string dfp_include_dir = TargetedDevice.get_dfp_include_dir(as7_installation_folder + "\\packs");
+  std::string dfp_include_dir = TargetedDevice.get_dfp_include_dir(as7_installation_folder + "\\packs\\");
 
   translator.toolchain.avrgcc.directories.include_paths.push_back(dfp_include_dir);
   translator.toolchain.avrgcccpp.directories.include_paths.push_back(dfp_include_dir);
@@ -402,7 +402,7 @@ void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent
         // So we need to check the extension instead (...)
         if (extension == "h")
         {
-          add_source_compile_node(item_group_node, si); 
+          add_source_compile_node(item_group_node, si);
         }
       } break;
 
@@ -679,5 +679,5 @@ std::string cmAtmelStudio7TargetGenerator::TargetedDevice_t::get_dfp_include_dir
   if (version.empty()) {
     version = resolve_version(packs_path);
   }
-  return "%24(PackRepoDir)\\atmel\\" + DFP_name + "\\" + version + "\\include";
+  return "%24(PackRepoDir)\\atmel\\" + DFP_name + "\\" + version + "\\include\\";
 }

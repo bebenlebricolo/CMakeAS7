@@ -450,6 +450,11 @@ void cmGlobalAtmelStudio7Generator::EnableLanguage(
       cmStateEnums::STRING);
   }
 
+  // Disabling the trycompile cmake features
+  mf->AddDefinition("CMAKE_C_COMPILER_WORKS", "1");
+  mf->AddDefinition("CMAKE_CXX_COMPILER_WORKS", "1");
+  mf->AddDefinition("CMAKE_ASM_COMPILER_WORKS", "1");
+
   mf->AddDefinition("CMAKE_AS_PLATFORM_NAME_DEFAULT",
                     GetPlatform(DefaultPlatform));
   this->cmGlobalGenerator::EnableLanguage(languages, mf, optional);
