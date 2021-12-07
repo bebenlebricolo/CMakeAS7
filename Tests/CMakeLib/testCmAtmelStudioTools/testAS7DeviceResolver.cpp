@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <filesystem>
 #include "AS7DeviceResolver.h"
 
-namespace cmAtmelStudioToolsTests
+namespace AtmelStudioToolsTests
 {
 
 TEST(DeviceNamingConventionTest, test_Atmega_names)
