@@ -60,8 +60,10 @@ TEST_F(AVR8GCCTests, toolchain_includes_persistence)
   }
 
 
-  compiler::cmAvrGccCompiler compiler_abstraction;
-  //toolchain.convert_from()
+  compiler::cmAvrGccCompiler cparser;
+
+
+  toolchain.convert_from(cparser, "C");
 
 }
 

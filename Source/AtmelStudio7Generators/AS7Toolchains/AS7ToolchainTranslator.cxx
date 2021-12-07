@@ -48,14 +48,13 @@ void AS7ToolchainTranslator::parse(const std::vector<std::string>& flags, const 
     auto found_compiler = compilers.find(lang);
     if (found_compiler == compilers.end())
     {
-        compiler::cmAvrGccCompiler cxxcompiler;
-        cxxcompiler.parse_flags(flags);
-        compilers[lang] = cxxcompiler;
+        compilers[lang] = std::unique_ptr<compiler::AbstractCompilerModel>(new compiler::cmAvrGccCompiler());
+        compilers[lang]->parse_flags(flags);
     }
     else
     {
-        found_compiler->second.clear();
-        found_compiler->second.parse_flags(flags);
+        found_compiler->second->clear();
+        found_compiler->second->parse_flags(flags);
     }
 }
 
@@ -88,19 +87,19 @@ void AS7ToolchainTranslator::sync_toolchain_languages()
 // NOTE : better switch to enum versions of the languages : plain strings are not a good solution.
 void AS7ToolchainTranslator::translate()
 {
-    toolchain.convert_from(compilers["C"], "C");
+    toolchain.convert_from(*compilers["C"], "C");
     if (targeted_language == "CXX")
     {
-        toolchain.convert_from(compilers["CXX"], "CXX");
+        toolchain.convert_from(*compilers["CXX"], "CXX");
     }
 }
 
-compiler::cmAvrGccCompiler* AS7ToolchainTranslator::get_compiler(const std::string& lang)
+compiler::AbstractCompilerModel* AS7ToolchainTranslator::get_compiler(const std::string& lang)
 {
     auto found_compiler = compilers.find(lang);
     if (found_compiler != compilers.end())
     {
-        return &(found_compiler->second);
+        return (found_compiler->second.get());
     }
     return nullptr;
 }

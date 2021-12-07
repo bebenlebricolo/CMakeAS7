@@ -47,6 +47,10 @@ bool CompilerOptionFactory::is_valid(const std::string& token)
   return (prefixes.find(token[1]) != std::string::npos);
 }
 
+cmAvrGccCompiler::~cmAvrGccCompiler()
+{
+}
+
 std::vector<std::shared_ptr<CompilerOption>> CompilerOptionFactory::create(const std::string& token)
 {
   std::vector<std::shared_ptr<CompilerOption>> out;
