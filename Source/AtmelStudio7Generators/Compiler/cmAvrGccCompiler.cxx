@@ -151,10 +151,13 @@ std::vector<std::string> cmAvrGccCompiler::get_all_options(const CompilerOption:
 
 void cmAvrGccCompiler::parse_flags(const std::vector<std::string>& tokens)
 {
-  for (const auto& token : tokens) {
-    if (compiler::CompilerOptionFactory::is_valid(token)) {
+  for (const auto& token : tokens)
+  {
+    if (compiler::CompilerOptionFactory::is_valid(token))
+    {
       std::vector<ShrdOption> option_list = compiler::CompilerOptionFactory::create(token);
-      for (auto& option : option_list) {
+      for (auto& option : option_list)
+      {
         this->options.accept_option(option);
       }
     }

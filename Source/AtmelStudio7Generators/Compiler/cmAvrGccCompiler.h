@@ -120,6 +120,11 @@ public:
      */
     void clear();
 
+// Allows to implement unit-testing oriented public apis
+#ifdef UNIT_TESTING
+    void add_option(const CompilerOption::Type type, const CompilerOption& option);
+#endif
+
 private:
 
     /**

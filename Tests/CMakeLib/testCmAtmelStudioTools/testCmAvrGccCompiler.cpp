@@ -31,7 +31,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cmStringUtils.h"
 #include "pugixml.hpp"
 
-namespace cmAtmelStudioToolsTests {
+namespace AtmelStudioToolsTests {
 
 class FlagParsingFixture : public ::testing::Test
 {
