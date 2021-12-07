@@ -22,7 +22,7 @@ if (WIN32)
     CMAKE_SET_TARGET_FOLDER(testAtmelStudioTools "Tests")
     target_compile_options(testAtmelStudioTools PRIVATE "/W4")
 else()
-    target_compile_options(testAVR8GCToolchain PRIVATE "-Werror -Wall -Wextra")
+    target_compile_options(testAVR8GCCToolchain PRIVATE "-Werror -Wall -Wextra")
 endif()
 
 if(WIN32)
@@ -35,32 +35,27 @@ endif()
 ####### Test AVR8GCC toolchain
 
 # We explicitely recompile AvrGCC8Toolchain in order to only draw it
-add_executable(testAVR8GCToolchain
+add_executable(testAVR8GCCToolchain
     testAVR8GCCToolchain.cpp
-    Stubs/StubAvrGccCompiler.cpp
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/cmAvrGccCompiler.h
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/AS7Toolchains/AvrGCC8Toolchain.h
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/AS7Toolchains/AvrGCC8Toolchain.cxx
+    Stubs/StubCompilerModel.cpp
+    Stubs/StubCompilerModel.h
 )
 
-target_include_directories(testAVR8GCToolchain PUBLIC
-    ${CMAKE_SOURCE_DIR}/Source/Utils
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/Compiler/Options
-    ${CMAKE_SOURCE_DIR}/Source/AtmelStudio7Generators/AS7Toolchains
+target_include_directories(testAVR8GCCToolchain PUBLIC
+    Stubs/
 )
 
 if (WIN32)
-    CMAKE_SET_TARGET_FOLDER(testAVR8GCToolchain "Tests")
-    target_compile_options(testAVR8GCToolchain PRIVATE "/W4")
+    CMAKE_SET_TARGET_FOLDER(testAVR8GCCToolchain "Tests")
+    target_compile_options(testAVR8GCCToolchain PRIVATE "/W4")
 else()
-    target_compile_options(testAVR8GCToolchain PRIVATE "-Werror -Wall -Wextra")
+    target_compile_options(testAVR8GCCToolchain PRIVATE "-Werror -Wall -Wextra")
 endif()
 
 if(WIN32)
-    target_link_libraries(testAVR8GCToolchain cmutils pugixml gtest )
+    target_link_libraries(testAVR8GCCToolchain AtmelStudio7Generators cmutils pugixml gtest )
 else()
-    target_link_libraries(testAVR8GCToolchain cmutils pugixml gtest pthread)
+    target_link_libraries(testAVR8GCCToolchain AtmelStudio7Generators cmutils pugixml gtest pthread)
 endif()
 
 

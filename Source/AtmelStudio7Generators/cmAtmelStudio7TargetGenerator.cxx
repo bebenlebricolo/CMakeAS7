@@ -437,7 +437,7 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
       }
 
       // extract -mmcu option
-      compiler::cmAvrGccCompiler* comp = translator.get_compiler(enabledLanguages[0]);
+      compiler::AbstractCompilerModel* comp = translator.get_compiler(enabledLanguages[0]);
       if (comp != nullptr) {
         compiler::CompilerOption* mmcu_opt = comp->get_option("-mmcu");
         if (mmcu_opt != nullptr) {

@@ -17,15 +17,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <string>
 #include <vector>
-
 #include "cmAvrGccCompilerOption.h"
 
 namespace compiler {
-class cmAvrGccCompiler;
+  class AbstractCompilerModel;
 }
 
 namespace pugi {
-class xml_node;
+  class xml_node;
 }
 
 namespace AvrToolchain {
@@ -358,7 +357,7 @@ struct AS7AvrGCC8
    * @param lang        : language for which the conversion is operated. Used to distinguish
    *                      avr gcc/g++.
    */
-  void convert_from(const compiler::cmAvrGccCompiler& abstraction, const std::string& lang = "C");
+  void convert_from(const compiler::AbstractCompilerModel& abstraction, const std::string& lang = "C");
 
   /**
    * @brief Generates an AtmelStudio7 compatible XML representation of mapped options.
@@ -423,7 +422,7 @@ private:
    *
    * @return a plain string with a list of unsupported options separated by a whitespace ' '
    */
-  std::string get_unsupported_options(const compiler::cmAvrGccCompiler& abstraction,
+  std::string get_unsupported_options(const compiler::AbstractCompilerModel& abstraction,
                                       const compiler::CompilerOption::Type type,
                                       const std::vector<std::string>& options) const;
 
