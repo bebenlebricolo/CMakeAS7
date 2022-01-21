@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <unordered_map>
 
 #include "AvrGCC8Toolchain.h"
-#include "cmAvrGccCompiler.h"
+#include "AbstractCompilerModel.h"
 
 namespace pugi
 {
@@ -60,7 +60,7 @@ public:
      *      pointer to a compiler abstraction if one exists for selected language
      *      nullptr if no compiler abstraction could be found
     */
-    compiler::cmAvrGccCompiler* get_compiler(const std::string& lang);
+    compiler::AbstractCompilerModel* get_compiler(const std::string& lang);
 
     /**
      * @brief returns targeted language. This method resolves the "highest" language used in
@@ -94,7 +94,7 @@ private:
     std::string targeted_language;   /**< Stores the language used. If C++ was given,
                                          then C and C++ abstractions will be used.
                                          Otherwise, only C is activated                 */
-    std::unordered_map <std::string, compiler::cmAvrGccCompiler> compilers; /**< Collection of compiler abstractions        */
+    std::unordered_map <std::string, std::unique_ptr<compiler::AbstractCompilerModel>> compilers; /**< Collection of compiler abstractions        */
 };
 
 

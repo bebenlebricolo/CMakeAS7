@@ -49,6 +49,17 @@ class xml_node;
 class xml_doc;
 }
 
+
+
+// TODO : Move this function elsewhere : this method has little to do with TargetGenerator and is more related to XML manipulations than anything else.
+/**
+ * @brief Appends an inlined xml node to a parent node.
+ * @param parent      :   xml parent node reference
+ * @param node_name   :   node's name (<node_name>....</node_name>)
+ * @param value       :   node's value
+ */
+static void AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value = "");
+
 /**
  * @brief Describes an AtmelStudio7 Project (a.k.a CMake's Target)
 */
@@ -222,16 +233,7 @@ private:
    * @param     range : Cmake's StringRange object
    * @return a collection of strings
    */
-  std::vector<std::string> cmAtmelStudio7TargetGenerator::ConvertStringRange(const cmStringRange& range) const;
-
-  // TODO : Move this function elsewhere : this method has little to do with TargetGenerator and is more related to XML manipulations than anything else.
-  /**
-   * @brief Appends an inlined xml node to a parent node.
-   * @param parent      :   xml parent node reference
-   * @param node_name   :   node's name (<node_name>....</node_name>)
-   * @param value       :   node's value
-   */
-  void AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value = "");
+  std::vector<std::string> ConvertStringRange(const cmStringRange& range) const;
 
   /**
    * @brief Builds a configuration group and attaches its xml representation to the parent node.

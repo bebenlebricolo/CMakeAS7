@@ -43,6 +43,14 @@ struct DefinitionOption : public CompilerOption
   static bool can_create(const std::string& _token);
 
   /**
+   * @brief Generates an Atmel Studio compatible representation of the embedded definition.
+   * If a definition is passed like this : "-DTEST_DEFINITION=33", then the returned definition will be "TEST_DEFINITION=33"
+   * @param atmel_studio_compat : essentially discarded
+   * @return std::string
+   */
+  std::string generate(const bool atmel_studio_compat = true) override;
+
+  /**
    * @brief Standard default constructor .
    */
   DefinitionOption();

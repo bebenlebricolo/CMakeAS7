@@ -52,6 +52,13 @@ CompilerOption::CompilerOption(const std::string& _token, const std::string& _de
 {
 }
 
+// Not implemented
+bool CompilerOption::operator<(const CompilerOption& other)
+{
+  (void) other;
+  return false;
+}
+
 std::string CompilerOption::generate(const bool atmel_studio_compat)
 {
   if (atmel_studio_compat) {

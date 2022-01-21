@@ -42,9 +42,13 @@ bool CompilerOptionFactory::is_valid(const std::string& token)
   // category (Linker, Optimization, Warnings, etc). Parsing might then be automated while comparing
   // against existing option/flag within those maps, retrieving their categorization at the same time.
 
-  const std::string prefixes = "WfODgwEnms";
+  const std::string prefixes = "WfODgwEnmsp";
   // Check if second character of token is part of the above characters list
   return (prefixes.find(token[1]) != std::string::npos);
+}
+
+cmAvrGccCompiler::~cmAvrGccCompiler()
+{
 }
 
 std::vector<std::shared_ptr<CompilerOption>> CompilerOptionFactory::create(const std::string& token)
@@ -76,6 +80,7 @@ std::vector<std::shared_ptr<CompilerOption>> CompilerOptionFactory::create(const
 
     // Warning flags or linker flags (this is resolved with the help of the next character)
     case 'W':
+    case 'p':
       if (token[2] == 'l') {
         const auto& split_tokens = LinkerOption::split_concatenated_options(token);
         for (auto& elem : split_tokens) {
@@ -150,10 +155,13 @@ std::vector<std::string> cmAvrGccCompiler::get_all_options(const CompilerOption:
 
 void cmAvrGccCompiler::parse_flags(const std::vector<std::string>& tokens)
 {
-  for (const auto& token : tokens) {
-    if (compiler::CompilerOptionFactory::is_valid(token)) {
+  for (const auto& token : tokens)
+  {
+    if (compiler::CompilerOptionFactory::is_valid(token))
+    {
       std::vector<ShrdOption> option_list = compiler::CompilerOptionFactory::create(token);
-      for (auto& option : option_list) {
+      for (auto& option : option_list)
+      {
         this->options.accept_option(option);
       }
     }

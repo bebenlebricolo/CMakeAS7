@@ -90,6 +90,16 @@ public:
   std::string GetDefaultPlatformName() const override { return "AVR8"; }
 };
 
+const char* cmGlobalAtmelStudio7Generator::GeneratorName = "Atmel Studio 7.0";          /**< Generator's name is used to instantiate the generator using command line input (@see cmGlobalAtmelStudio7Generator::Factory)   */
+const char* cmGlobalAtmelStudio7Generator::TruncatedGeneratorName = "Atmel Studio 7";   /**< Same as generator's name, but truncated                                                                                        */
+const char* cmGlobalAtmelStudio7Generator::SolutionFileExtension = ".atsln";            /**< Solution file extension for AtmelStudio7 IDE */
+const char* cmGlobalAtmelStudio7Generator::MinimumVisualStudioVersion = "10.0.40219.1"; /**< Used to generate solution files and project files to indicate the minimum required for Visual Studio IDE)*/
+const char* cmGlobalAtmelStudio7Generator::VisualStudioLastVersion = "14.0.23107.0";    /**< Gives the latest VisualStudio version supported by AtmelStudio7  */
+
+const cmGlobalAtmelStudio7Generator::AvailablePlatforms cmGlobalAtmelStudio7Generator::DefaultPlatform = AvailablePlatforms::AVR8; /**< Default platform will always be AVR8*/
+const char* cmGlobalAtmelStudio7Generator::ProjectConfigurationSectionName = "ProjectConfiguration";                               /**< Used when writing Atmel Studio solution file */
+
+
 std::string cmGlobalAtmelStudio7Generator::GetPlatform(
   AvailablePlatforms platform)
 {
@@ -439,6 +449,11 @@ void cmGlobalAtmelStudio7Generator::EnableLanguage(
       "anything else will be ignored.",
       cmStateEnums::STRING);
   }
+
+  // Disabling the trycompile cmake features
+  mf->AddDefinition("CMAKE_C_COMPILER_WORKS", "1");
+  mf->AddDefinition("CMAKE_CXX_COMPILER_WORKS", "1");
+  mf->AddDefinition("CMAKE_ASM_COMPILER_WORKS", "1");
 
   mf->AddDefinition("CMAKE_AS_PLATFORM_NAME_DEFAULT",
                     GetPlatform(DefaultPlatform));

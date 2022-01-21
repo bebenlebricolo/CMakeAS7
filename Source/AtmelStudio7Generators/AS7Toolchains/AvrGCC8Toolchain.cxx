@@ -126,12 +126,12 @@ void AS7AvrGcc8_Base::copy_from(const AS7AvrGcc8_Base& other)
   miscellaneous = other.miscellaneous;
 }
 
-std::string AS7AvrGCC8::get_unsupported_options(const compiler::cmAvrGccCompiler& parser,
+std::string AS7AvrGCC8::get_unsupported_options(const compiler::AbstractCompilerModel& compiler_model,
                                                 const compiler::CompilerOption::Type type,
                                                 const std::vector<std::string>& options) const
 {
   std::string out;
-  std::vector<std::string> unsupported_optim = parser.get_unsupported_options(type, options);
+  std::vector<std::string> unsupported_optim = compiler_model.get_unsupported_options(type, options);
   for (uint8_t i = 0; i < unsupported_optim.size(); i++) {
     out += unsupported_optim[i];
     if (i != (unsupported_optim.size() - 1)) {
@@ -157,9 +157,8 @@ std::vector<std::string> AS7AvrGCC8::get_all_supported_options() const
   return out;
 }
 
-void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const std::string& lang)
+void AS7AvrGCC8::convert_from(const compiler::AbstractCompilerModel& compiler_model, const std::string& lang)
 {
-  //parser.get_options(compiler::CompilerOption::Type::Optimization)
   AS7AvrGcc8_Base* tool = nullptr;
   if (lang == "C") {
     tool = &avrgcc;
@@ -167,42 +166,55 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
     tool = &avrgcccpp;
   }
 
+  // Note: do not clear the toolchain as it could have been partially configured by external code.
+  // This method shall only override the part which is described in the compiler_model, nothing more.
+
   // TODO : Use the device resolver to perform device deduction. note that the TargetedDevice code from TargetGenerator
   // first has to be moved closer for this to be enabled. For now, default -mmcu handling is proposed
 
   // This option is a bit special and requires dedicated handling
   if (common.Device.empty()) {
-    if (parser.has_option("-mmcu")) {
-      compiler::CompilerOption* opt = parser.get_option("-mmcu");
+    if (compiler_model.has_option("-mmcu")) {
+      compiler::CompilerOption* opt = compiler_model.get_option("-mmcu");
       auto option = dynamic_cast<compiler::MachineOption*>(opt);
       common.Device = "-mmcu=" + option->value;
     }
     common.Device += " -B \"%24(PackRepoDir)\\atmel\\ATmega_DFP\\1.2.209\\gcc\\dev\\atmega328p\"";
   }
 
-  common.relax_branches = parser.has_option("-mrelax");
+  common.relax_branches = compiler_model.has_option("-mrelax");
 
-  tool->general.subroutine_function_prologue = parser.has_option("-mcall-prologues");
-  tool->general.change_stack_pointer_without_disabling_interrupt = parser.has_option("-mno-interrupts");
-  tool->general.change_default_chartype_unsigned = parser.has_option("-funsigned-char");
-  tool->general.change_default_bitfield_unsigned = parser.has_option("-funsigned-bitfields");
+  tool->general.subroutine_function_prologue = compiler_model.has_option("-mcall-prologues");
+  tool->general.change_stack_pointer_without_disabling_interrupt = compiler_model.has_option("-mno-interrupts");
+  tool->general.change_default_chartype_unsigned = compiler_model.has_option("-funsigned-char");
+  tool->general.change_default_bitfield_unsigned = compiler_model.has_option("-funsigned-bitfields");
 
-  tool->preprocessor.do_not_search_system_directories = parser.has_option("-nostdinc");
-  tool->preprocessor.preprocess_only = parser.has_option("-E");
+  tool->preprocessor.do_not_search_system_directories = compiler_model.has_option("-nostdinc");
+  tool->preprocessor.preprocess_only = compiler_model.has_option("-E");
 
   // Retrieve definitions symbols
   {
-    const auto& definitions = parser.get_options(compiler::CompilerOption::Type::Definition);
+    const auto& definitions = compiler_model.get_options(compiler::CompilerOption::Type::Definition);
     for (const auto& def : definitions) {
       auto* def_ptr = dynamic_cast<compiler::DefinitionOption*>(def.get());
-      tool->symbols.def_symbols.push_back(def_ptr->defsymbol);
+      tool->symbols.def_symbols.push_back(def_ptr->generate(true));
     }
   }
 
   // Extract optimizations
+  // This extraction requires more work as we need to compare optimization options to one another
+  // in order to extract the most relevant one
   {
-    const auto& optimizations = parser.get_options(compiler::CompilerOption::Type::Optimization);
-    const auto& max_opt = std::max_element(optimizations.begin(), optimizations.end());
+    const compiler::cmAvrGccCompiler::OptionsVec& optimizations = compiler_model.get_options(compiler::CompilerOption::Type::Optimization);
+    const auto& max_opt = std::max_element(optimizations.begin(),
+                                           optimizations.end(),
+                                           [](const compiler::cmAvrGccCompiler::ShrdOption& opt1,
+                                              const compiler::cmAvrGccCompiler::ShrdOption& opt2)
+                                              {
+                                                const auto* copt1 = dynamic_cast<compiler::OptimizationOption*>(opt1.get());
+                                                const auto* copt2 = dynamic_cast<compiler::OptimizationOption*>(opt2.get());
+                                                return  *copt1 < *copt2;
+                                              });
 
     // Default optimization
     if (max_opt == optimizations.end()) {
@@ -212,20 +224,20 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
     }
   }
 
-  tool->optimizations.prepare_function_for_garbage_collection = parser.has_option("-ffunction-sections");
-  tool->optimizations.prepare_data_for_garbage_collection = parser.has_option("-fdata-sections");
-  tool->optimizations.pack_structure_members = parser.has_option("-fpack-struct");
-  tool->optimizations.allocate_bytes_needed_for_enum = parser.has_option("-fshort-enums");
-  tool->optimizations.use_short_calls = parser.has_option("-mshort-calls");
+  tool->optimizations.prepare_function_for_garbage_collection = compiler_model.has_option("-ffunction-sections");
+  tool->optimizations.prepare_data_for_garbage_collection = compiler_model.has_option("-fdata-sections");
+  tool->optimizations.pack_structure_members = compiler_model.has_option("-fpack-struct");
+  tool->optimizations.allocate_bytes_needed_for_enum = compiler_model.has_option("-fshort-enums");
+  tool->optimizations.use_short_calls = compiler_model.has_option("-mshort-calls");
 
   // List "other" optimizations flags (a.k.a unsupported flags)
-  tool->optimizations.other_flags = get_unsupported_options(parser,
+  tool->optimizations.other_flags = get_unsupported_options(compiler_model,
                                                             compiler::CompilerOption::Type::Optimization,
                                                             tool->get_supported_optimizations_options());
 
   // Extract debug option
   {
-    const auto& debug_opts = parser.get_options(compiler::CompilerOption::Type::Debug);
+    const auto& debug_opts = compiler_model.get_options(compiler::CompilerOption::Type::Debug);
     const auto& max_opt = std::max_element(debug_opts.begin(), debug_opts.end());
 
     // Default optimization
@@ -237,53 +249,60 @@ void AS7AvrGCC8::convert_from(const compiler::cmAvrGccCompiler& parser, const st
   }
 
   // List "other" debugging flags (a.k.a unsupported flags)
-  tool->optimizations.other_debugging_flags = get_unsupported_options(parser,
+  tool->optimizations.other_debugging_flags = get_unsupported_options(compiler_model,
                                                                       compiler::CompilerOption::Type::Debug,
                                                                       tool->get_supported_debug_options());
 
-  tool->warnings.all_warnings = parser.has_option("-Wall");
-  tool->warnings.extra_warnings = parser.has_option("-Wextra");
-  tool->warnings.undefined = parser.has_option("-Wundef");
-  tool->warnings.warnings_as_error = parser.has_option("-Werror");
-  tool->warnings.check_syntax_only = parser.has_option("-fsyntax-only");
-  tool->warnings.pedantic = parser.has_option("-pedantic");
-  tool->warnings.pedantic_warnings_as_errors = parser.has_option("-pedantic-errors");
-  tool->warnings.inhibit_all_warnings = parser.has_option("-w");
+  tool->warnings.all_warnings = compiler_model.has_option("-Wall");
+  tool->warnings.extra_warnings = compiler_model.has_option("-Wextra");
+  tool->warnings.undefined = compiler_model.has_option("-Wundef");
+  tool->warnings.warnings_as_error = compiler_model.has_option("-Werror");
+  tool->warnings.check_syntax_only = compiler_model.has_option("-fsyntax-only");
+  tool->warnings.pedantic = compiler_model.has_option("-pedantic");
+  tool->warnings.pedantic_warnings_as_errors = compiler_model.has_option("-pedantic-errors");
+  tool->warnings.inhibit_all_warnings = compiler_model.has_option("-w");
 
-  tool->miscellaneous.do_not_delete_temporary_files = parser.has_option("-save-temps");
-  tool->miscellaneous.verbose = parser.has_option("-v");
-  tool->miscellaneous.support_ansi_programs = parser.has_option("-ansi");
+  tool->miscellaneous.other_flags += get_unsupported_options(compiler_model,
+                                                             compiler::CompilerOption::Type::Warning,
+                                                             tool->get_supported_warning_options());
+  tool->miscellaneous.other_flags += " ";
+
+
+  tool->miscellaneous.do_not_delete_temporary_files = compiler_model.has_option("-save-temps");
+  tool->miscellaneous.verbose = compiler_model.has_option("-v");
+  tool->miscellaneous.support_ansi_programs = compiler_model.has_option("-ansi");
 
   // List "other" miscellaneous flags (a.k.a unsupported flags)
-  compiler::cmAvrGccCompiler::OptionsVec language_standards = parser.get_options(compiler::CompilerOption::Type::LanguageStandard);
+  compiler::cmAvrGccCompiler::OptionsVec language_standards = compiler_model.get_options(compiler::CompilerOption::Type::LanguageStandard);
   for (auto& opt : language_standards) {
     compiler::LanguageStandardOption* lstd = static_cast<compiler::LanguageStandardOption*>(opt.get());
     if (lstd->lang.to_string() == lang) {
-      tool->miscellaneous.other_flags = lstd->get_token() + " ";
+      tool->miscellaneous.other_flags += lstd->get_token() + " ";
     }
   }
 
-  tool->miscellaneous.other_flags += get_unsupported_options(parser,
+  tool->miscellaneous.other_flags += get_unsupported_options(compiler_model,
                                                              compiler::CompilerOption::Type::Generic,
                                                              get_all_supported_options());
+  tool->miscellaneous.other_flags += " ";
 
-  linker.general.do_not_use_default_libraries = parser.has_option("-nostartfile");
-  linker.general.do_not_use_default_libraries = parser.has_option("-nodefaultlibs");
-  linker.general.no_startup_or_default_libs = parser.has_option("-nostdlib");
-  linker.general.omit_all_symbol_information = parser.has_option("-Wl,s");
-  linker.general.no_shared_libraries = parser.has_option("-Wl,-static");
-  linker.general.generate_map_file = parser.has_option("-Wl,-Map");
-  linker.general.use_vprintf_library = parser.has_option("-Wl,-u,vprintf");
+  linker.general.do_not_use_default_libraries = compiler_model.has_option("-nostartfile");
+  linker.general.do_not_use_default_libraries = compiler_model.has_option("-nodefaultlibs");
+  linker.general.no_startup_or_default_libs = compiler_model.has_option("-nostdlib");
+  linker.general.omit_all_symbol_information = compiler_model.has_option("-Wl,s");
+  linker.general.no_shared_libraries = compiler_model.has_option("-Wl,-static");
+  linker.general.generate_map_file = compiler_model.has_option("-Wl,-Map");
+  linker.general.use_vprintf_library = compiler_model.has_option("-Wl,-u,vprintf");
 
-  linker.optimizations.garbage_collect_unused_sections = parser.has_option("-Wl,--gc-sections");
-  linker.optimizations.put_read_only_data_in_writable_data_section = parser.has_option("--rodata-writable");
+  linker.optimizations.garbage_collect_unused_sections = compiler_model.has_option("-Wl,--gc-sections");
+  linker.optimizations.put_read_only_data_in_writable_data_section = compiler_model.has_option("--rodata-writable");
 
   // List "other" miscellaneous flags (a.k.a unsupported flags)
-  linker.miscellaneous.linker_flags = get_unsupported_options(parser,
+  linker.miscellaneous.linker_flags = get_unsupported_options(compiler_model,
                                                               compiler::CompilerOption::Type::Linker,
                                                               linker.get_supported_options());
 
-  assembler.debugging.debug_level = parser.has_option("-Wa,-g") ? "Default (-Wa,-g)" : "";
+  assembler.debugging.debug_level = compiler_model.has_option("-Wa,-g") ? "Default (-Wa,-g)" : "";
 }
 
 void xml_append_inline(pugi::xml_node& parent, const std::string& node_name, const std::string& value = "")

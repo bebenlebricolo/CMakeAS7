@@ -54,11 +54,11 @@ public:
   /**
    * @brief Collection of one-time definitions for AtmelStudio 7 IDE
    */
-  static constexpr char* GeneratorName = "Atmel Studio 7.0";          /**< Generator's name is used to instantiate the generator using command line input (@see cmGlobalAtmelStudio7Generator::Factory)   */
-  static constexpr char* TruncatedGeneratorName = "Atmel Studio 7";   /**< Same as generator's name, but truncated                                                                                        */
-  static constexpr char* SolutionFileExtension = ".atsln";            /**< Solution file extension for AtmelStudio7 IDE */
-  static constexpr char* MinimumVisualStudioVersion = "10.0.40219.1"; /**< Used to generate solution files and project files to indicate the minimum required for Visual Studio IDE)*/
-  static constexpr char* VisualStudioLastVersion = "14.0.23107.0";    /**< Gives the latest VisualStudio version supported by AtmelStudio7  */
+  static const char* GeneratorName;               /**< Generator's name is used to instantiate the generator using command line input (@see cmGlobalAtmelStudio7Generator::Factory)   */
+  static const char* TruncatedGeneratorName;      /**< Same as generator's name, but truncated                                                                                        */
+  static const char* SolutionFileExtension;       /**< Solution file extension for AtmelStudio7 IDE */
+  static const char* MinimumVisualStudioVersion;  /**< Used to generate solution files and project files to indicate the minimum required for Visual Studio IDE)*/
+  static const char* VisualStudioLastVersion;     /**< Gives the latest VisualStudio version supported by AtmelStudio7  */
 
   /**
     @brief Lists available platforms supported by AtmelStudio
@@ -338,8 +338,8 @@ protected:
   friend class Factory; /**< Only this Factory can instantiate cmGlobalAtmelStudio7Generator class  */
 
   static std::vector<LangProp> SupportedLanguagesList;  /**< Lists all languages supported by AtmelStudio7 tool */
-  static constexpr AvailablePlatforms DefaultPlatform = AvailablePlatforms::AVR8; /**< Default platform will always be AVR8*/
-  static constexpr char* ProjectConfigurationSectionName = "ProjectConfiguration"; /**< Used when writing Atmel Studio solution file */
+  static const AvailablePlatforms DefaultPlatform;      /**< Default platform will always be AVR8*/
+  static const char* ProjectConfigurationSectionName;   /**< Used when writing Atmel Studio solution file */
   AvailablePlatforms CurrentPlatform = DefaultPlatform; /**< Gives the current platform for which the build system is being created */
 
   // Set during OutputATSLNFile with the name of the current project.

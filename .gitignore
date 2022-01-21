@@ -19,3 +19,8 @@ out/
 .idea/
 # CLion build directories
 cmake-build-*/
+[Bb]uild*/
+[Dd]ebug*/
+[Rr]elease*/
+[Bb]in*/
+[Oo]ut*/

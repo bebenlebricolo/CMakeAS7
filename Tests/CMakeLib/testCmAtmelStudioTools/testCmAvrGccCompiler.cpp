@@ -16,6 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <filesystem>
 
 #include <gtest/gtest.h>
 
@@ -27,10 +28,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cmAvrGccLinkerOption.h"
 #include "AvrGCC8Toolchain.h"
 #include "AS7ToolchainTranslator.h"
-
+#include "cmStringUtils.h"
 #include "pugixml.hpp"
 
-namespace cmAtmelStudioToolsTests {
+namespace AtmelStudioToolsTests {
 
 class FlagParsingFixture : public ::testing::Test
 {
@@ -74,6 +75,18 @@ static bool check_flag_uniqueness(const std::vector<std::string>& target, const 
     }
   }
   return true;
+}
+
+static void compare_misc(const std::string& ref, const std::string& target)
+{
+  auto ref_vec = cmutils::strings::split(ref);
+  auto tgt_vec = cmutils::strings::split(target);
+
+  for (const auto& tgt : tgt_vec)
+  {
+    auto item = std::find(ref_vec.begin(), ref_vec.end(), tgt);
+    EXPECT_NE(item, ref_vec.end());
+  }
 }
 
 TEST(AvrGccCompilerFlagsParsing, test_avr_gcc_representation)
@@ -178,7 +191,7 @@ TEST(AvrGccCompilerFlagsParsing, test_debug_default_flags)
 
 TEST(AvrGccCompilerFlagsParsing, test_compiler_flags_factory_optimization_flags)
 {
-  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra", "-fpedantic", "-O2" };
+  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra", "-pedantic", "-O2" };
   for (auto& f : flags) {
     EXPECT_TRUE(compiler::CompilerOptionFactory::is_valid(f));
   }
@@ -189,15 +202,93 @@ TEST(AvrGccCompilerFlagsParsing, test_compiler_flags_factory_optimization_flags)
   ASSERT_EQ(built_flag[0]->get_type(), compiler::CompilerOption::Type::Optimization);
 }
 
-TEST(AvrGcc8Representation, test_AvrGcc8Representation_convert_from_compiler_abstraction)
+TEST(AvrGcc8Representation, convert_from_compiler_abstraction_all_ok)
 {
-  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
+  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra", "-Werror", "-pedantic", "-pedantic-errors",
                                            "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
                                            "-fpedantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
                                            "-nostdinc", "-fpack-struct", "-mshort-calls", "-std=c11" };
-  for (auto& f : flags) {
+  for (auto& f : flags)
+  {
+    bool valid = compiler::CompilerOptionFactory::is_valid(f);
+    EXPECT_TRUE(valid);
+    if (!valid)
+    {
+      std::cout << "invalid flag is : " << f.c_str() << "\n";
+    }
+  }
+
+  compiler::cmAvrGccCompiler compiler_abstraction;
+  compiler_abstraction.parse_flags(flags);
+
+  AvrToolchain::AS7AvrGCC8 toolchain;
+  pugi::xml_node node;
+  toolchain.convert_from(compiler_abstraction);
+
+  // Checking the general abstraction of avrgcc
+  ASSERT_TRUE(toolchain.avrgcc.general.subroutine_function_prologue);
+  ASSERT_TRUE(toolchain.avrgcc.general.change_stack_pointer_without_disabling_interrupt);
+  ASSERT_TRUE(toolchain.avrgcc.general.change_default_chartype_unsigned);
+  ASSERT_FALSE(toolchain.avrgcc.general.change_default_bitfield_unsigned);
+
+  // Checking preprocessor abstraction of avrgcc
+  ASSERT_TRUE(toolchain.avrgcc.preprocessor.do_not_search_system_directories);
+  ASSERT_FALSE(toolchain.avrgcc.preprocessor.preprocess_only);
+
+  // Checking symbols abstraction of avrgcc
+  ASSERT_FALSE(toolchain.avrgcc.symbols.def_symbols.empty());
+  ASSERT_EQ(toolchain.avrgcc.symbols.def_symbols, std::vector<std::string>({"TEST_DEFINITION=33"}));
+
+  // Checking directories abstraction of avrgcc
+  ASSERT_TRUE(toolchain.avrgcc.directories.include_paths.empty());
+
+  // Checking optimizations abstraction of avrgcc
+  ASSERT_EQ(toolchain.avrgcc.optimizations.level, "None (-O0)");
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.other_flags.empty());
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.prepare_function_for_garbage_collection);
+  ASSERT_FALSE(toolchain.avrgcc.optimizations.prepare_data_for_garbage_collection);
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.pack_structure_members);
+  ASSERT_FALSE(toolchain.avrgcc.optimizations.allocate_bytes_needed_for_enum);
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.use_short_calls);
+  ASSERT_FALSE(toolchain.avrgcc.optimizations.debug_level.empty());
+  ASSERT_EQ(toolchain.avrgcc.optimizations.debug_level, "Maximum (-g3)");
+  ASSERT_TRUE(toolchain.avrgcc.optimizations.other_debugging_flags.empty());
+
+  // Checking warning abstraction of avrgcc
+  ASSERT_TRUE(toolchain.avrgcc.warnings.all_warnings);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.extra_warnings);
+  ASSERT_FALSE(toolchain.avrgcc.warnings.undefined);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.warnings_as_error);
+  ASSERT_FALSE(toolchain.avrgcc.warnings.check_syntax_only);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.pedantic);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.pedantic_warnings_as_errors);
+  ASSERT_FALSE(toolchain.avrgcc.warnings.inhibit_all_warnings);
+  ASSERT_TRUE(toolchain.avrgcc.warnings.other_warnings.empty());
+
+  // Checking miscellaneous abstraction of avrgcc
+  ASSERT_FALSE(toolchain.avrgcc.miscellaneous.other_flags.empty());
+  ASSERT_FALSE(toolchain.avrgcc.miscellaneous.verbose);
+  ASSERT_FALSE(toolchain.avrgcc.miscellaneous.support_ansi_programs);
+  ASSERT_FALSE(toolchain.avrgcc.miscellaneous.do_not_delete_temporary_files);
+  compare_misc(toolchain.avrgcc.miscellaneous.other_flags, "-std=c11 -fpedantic -fpedantic-errors");
+
+}
+
+TEST(AvrGcc8Representation, convert_from_compiler_abstraction_misc_flags_redirection)
+{
+  const std::vector<std::string> flags = { "-Wall", "-DTEST_DEFINITION=33", "-Wextra",
+    "-fpedantic", "-O2", "-O3", "-O0", "-g1", "-g2", "-g3", "-ffunction-sections",
+    "-fpedantic-errors", "-mcall-prologues", "-mno-interrupts", "-funsigned-char",
+    "-nostdinc", "-fpack-struct", "-mshort-calls", "-std=c11",
+    "-Wno-unused-parameter", "-Wno-error=unused-function", "-Wno-error=unused-variable"};
+
+  const std::string expected_misc_flags = "-Wno-unused-parameter -Wno-error=unused-function -Wno-error=unused-variable -fpedantic -fpedantic-errors -std=c11";
+
+  for (auto& f : flags)
+  {
     EXPECT_TRUE(compiler::CompilerOptionFactory::is_valid(f));
   }
+
 
   compiler::cmAvrGccCompiler compiler_abstraction;
   compiler_abstraction.parse_flags(flags);
@@ -212,7 +303,7 @@ TEST(AvrGcc8Representation, test_AvrGcc8Representation_convert_from_compiler_abs
   ASSERT_TRUE(toolchain.avrgcc.optimizations.pack_structure_members);
   ASSERT_FALSE(toolchain.avrgcc.optimizations.prepare_data_for_garbage_collection);
   ASSERT_TRUE(toolchain.avrgcc.optimizations.prepare_function_for_garbage_collection);
-  ASSERT_EQ(toolchain.avrgcc.miscellaneous.other_flags, "-std=c11 -fpedantic -fpedantic-errors");
+  compare_misc(toolchain.avrgcc.miscellaneous.other_flags, expected_misc_flags);
 }
 
 TEST_F(FlagParsingFixture, test_generate_xml)
@@ -220,9 +311,16 @@ TEST_F(FlagParsingFixture, test_generate_xml)
   pugi::xml_document doc;
   // Prepend delcaration node will look like this : <?xml version="1.0" encoding="utf-8"?>
   pugi::xml_node project_node = doc.append_child(pugi::node_element);
+  project_node.set_name("Testing Xml generation");
   toolchain_translator.generate_xml(project_node);
-  doc.save_file(R"(C:\temp\testfile.xml)", "  ");
+  auto out_dir = std::filesystem::temp_directory_path() / "CMakeLibTests" / "AtmelStudio7Tools";
 
+  if(!std::filesystem::exists(out_dir))
+  {
+    ASSERT_TRUE(std::filesystem::create_directories(out_dir));
+  }
+
+  ASSERT_TRUE(doc.save_file((out_dir / "testfile.xml").c_str()));
 }
 
 

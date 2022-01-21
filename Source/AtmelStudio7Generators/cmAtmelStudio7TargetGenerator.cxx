@@ -29,7 +29,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "cmGeneratorExpression.h"
 #include "cmGeneratorTarget.h"
 #include "cmGlobalAtmelStudio7Generator.h"
-#include "cmGlobalVisualStudioVersionedGenerator.h"
 #include "cmLinkLineDeviceComputer.h"
 #include "cmLocalAtmelStudio7Generator.h"
 #include "cmMakefile.h"
@@ -41,6 +40,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "AS7DeviceResolver.h"
 #include "AS7ToolchainTranslator.h"
 #include "pugixml.hpp"
+
+#define CMAKE_CHECK_BUILD_SYSTEM_TARGET "ZERO_CHECK"
 
 cmAtmelStudio7TargetGenerator::cmAtmelStudio7TargetGenerator(
   cmGeneratorTarget* target, cmGlobalAtmelStudio7Generator* gg)
@@ -125,7 +126,7 @@ void cmAtmelStudio7TargetGenerator::Generate()
     BuildConfigurationXmlGroup(project_node, config);
   }
 
-  // Compile item group which lists sources to be built as part of this target
+  // Compile item group which lists sources to be built as part of this target
   BuildCompileItemGroup(project_node);
 
   // Add projects references
@@ -139,7 +140,7 @@ void cmAtmelStudio7TargetGenerator::Generate()
   BuildFileStream.Close();
 }
 
-void cmAtmelStudio7TargetGenerator::AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value)
+void AppendInlinedNodeChildPcData(pugi::xml_node& parent, const std::string& node_name, const std::string& value)
 {
   pugi::xml_node node = parent.append_child(node_name.c_str());
   if (0 != value.size()) {
@@ -299,10 +300,10 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
 
   // Handle include paths
   std::string as7_installation_folder = this->GlobalGenerator->GetAtmelStudio7InstallationFolder();
-  std::string dfp_dir = TargetedDevice.get_dfp_path(as7_installation_folder + "\\packs");
+  std::string dfp_dir = TargetedDevice.get_dfp_path(as7_installation_folder + "\\packs\\");
   TargetedDevice.version = AS7DeviceResolver::get_max_packs_version(dfp_dir);
 
-  std::string dfp_include_dir = TargetedDevice.get_dfp_include_dir(as7_installation_folder + "\\packs");
+  std::string dfp_include_dir = TargetedDevice.get_dfp_include_dir(as7_installation_folder + "\\packs\\");
 
   translator.toolchain.avrgcc.directories.include_paths.push_back(dfp_include_dir);
   translator.toolchain.avrgcccpp.directories.include_paths.push_back(dfp_include_dir);
@@ -328,7 +329,6 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
         translator.toolchain.avrgcc.symbols.def_symbols.push_back(define);
       }
     }
-
   }
 
   // Configure linker
@@ -344,6 +344,9 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
     }
     cmLocalGenerator* lg = dependent_target->GetLocalGenerator();
     translator.toolchain.linker.libraries.libraries.push_back(dependent_target->GetName());
+
+    // Including built libraries with the right configuration for automatic linking
+    // features
     if (lg != nullptr) {
       std::string build_directory = lg->GetCurrentBinaryDirectory() + "/" + build_type;
       translator.toolchain.linker.libraries.search_path.push_back(cmutils::strings::replace(build_directory, "/", "\\"));
@@ -353,6 +356,19 @@ void cmAtmelStudio7TargetGenerator::BuildConfigurationXmlGroup(pugi::xml_node& p
 
   // Finally generate the xml project file
   translator.generate_xml(avr_gcc_node);
+}
+
+
+static void add_source_compile_node(pugi::xml_node& item_group_node, const cmGeneratorTarget::AllConfigSource& s)
+{
+  const char* toolname = "Compile";
+  pugi::xml_node compile_node = item_group_node.append_child(toolname);
+  std::string path = s.Source->GetFullPath().c_str();
+
+  // Convert regular slashes to Windows backslashes
+  std::replace(path.begin(), path.end(), '/', '\\');
+  compile_node.append_attribute("Include") = path.c_str();
+  AppendInlinedNodeChildPcData(compile_node, "SubType", "compile");
 }
 
 void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent)
@@ -366,21 +382,30 @@ void cmAtmelStudio7TargetGenerator::BuildCompileItemGroup(pugi::xml_node& parent
   //
   for (cmGeneratorTarget::AllConfigSource const& si : sources) {
     const char* tool = nullptr;
-    switch (si.Kind) {
-      case cmGeneratorTarget::SourceKindObjectSource: {
+    switch (si.Kind)
+    {
+      // Headers and sources both need to be present in the final project description
+      // So that the files show up in Atmel Studio
+      case cmGeneratorTarget::SourceKindObjectSource:
+      {
         const std::string& lang = si.Source->GetLanguage();
-
-        if (lang == "C" || lang == "CXX") {
-          tool = "Compile";
-          pugi::xml_node compile_node = item_group_node.append_child(tool);
-          std::string path = si.Source->GetFullPath().c_str();
-
-          // Convert regular slashes to Windows backslashes
-          std::replace(path.begin(), path.end(), '/', '\\');
-          compile_node.append_attribute("Include") = path.c_str();
-          AppendInlinedNodeChildPcData(compile_node, "SubType", "compile");
+        if (lang == "C" || lang == "CXX")
+        {
+          add_source_compile_node(item_group_node, si);
         }
       } break;
+
+      case cmGeneratorTarget::SourceKindHeader: {
+        const std::string& extension = si.Source->GetExtension();
+
+        // Headers, for an unknown reason, are not recognized as C or CXX language files
+        // So we need to check the extension instead (...)
+        if (extension == "h")
+        {
+          add_source_compile_node(item_group_node, si);
+        }
+      } break;
+
 
       // NOTE : External Object source kind is not supported for now, investigations needed
       case cmGeneratorTarget::SourceKindExternalObject:
@@ -412,7 +437,7 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
       }
 
       // extract -mmcu option
-      compiler::cmAvrGccCompiler* comp = translator.get_compiler(enabledLanguages[0]);
+      compiler::AbstractCompilerModel* comp = translator.get_compiler(enabledLanguages[0]);
       if (comp != nullptr) {
         compiler::CompilerOption* mmcu_opt = comp->get_option("-mmcu");
         if (mmcu_opt != nullptr) {
@@ -463,7 +488,6 @@ void cmAtmelStudio7TargetGenerator::BuildDevicePropertyGroup(pugi::xml_node& par
     case AS7DeviceResolver::Core::ATSAM:
       toolchain = "ARMGCC";
       break;
-
   }
 
   // handles devices with mmcu option
@@ -556,7 +580,7 @@ void cmAtmelStudio7TargetGenerator::BuildSimulatorConfiguration(pugi::xml_node& 
 
 void cmAtmelStudio7TargetGenerator::BuildProjectReferenceItemGroup(pugi::xml_node& parent)
 {
-  cmGlobalVisualStudioGenerator::OrderedTargetDependSet& target_dependencies = GetTargetDependencies();
+  cmGlobalVisualStudioGenerator::OrderedTargetDependSet target_dependencies = GetTargetDependencies();
 
   auto item_group_node = parent.append_child("ItemGroup");
 
@@ -589,8 +613,7 @@ void cmAtmelStudio7TargetGenerator::BuildProjectReferenceItemGroup(pugi::xml_nod
 
 cmGlobalVisualStudioGenerator::OrderedTargetDependSet cmAtmelStudio7TargetGenerator::GetTargetDependencies() const
 {
-  cmGlobalGenerator::TargetDependSet const& unordered =
-    this->GlobalGenerator->GetTargetDirectDepends(this->GeneratorTarget);
+  cmGlobalGenerator::TargetDependSet const& unordered = this->GlobalGenerator->GetTargetDirectDepends(this->GeneratorTarget);
   cmGlobalVisualStudioGenerator::OrderedTargetDependSet depends(unordered, CMAKE_CHECK_BUILD_SYSTEM_TARGET);
   return depends;
 }
@@ -656,5 +679,5 @@ std::string cmAtmelStudio7TargetGenerator::TargetedDevice_t::get_dfp_include_dir
   if (version.empty()) {
     version = resolve_version(packs_path);
   }
-  return "%24(PackRepoDir)\\atmel\\" + DFP_name + "\\" + version + "\\include";
+  return "%24(PackRepoDir)\\atmel\\" + DFP_name + "\\" + version + "\\include\\";
 }

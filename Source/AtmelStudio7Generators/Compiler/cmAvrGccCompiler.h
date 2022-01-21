@@ -20,6 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <memory>
 #include <unordered_map>
 #include "cmAvrGccCompilerOption.h"
+#include "AbstractCompilerModel.h"
 
 namespace compiler
 {
@@ -31,16 +32,18 @@ namespace compiler
  * It could also provide some means to validate flags (this has yet to be implemented) as
  * options and flags need to comply with a handfull of naming rules to be accepted.
  */
-class cmAvrGccCompiler
+class cmAvrGccCompiler : public AbstractCompilerModel
 {
 public:
+    ~cmAvrGccCompiler() noexcept;
+
     /**
      * @brief uses input vector of raw tokens (i.e. parsed from command line or CMAKE flags) and
      * builds the appropriate option container to store each token representation.
      *
      * @param tokens : vector of raw tokens parsed from command line input
      */
-    void parse_flags(const std::vector<std::string>& tokens);
+    void parse_flags(const std::vector<std::string>& tokens) override;
 
     /**
      * @brief parses options and flags from given string where options and flags are separated by
@@ -54,10 +57,7 @@ public:
      *
      * @param flags : concatenated string including all raw tokens to be parsed
      */
-    void parse_flags(const std::string& flags);
-
-    using ShrdOption = std::shared_ptr<CompilerOption>;
-    using OptionsVec = std::vector<std::shared_ptr<CompilerOption>>;
+    void parse_flags(const std::string& flags) override;
 
     /**
      * @brief Returns the adequate vector of options (each option being wrapped in a shared_ptr)
@@ -73,7 +73,7 @@ public:
      * @param type  : indicates which flavor of CompilerOption is requested
      * @return a vector of shared_ptr wrapping a CompilerOption* pointer.
      */
-    OptionsVec get_options(const CompilerOption::Type type) const;
+    OptionsVec get_options(const CompilerOption::Type type) const override;
 
     /**
      * @brief fetches a particular option using the raw token as a key.
@@ -84,7 +84,7 @@ public:
      * @return nullptr in case of failure (raw token has no stored CompilerOption representation) or
      *                 the found pointer in case this raw token has already been stored previously
      */
-    CompilerOption * get_option(const std::string& token) const;
+    CompilerOption * get_option(const std::string& token) const override;
 
     /**
      * @brief Get a list of available options stored in memory using the CompilerOption::Type
@@ -93,7 +93,7 @@ public:
      * @param type  : the kind of option you want to know about
      * @return  a list of supported options for that kind of option
      */
-    std::vector<std::string> get_all_options(const CompilerOption::Type type) const;
+    std::vector<std::string> get_all_options(const CompilerOption::Type type) const override;
 
     /**
      * @brief returns a list of raw tokens contained within a collection of Options, minus the options that Atmel Studio supports.
@@ -103,7 +103,7 @@ public:
      * @param   as7_options :   atmel studio 7 supported options list
      * @return  a vector of raw tokens
      */
-    std::vector<std::string> get_unsupported_options(const CompilerOption::Type type, const std::vector<std::string>& as7_options) const;
+    std::vector<std::string> get_unsupported_options(const CompilerOption::Type type, const std::vector<std::string>& as7_options) const override;
 
     /**
      * @brief Tells whether this cmAvrGccCompiler instance has the requested option in memory
@@ -113,7 +113,7 @@ public:
      * @return true  : this instance has the requested option representation stored in memory
      *         false : no available representation of this option was found in memory
      */
-    bool has_option(const std::string& option) const;
+    bool has_option(const std::string& option) const override;
 
     /**
      * @brief Clears all memory storages.
