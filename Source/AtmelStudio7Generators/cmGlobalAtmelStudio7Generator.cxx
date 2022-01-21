@@ -313,7 +313,7 @@ void cmGlobalAtmelStudio7Generator::OutputATSLNFile(
 std::string cmGlobalAtmelStudio7Generator::GetStartupProjectName(
   cmLocalGenerator const* root) const
 {
-  cmProp n = root->GetMakefile()->GetProperty("VS_STARTUP_PROJECT");
+  cmValue n = root->GetMakefile()->GetProperty("VS_STARTUP_PROJECT");
   if (cmNonempty(n)) {
     std::string startup = *n;
     if (this->FindTarget(startup)) {
@@ -343,7 +343,7 @@ bool cmGlobalAtmelStudio7Generator::FindMakeProgram(cmMakefile*)
 std::string cmGlobalAtmelStudio7Generator::GetGUID(std::string const& name)
 {
   std::string const& guidStoreName = name + "_GUID_CMAKE";
-  cmProp storedGUID = this->CMakeInstance->GetCacheDefinition(guidStoreName);
+  cmValue storedGUID = this->CMakeInstance->GetCacheDefinition(guidStoreName);
   if (nullptr != storedGUID)
   {
     return std::string(*storedGUID);
@@ -492,7 +492,7 @@ std::vector<cmGlobalGenerator::GeneratedMakeCommand> cmGlobalAtmelStudio7Generat
 
   // Written by the toolchain file
 
-  cmProp compiler;
+  cmValue compiler;
   switch (CurrentPlatform) {
 
     case AvailablePlatforms::AVR8:
@@ -513,7 +513,7 @@ std::vector<cmGlobalGenerator::GeneratedMakeCommand> cmGlobalAtmelStudio7Generat
   }
 
   // Select the caller- or user-preferred make program, else MSBuild.
-  cmProp AtmelStudioPath = this->CMakeInstance->GetState()->GetCacheEntryValue("CMAKE_ATMEL_STUDIO_EXECUTABLE");
+  cmValue AtmelStudioPath = this->CMakeInstance->GetState()->GetCacheEntryValue("CMAKE_ATMEL_STUDIO_EXECUTABLE");
   if (!AtmelStudioPath) {
     GeneratedMakeCommand makeCommand;
     makeCommand.Add("Could not find CMAKE_ATMEL_STUDIO_EXECUTABLE in cache !");
@@ -552,11 +552,10 @@ void cmGlobalAtmelStudio7Generator::WriteTargetsToSolution(
 
     bool written = false;
 
-    cmProp projName = target->GetProperty("GENERATOR_FILE_NAME");
+    cmValue projName = target->GetProperty("GENERATOR_FILE_NAME");
     if (projName) {
         cmLocalGenerator* lg = target->GetLocalGenerator();
-        std::string dir = lg->GetCurrentBinaryDirectory();
-        dir = root->MaybeConvertToRelativePath(rootBinaryDir, dir);
+        std::string dir = root->MaybeRelativeToCurBinDir(rootBinaryDir);
         if (dir == ".") {
             dir.clear(); // msbuild cannot handle ".\" prefix
         }
@@ -602,7 +601,7 @@ void cmGlobalAtmelStudio7Generator::WriteProject(std::ostream& fout,
   const char* project =
     "Project(\"{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}\") = \"";
 
-  cmProp targetExt = target_gen->GetProperty("GENERATOR_FILE_NAME_EXT");
+  cmValue targetExt = target_gen->GetProperty("GENERATOR_FILE_NAME_EXT");
   if (targetExt) {
     ext = *targetExt;
   }
@@ -645,17 +644,17 @@ void cmGlobalAtmelStudio7Generator::WriteTargetConfigurations(
     if (!target->IsInBuildSystem()) {
       continue;
     }
-    cmProp expath = target->GetProperty("EXTERNAL_MSPROJECT");
+    cmValue expath = target->GetProperty("EXTERNAL_MSPROJECT");
     if (expath) {
       std::set<std::string> allConfigurations(configs.begin(), configs.end());
-      cmProp mapping = target->GetProperty("VS_PLATFORM_MAPPING");
+      cmValue mapping = target->GetProperty("VS_PLATFORM_MAPPING");
       this->WriteProjectConfigurations(fout, target->GetName(), *target,
                                        configs, allConfigurations,
                                        mapping ? *mapping : "");
     } else {
       const std::set<std::string>& configsPartOfDefaultBuild =
         this->IsPartOfDefaultBuild(configs, projectTargets, target);
-      cmProp vcprojName = target->GetProperty("GENERATOR_FILE_NAME");
+      cmValue vcprojName = target->GetProperty("GENERATOR_FILE_NAME");
       if (vcprojName) {
         this->WriteProjectConfigurations(fout, *vcprojName, *target, configs,
                                          configsPartOfDefaultBuild);
@@ -675,7 +674,7 @@ void cmGlobalAtmelStudio7Generator::WriteProjectConfigurations(
     std::vector<std::string> mapConfig;
     const char* dstConfig = i.c_str();
     if (target.GetProperty("EXTERNAL_MSPROJECT")) {
-      if (cmProp m = target.GetProperty("MAP_IMPORTED_CONFIG_" +
+      if (cmValue m = target.GetProperty("MAP_IMPORTED_CONFIG_" +
                                         cmSystemTools::UpperCase(i))) {
         cmExpandList(*m, mapConfig);
         if (!mapConfig.empty()) {
@@ -744,7 +743,7 @@ void cmGlobalAtmelStudio7Generator::WriteATSLNGlobalSections(
           extensibilityAddInsOverridden = true;
         }
         fout << "\tGlobalSection(" << name << ") = " << sectionType << "\n";
-        cmProp p = root->GetMakefile()->GetProperty(it);
+        cmValue p = root->GetMakefile()->GetProperty(it);
         std::vector<std::string> keyValuePairs = cmExpandedList(p ? *p : "");
         for (std::string const& itPair : keyValuePairs) {
           const std::string::size_type posEqual = itPair.find('=');
@@ -801,7 +800,7 @@ std::set<std::string> cmGlobalAtmelStudio7Generator::IsPartOfDefaultBuild(
           "CMAKE_VS_INCLUDE_" + t + "_TO_DEFAULT_BUILD";
         // inspect CMAKE_VS_INCLUDE_<t>_TO_DEFAULT_BUILD properties
         for (std::string const& i : configs) {
-          cmProp propertyValue =
+          cmValue propertyValue =
             target->Target->GetMakefile()->GetDefinition(propertyName);
           if (propertyValue &&
               cmIsOn(cmGeneratorExpression::Evaluate(

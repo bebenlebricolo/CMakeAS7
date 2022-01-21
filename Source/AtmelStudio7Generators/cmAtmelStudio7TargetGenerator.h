@@ -233,7 +233,7 @@ private:
    * @param     range : Cmake's StringRange object
    * @return a collection of strings
    */
-  std::vector<std::string> ConvertStringRange(const cmStringRange& range) const;
+  std::vector<std::string> ConvertBTStringRange(const cmBTStringRange& range) const;
 
   /**
    * @brief Builds a configuration group and attaches its xml representation to the parent node.

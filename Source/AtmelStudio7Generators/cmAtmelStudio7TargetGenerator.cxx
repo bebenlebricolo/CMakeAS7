@@ -173,11 +173,11 @@ std::vector<std::string> cmAtmelStudio7TargetGenerator::GetDefines(const std::st
   return out;
 }
 
-std::vector<std::string> cmAtmelStudio7TargetGenerator::ConvertStringRange(const cmStringRange& range) const
+std::vector<std::string> cmAtmelStudio7TargetGenerator::ConvertBTStringRange(const cmBTStringRange& range) const
 {
   std::vector<std::string> out;
   for (auto& val : range) {
-    out.push_back(val);
+    out.push_back(val.Value);
   }
   return out;
 }
@@ -214,12 +214,12 @@ std::unordered_map<std::string, std::vector<std::string>> cmAtmelStudio7TargetGe
     std::string flag_variable_config_name = flag_variable_name + "_" + upConfig;
     std::string lang_standard_varname = "CMAKE_" + lang + "_STANDARD";
 
-    cmProp lang_flags_base = this->Makefile->GetDefinition(flag_variable_name);
-    cmProp lang_flags_config = this->Makefile->GetDefinition(flag_variable_config_name);
-    cmProp lang_standard_def = this->Makefile->GetDefinition(lang_standard_varname);
+    cmValue lang_flags_base = this->Makefile->GetDefinition(flag_variable_name);
+    cmValue lang_flags_config = this->Makefile->GetDefinition(flag_variable_config_name);
+    cmValue lang_standard_def = this->Makefile->GetDefinition(lang_standard_varname);
 
-    auto compile_definitions = ConvertStringRange(this->Makefile->GetCompileDefinitionsEntries());
-    auto compile_options = ConvertStringRange(this->Makefile->GetCompileOptionsEntries());
+    auto compile_definitions = ConvertBTStringRange(this->Makefile->GetCompileDefinitionsEntries());
+    auto compile_options = ConvertBTStringRange(this->Makefile->GetCompileOptionsEntries());
 
     std::vector<std::string> base_flags;
     std::vector<std::string> config_flags;
@@ -592,7 +592,7 @@ void cmAtmelStudio7TargetGenerator::BuildProjectReferenceItemGroup(pugi::xml_nod
     cmLocalGenerator* lg = dependent_target->GetLocalGenerator();
     std::string name = dependent_target->GetName();
     std::string path;
-    cmProp p = dependent_target->GetProperty("EXTERNAL_MSPROJECT");
+    cmValue p = dependent_target->GetProperty("EXTERNAL_MSPROJECT");
     if (p != nullptr) {
       path = *p;
     } else {
