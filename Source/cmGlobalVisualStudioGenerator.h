@@ -38,7 +38,8 @@ public:
     /* VS13 = 130 was skipped */
     VS14 = 140,
     VS15 = 150,
-    VS16 = 160
+    VS16 = 160,
+    VS17 = 170
   };
 
   virtual ~cmGlobalVisualStudioGenerator();
@@ -166,11 +167,6 @@ protected:
 
   void WriteSLNHeader(std::ostream& fout);
 
-  FindMakeProgramStage GetFindMakeProgramStage() const override
-  {
-    return FindMakeProgramStage::Early;
-  }
-
   bool ComputeTargetDepends() override;
   class VSDependSet : public std::set<std::string>
   {
@@ -200,7 +196,7 @@ protected:
 private:
   virtual std::string GetVSMakeProgram() = 0;
   void PrintCompilerAdvice(std::ostream&, std::string const&,
-                           const char*) const override
+                           cmValue) const override
   {
   }
 

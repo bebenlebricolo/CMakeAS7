@@ -106,7 +106,7 @@ endmacro()
 # Do NOT even think about using it outside of this file!
 macro(_check_pthreads_flag)
   if(NOT Threads_FOUND)
-    # If we did not found -lpthread, -lpthread, or -lthread, look for -pthread
+    # If we did not find -lpthreads, -lpthread, or -lthread, look for -pthread
     if(NOT DEFINED THREADS_HAVE_PTHREAD_ARG)
       message(CHECK_START "Check if compiler accepts -pthread")
       if(CMAKE_C_COMPILER_LOADED)
@@ -119,7 +119,10 @@ macro(_check_pthreads_flag)
         ${CMAKE_BINARY_DIR}
         ${_threads_src}
         CMAKE_FLAGS -DLINK_LIBRARIES:STRING=-pthread
-        OUTPUT_VARIABLE OUTPUT)
+        OUTPUT_VARIABLE _cmake_check_pthreads_output)
+
+      string(APPEND _cmake_find_threads_output "${_cmake_check_pthreads_output}")
+      unset(_cmake_check_pthreads_output)
       unset(_threads_src)
 
       if(THREADS_HAVE_PTHREAD_ARG)
@@ -127,9 +130,6 @@ macro(_check_pthreads_flag)
         message(CHECK_PASS "yes")
       else()
         message(CHECK_FAIL "no")
-        file(APPEND
-          ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
-          "Determining if compiler accepts -pthread failed with the following output:\n${OUTPUT}\n\n")
       endif()
 
     endif()
@@ -225,7 +225,7 @@ if(CMAKE_USE_PTHREADS_INIT)
     set(CMAKE_THREAD_LIBS_INIT )
   endif()
 
-  if(CMAKE_SYSTEM MATCHES "CYGWIN_NT")
+  if(CMAKE_SYSTEM MATCHES "CYGWIN_NT" OR CMAKE_SYSTEM MATCHES "MSYS_NT")
     set(CMAKE_USE_PTHREADS_INIT 1)
     set(Threads_FOUND TRUE)
     set(CMAKE_THREAD_LIBS_INIT )
@@ -249,4 +249,10 @@ if(THREADS_FOUND AND NOT TARGET Threads::Threads)
   if(CMAKE_THREAD_LIBS_INIT)
     set_property(TARGET Threads::Threads PROPERTY INTERFACE_LINK_LIBRARIES "${CMAKE_THREAD_LIBS_INIT}")
   endif()
+elseif(NOT THREADS_FOUND AND _cmake_find_threads_output)
+  file(APPEND
+    ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+    "Determining if compiler accepts -pthread failed with the following output:\n${_cmake_find_threads_output}\n\n")
 endif()
+
+unset(_cmake_find_threads_output)

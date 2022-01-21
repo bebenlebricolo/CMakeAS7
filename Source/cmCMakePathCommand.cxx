@@ -22,6 +22,7 @@
 #include "cmStringAlgorithms.h"
 #include "cmSubcommandTable.h"
 #include "cmSystemTools.h"
+#include "cmValue.h"
 
 namespace {
 // Helper classes for argument parsing
@@ -149,8 +150,8 @@ public:
 bool getInputPath(const std::string& arg, cmExecutionStatus& status,
                   std::string& path)
 {
-  const auto* def = status.GetMakefile().GetDefinition(arg);
-  if (def == nullptr) {
+  cmValue def = status.GetMakefile().GetDefinition(arg);
+  if (!def) {
     status.SetError("undefined variable for input path.");
     return false;
   }

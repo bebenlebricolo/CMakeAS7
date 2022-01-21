@@ -11,9 +11,9 @@
 #include "cmGlobalGenerator.h"
 #include "cmMakefile.h"
 #include "cmMessageType.h"
-#include "cmProperty.h"
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
+#include "cmValue.h"
 #include "cmake.h"
 
 class cmExecutionStatus;
@@ -27,6 +27,7 @@ void cmCTestBuildCommand::BindArguments()
   this->Bind("CONFIGURATION"_s, this->Configuration);
   this->Bind("FLAGS"_s, this->Flags);
   this->Bind("PROJECT_NAME"_s, this->ProjectName);
+  this->Bind("PARALLEL_LEVEL"_s, this->ParallelLevel);
 }
 
 cmCTestBuildCommand::~cmCTestBuildCommand() = default;
@@ -38,13 +39,13 @@ cmCTestGenericHandler* cmCTestBuildCommand::InitializeHandler()
 
   this->Handler = handler;
 
-  cmProp ctestBuildCommand =
+  cmValue ctestBuildCommand =
     this->Makefile->GetDefinition("CTEST_BUILD_COMMAND");
   if (cmNonempty(ctestBuildCommand)) {
     this->CTest->SetCTestConfiguration("MakeCommand", *ctestBuildCommand,
                                        this->Quiet);
   } else {
-    cmProp cmakeGeneratorName =
+    cmValue cmakeGeneratorName =
       this->Makefile->GetDefinition("CTEST_CMAKE_GENERATOR");
 
     // Build configuration is determined by: CONFIGURATION argument,
@@ -52,7 +53,7 @@ cmCTestGenericHandler* cmCTestBuildCommand::InitializeHandler()
     // CTEST_CONFIGURATION_TYPE script variable, or ctest -C command
     // line argument... in that order.
     //
-    cmProp ctestBuildConfiguration =
+    cmValue ctestBuildConfiguration =
       this->Makefile->GetDefinition("CTEST_BUILD_CONFIGURATION");
     std::string cmakeBuildConfiguration = cmNonempty(this->Configuration)
       ? this->Configuration
@@ -98,8 +99,8 @@ cmCTestGenericHandler* cmCTestBuildCommand::InitializeHandler()
       std::string dir = this->CTest->GetCTestConfiguration("BuildDirectory");
       std::string buildCommand =
         this->GlobalGenerator->GenerateCMakeBuildCommand(
-          cmakeBuildTarget, cmakeBuildConfiguration, cmakeBuildAdditionalFlags,
-          this->Makefile->IgnoreErrorsCMP0061());
+          cmakeBuildTarget, cmakeBuildConfiguration, this->ParallelLevel,
+          cmakeBuildAdditionalFlags, this->Makefile->IgnoreErrorsCMP0061());
       cmCTestOptionalLog(this->CTest, HANDLER_VERBOSE_OUTPUT,
                          "SetMakeCommand:" << buildCommand << "\n",
                          this->Quiet);
@@ -118,13 +119,13 @@ cmCTestGenericHandler* cmCTestBuildCommand::InitializeHandler()
     }
   }
 
-  if (cmProp useLaunchers =
+  if (cmValue useLaunchers =
         this->Makefile->GetDefinition("CTEST_USE_LAUNCHERS")) {
     this->CTest->SetCTestConfiguration("UseLaunchers", *useLaunchers,
                                        this->Quiet);
   }
 
-  if (cmProp labelsForSubprojects =
+  if (cmValue labelsForSubprojects =
         this->Makefile->GetDefinition("CTEST_LABELS_FOR_SUBPROJECTS")) {
     this->CTest->SetCTestConfiguration("LabelsForSubprojects",
                                        *labelsForSubprojects, this->Quiet);

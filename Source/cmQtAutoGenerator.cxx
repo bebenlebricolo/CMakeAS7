@@ -9,6 +9,7 @@
 #include "cmQtAutoGen.h"
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
+#include "cmValue.h"
 
 cmQtAutoGenerator::Logger::Logger()
 {
@@ -116,7 +117,7 @@ bool cmQtAutoGenerator::MakeParentDirectory(std::string const& filename)
   bool success = true;
   std::string const dirName = cmSystemTools::GetFilenamePath(filename);
   if (!dirName.empty()) {
-    success = cmSystemTools::MakeDirectory(dirName);
+    success = static_cast<bool>(cmSystemTools::MakeDirectory(dirName));
   }
   return success;
 }

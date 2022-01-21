@@ -29,6 +29,7 @@
 #include "cmTarget.h"
 #include "cmTargetDepend.h"
 #include "cmTransformDepfile.h"
+#include "cmValue.h"
 
 #if !defined(CMAKE_BOOTSTRAP)
 #  include <cm3p/json/value.h>
@@ -42,6 +43,7 @@ class cmDirectoryId;
 class cmExportBuildFileGenerator;
 class cmExternalMakefileProjectGenerator;
 class cmGeneratorTarget;
+class cmInstallRuntimeDependencySet;
 class cmLinkLineComputer;
 class cmLocalGenerator;
 class cmMakefile;
@@ -151,6 +153,8 @@ public:
    */
   virtual void Configure();
 
+  virtual bool InspectConfigTypeVariables() { return true; }
+
   bool Compute();
   virtual void AddExtraIDETargets() {}
 
@@ -249,9 +253,13 @@ public:
 
   virtual void PrintBuildCommandAdvice(std::ostream& os, int jobs) const;
 
-  /** Generate a "cmake --build" call for a given target and config.  */
+  /**
+   * Generate a "cmake --build" call for a given target, config and parallel
+   * level.
+   */
   std::string GenerateCMakeBuildCommand(const std::string& target,
                                         const std::string& config,
+                                        const std::string& parallel,
                                         const std::string& native,
                                         bool ignoreErrors);
 
@@ -303,7 +311,7 @@ public:
 
   cmExportSetMap& GetExportSets() { return this->ExportSets; }
 
-  const char* GetGlobalSetting(std::string const& name) const;
+  cmValue GetGlobalSetting(std::string const& name) const;
   bool GlobalSettingIsOn(std::string const& name) const;
   std::string GetSafeGlobalSetting(std::string const& name) const;
 
@@ -438,6 +446,8 @@ public:
 
   virtual bool IsVisualStudio() const { return false; }
 
+  virtual bool IsVisualStudioAtLeast10() const { return false; }
+
   virtual bool IsNinja() const { return false; }
 
   /** Return true if we know the exact location of object files.
@@ -524,6 +534,11 @@ public:
 
   std::string NewDeferId();
 
+  cmInstallRuntimeDependencySet* CreateAnonymousRuntimeDependencySet();
+
+  cmInstallRuntimeDependencySet* GetNamedRuntimeDependencySet(
+    const std::string& name);
+
 protected:
   // for a project collect all its targets by following depend
   // information, and also collect all the targets
@@ -539,7 +554,7 @@ protected:
   virtual bool CheckLanguages(std::vector<std::string> const& languages,
                               cmMakefile* mf) const;
   virtual void PrintCompilerAdvice(std::ostream& os, std::string const& lang,
-                                   const char* envVar) const;
+                                   cmValue envVar) const;
 
   virtual bool ComputeTargetDepends();
 
@@ -586,7 +601,7 @@ protected:
   void AddGlobalTarget_RebuildCache(
     std::vector<GlobalTargetInfo>& targets) const;
   void AddGlobalTarget_Install(std::vector<GlobalTargetInfo>& targets);
-  cmTarget CreateGlobalTarget(GlobalTargetInfo const& gti, cmMakefile* mf);
+  void CreateGlobalTarget(GlobalTargetInfo const& gti, cmMakefile* mf);
 
   std::string FindMakeProgramFile;
   std::string ConfiguredFilesPath;
@@ -611,17 +626,6 @@ protected:
   cmGeneratorTarget* FindGeneratorTargetImpl(std::string const& name) const;
 
   std::string GetPredefinedTargetsFolder() const;
-
-  enum class FindMakeProgramStage
-  {
-    Early,
-    Late,
-  };
-
-  virtual FindMakeProgramStage GetFindMakeProgramStage() const
-  {
-    return FindMakeProgramStage::Late;
-  }
 
 private:
   using TargetMap = std::unordered_map<std::string, cmTarget*>;
@@ -742,6 +746,11 @@ private:
   std::map<std::string, std::string> RealPaths;
 
   std::unordered_set<std::string> GeneratedFiles;
+
+  std::vector<std::unique_ptr<cmInstallRuntimeDependencySet>>
+    RuntimeDependencySets;
+  std::map<std::string, cmInstallRuntimeDependencySet*>
+    RuntimeDependencySetsByName;
 
 #if !defined(CMAKE_BOOTSTRAP)
   // Pool of file locks

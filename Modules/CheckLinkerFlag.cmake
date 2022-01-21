@@ -41,6 +41,10 @@ include_guard(GLOBAL)
 
 include(CMakeCheckCompilerFlagCommonPatterns)
 
+cmake_policy(PUSH)
+cmake_policy(SET CMP0054 NEW) # if() quoted variables not dereferenced
+cmake_policy(SET CMP0057 NEW) # if() supports IN_LIST
+
 function(CHECK_LINKER_FLAG _lang _flag _var)
   get_property (_supported_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
   if (NOT _lang IN_LIST _supported_languages)
@@ -65,6 +69,8 @@ function(CHECK_LINKER_FLAG _lang _flag _var)
     set (_source "       program test\n       stop\n       end program")
   elseif (_lang MATCHES "CUDA")
     set (_source "__host__ int main() { return 0; }")
+  elseif (_lang MATCHES "HIP")
+    set (_source "__host__ int main() { return 0; }")
   elseif (_lang MATCHES "^(OBJC|OBJCXX)$")
     set (_source "#ifndef __OBJC__\n#  error \"Not an Objective-C++ compiler\"\n#endif\nint main(void) { return 0; }")
   else()
@@ -80,3 +86,5 @@ function(CHECK_LINKER_FLAG _lang _flag _var)
   endforeach()
   set(${_var} "${${_var}}" PARENT_SCOPE)
 endfunction()
+
+cmake_policy(POP)

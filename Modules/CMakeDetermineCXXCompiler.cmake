@@ -82,6 +82,11 @@ else()
 
     # ARMClang need target options
     "--target=arm-arm-none-eabi -mcpu=cortex-m3"
+
+    # MSVC needs at least one include directory for __has_include to function,
+    # but custom toolchains may run MSVC with no INCLUDE env var and no -I flags.
+    # Also avoid linking so this works with no LIB env var.
+    "-c -I__does_not_exist__"
     )
 endif()
 
@@ -121,11 +126,6 @@ if(NOT CMAKE_CXX_COMPILER_ID_RUN)
   # Set old compiler and platform id variables.
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_COMPILER_IS_GNUCXX 1)
-  endif()
-  if(CMAKE_CXX_PLATFORM_ID MATCHES "MinGW")
-    set(CMAKE_COMPILER_IS_MINGW 1)
-  elseif(CMAKE_CXX_PLATFORM_ID MATCHES "Cygwin")
-    set(CMAKE_COMPILER_IS_CYGWIN 1)
   endif()
 else()
   if(NOT DEFINED CMAKE_CXX_COMPILER_FRONTEND_VARIANT)

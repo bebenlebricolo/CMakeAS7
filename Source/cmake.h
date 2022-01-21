@@ -21,10 +21,10 @@
 #include "cmInstalledFile.h"
 #include "cmListFileCache.h"
 #include "cmMessageType.h"
-#include "cmProperty.h"
 #include "cmState.h"
 #include "cmStateSnapshot.h"
 #include "cmStateTypes.h"
+#include "cmValue.h"
 
 #if !defined(CMAKE_BOOTSTRAP)
 #  include <cm/optional>
@@ -168,7 +168,8 @@ public:
   static const int DEFAULT_BUILD_PARALLEL_LEVEL = 0;
 
   /// Default constructor
-  cmake(Role role, cmState::Mode mode);
+  cmake(Role role, cmState::Mode mode,
+        cmState::ProjectKind projectKind = cmState::ProjectKind::Normal);
   /// Destructor
   ~cmake();
 
@@ -192,6 +193,14 @@ public:
   void SetHomeOutputDirectory(const std::string& dir);
   std::string const& GetHomeOutputDirectory() const;
   //@}
+
+  /**
+   * Working directory at CMake launch
+   */
+  std::string const& GetCMakeWorkingDirectory() const
+  {
+    return this->CMakeWorkingDirectory;
+  }
 
   /**
    * Handle a command line invocation of cmake.
@@ -289,7 +298,7 @@ public:
     return this->CLikeSourceFileExtensions.Test(ext) ||
       this->CudaFileExtensions.Test(ext) ||
       this->FortranFileExtensions.Test(ext) ||
-      this->ISPCFileExtensions.Test(ext);
+      this->HipFileExtensions.Test(ext) || this->ISPCFileExtensions.Test(ext);
   }
 
   bool IsACLikeSourceExtension(cm::string_view ext) const
@@ -320,9 +329,21 @@ public:
   /**
    * Given a variable name, return its value (as a string).
    */
-  cmProp GetCacheDefinition(const std::string&) const;
+  cmValue GetCacheDefinition(const std::string&) const;
   //! Add an entry into the cache
   void AddCacheEntry(const std::string& key, const char* value,
+                     const char* helpString, int type)
+  {
+    this->AddCacheEntry(key,
+                        value ? cmValue(std::string(value)) : cmValue(nullptr),
+                        helpString, type);
+  }
+  void AddCacheEntry(const std::string& key, const std::string& value,
+                     const char* helpString, int type)
+  {
+    this->AddCacheEntry(key, cmValue(value), helpString, type);
+  }
+  void AddCacheEntry(const std::string& key, cmValue value,
                      const char* helpString, int type);
 
   bool DoWriteGlobVerifyTarget() const;
@@ -348,7 +369,6 @@ public:
 
   //! Is this cmake running as a result of a TRY_COMPILE command
   bool GetIsInTryCompile() const;
-  void SetIsInTryCompile(bool b);
 
 #ifndef CMAKE_BOOTSTRAP
   void SetWarningFromPreset(const std::string& name,
@@ -388,9 +408,14 @@ public:
 
   //! Set/Get a property of this target file
   void SetProperty(const std::string& prop, const char* value);
+  void SetProperty(const std::string& prop, cmValue value);
+  void SetProperty(const std::string& prop, const std::string& value)
+  {
+    this->SetProperty(prop, cmValue(value));
+  }
   void AppendProperty(const std::string& prop, const std::string& value,
                       bool asString = false);
-  cmProp GetProperty(const std::string& prop);
+  cmValue GetProperty(const std::string& prop);
   bool GetPropertyAsBool(const std::string& prop);
 
   //! Get or create an cmInstalledFile instance and return a pointer to it
@@ -628,6 +653,7 @@ protected:
   void GenerateGraphViz(const std::string& fileName) const;
 
 private:
+  std::string CMakeWorkingDirectory;
   ProgressCallbackType ProgressCallback;
   WorkingMode CurrentWorkingMode = NORMAL_MODE;
   bool DebugOutput = false;
@@ -653,6 +679,7 @@ private:
   FileExtensions CudaFileExtensions;
   FileExtensions ISPCFileExtensions;
   FileExtensions FortranFileExtensions;
+  FileExtensions HipFileExtensions;
   bool ClearBuildSystem = false;
   bool DebugTryCompile = false;
   bool RegenerateDuringBuild = false;
@@ -712,6 +739,10 @@ private:
       "Specify toolset name if supported by generator." },                    \
     { "-A <platform-name>",                                                   \
       "Specify platform name if supported by generator." },                   \
+    { "--toolchain <file>",                                                   \
+      "Specify toolchain file [CMAKE_TOOLCHAIN_FILE]." },                     \
+    { "--install-prefix <directory>",                                         \
+      "Specify install directory [CMAKE_INSTALL_PREFIX]." },                  \
     { "-Wdev", "Enable developer warnings." },                                \
     { "-Wno-dev", "Suppress developer warnings." },                           \
     { "-Werror=dev", "Make developer warnings errors." },                     \
@@ -739,6 +770,8 @@ private:
   F(c_std_90)                                                                 \
   F(c_std_99)                                                                 \
   F(c_std_11)                                                                 \
+  F(c_std_17)                                                                 \
+  F(c_std_23)                                                                 \
   FOR_EACH_C90_FEATURE(F)                                                     \
   FOR_EACH_C99_FEATURE(F)                                                     \
   FOR_EACH_C11_FEATURE(F)
@@ -823,3 +856,11 @@ private:
   F(cuda_std_17)                                                              \
   F(cuda_std_20)                                                              \
   F(cuda_std_23)
+
+#define FOR_EACH_HIP_FEATURE(F)                                               \
+  F(hip_std_98)                                                               \
+  F(hip_std_11)                                                               \
+  F(hip_std_14)                                                               \
+  F(hip_std_17)                                                               \
+  F(hip_std_20)                                                               \
+  F(hip_std_23)

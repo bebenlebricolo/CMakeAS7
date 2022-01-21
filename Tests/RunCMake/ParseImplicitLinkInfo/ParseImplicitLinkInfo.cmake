@@ -23,6 +23,9 @@ set(targets
   hand-C-empty hand-CXX-empty
   hand-C-relative hand-CXX-relative
   linux-C-GNU-7.3.0 linux-CXX-GNU-7.3.0 linux-Fortran-GNU-7.3.0
+  linux-C-GNU-10.2.1-static-libgcc
+    linux-CXX-GNU-10.2.1-static-libstdc++
+    linux-Fortran-GNU-10.2.1-static-libgfortran
   linux-C-Intel-18.0.0.20170811 linux-CXX-Intel-18.0.0.20170811
   linux-C-PGI-18.10.1 linux-CXX-PGI-18.10.1
     linux-Fortran-PGI-18.10.1 linux_pgf77-Fortran-PGI-18.10.1
@@ -35,6 +38,7 @@ set(targets
   linux-C-XL-16.1.0.0 linux-CXX-XL-16.1.0.0
   linux-CUDA-NVIDIA-10.1.168-CLANG linux-CUDA-NVIDIA-10.1.168-XLClang-v
     linux-CUDA-NVIDIA-9.2.148-GCC
+  linux-custom_clang-C-Clang-13.0.0 linux-custom_clang-CXX-Clang-13.0.0
   mingw.org-C-GNU-4.9.3 mingw.org-CXX-GNU-4.9.3
   netbsd-C-GNU-4.8.5 netbsd-CXX-GNU-4.8.5
     netbsd_nostdinc-C-GNU-4.8.5 netbsd_nostdinc-CXX-GNU-4.8.5
@@ -67,7 +71,7 @@ function(load_compiler_info infile lang_var outcmvars_var outstr_var)
   string(REGEX REPLACE "\r?\n" ";" in_lines "${in}")
   foreach(line IN LISTS in_lines)
     # check for special CMAKE variable lines and parse them if found
-    if("${line}" MATCHES "^CMAKE_([_A-Za-z0-9]+)=(.*)$")
+    if("${line}" MATCHES "^CMAKE_([_A-Za-z0-9+]+)=(.*)$")
       if("${CMAKE_MATCH_1}" STREQUAL "LANG")   # handle CMAKE_LANG here
         set(lang "${CMAKE_MATCH_2}")
       else()
@@ -162,12 +166,12 @@ foreach(t ${targets})
     if("${state}" STREQUAL "done")
       message("empty parse failed: ${idirs}, log=${log}")
     endif()
-  elseif(NOT "${idirs}" STREQUAL "${idirs_output}")
-    message("${t} parse failed: state=${state}, '${idirs}' does not match '${idirs_output}'")
-  elseif(NOT "${implicit_libs}" STREQUAL "${implicit_lib_output}")
-    message("${t} parse failed: state=${state}, '${implicit_libs}' does not match '${implicit_lib_output}'")
-  elseif((library_arch OR library_arch_output) AND NOT "${library_arch}" STREQUAL "${library_arch_output}")
-    message("${t} parse failed: state=${state}, '${library_arch}' does not match '${library_arch_output}'")
+  elseif(NOT "${idirs}" MATCHES "^${idirs_output}$")
+    message("${t} parse failed: state=${state}, '${idirs}' does not match '^${idirs_output}$'")
+  elseif(NOT "${implicit_libs}" MATCHES "^${implicit_lib_output}$")
+    message("${t} parse failed: state=${state}, '${implicit_libs}' does not match '^${implicit_lib_output}$'")
+  elseif((library_arch OR library_arch_output) AND NOT "${library_arch}" MATCHES "^${library_arch_output}$")
+    message("${t} parse failed: state=${state}, '${library_arch}' does not match '^${library_arch_output}$'")
   endif()
 
   unload_compiler_info("${cmvars}")

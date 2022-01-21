@@ -16,12 +16,12 @@
 #include "cmGlobalGenerator.h"
 #include "cmLocalGenerator.h"
 #include "cmMakefile.h"
-#include "cmProperty.h"
 #include "cmRange.h"
 #include "cmSourceFile.h"
 #include "cmStateTypes.h"
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
+#include "cmValue.h"
 #include "cmXMLWriter.h"
 #include "cmake.h"
 
@@ -366,10 +366,11 @@ void cmExtraCodeBlocksGenerator::CreateNewProjectFile(
               continue;
             }
 
-            // check whether it is a C/C++/CUDA implementation file
+            // check whether it is a C/C++/CUDA/HIP implementation file
             bool isCFile = false;
             std::string lang = s->GetOrDetermineLanguage();
-            if (lang == "C" || lang == "CXX" || lang == "CUDA") {
+            if (lang == "C" || lang == "CXX" || lang == "CUDA" ||
+                lang == "HIP") {
               std::string const& srcext = s->GetExtension();
               isCFile = cm->IsACLikeSourceExtension(srcext);
             }
@@ -395,8 +396,8 @@ void cmExtraCodeBlocksGenerator::CreateNewProjectFile(
             CbpUnit& cbpUnit = allFiles[fullPath];
             cbpUnit.Targets.push_back(target.get());
           }
-        }
-        default: // intended fallthrough
+        } break;
+        default:
           break;
       }
     }
@@ -498,12 +499,12 @@ void cmExtraCodeBlocksGenerator::AppendTarget(
     if (target->GetType() == cmStateEnums::EXECUTABLE) {
       // Determine the directory where the executable target is created, and
       // set the working directory to this dir.
-      cmProp runtimeOutputDir =
+      cmValue runtimeOutputDir =
         makefile->GetDefinition("CMAKE_RUNTIME_OUTPUT_DIRECTORY");
       if (runtimeOutputDir) {
         workingDir = *runtimeOutputDir;
       } else {
-        cmProp executableOutputDir =
+        cmValue executableOutputDir =
           makefile->GetDefinition("EXECUTABLE_OUTPUT_PATH");
         if (executableOutputDir) {
           workingDir = *executableOutputDir;

@@ -557,7 +557,7 @@ function(cpack_deb_prepare_package_vars)
         string(APPEND _description_failure_message
           " or CPACK_DEBIAN_${_local_component_name}_DESCRIPTION")
       endif()
-      message(FATAL_ERROR _description_failure_message)
+      message(FATAL_ERROR "${_description_failure_message}")
     endif()
 
   # Ok, description has set. According to the `Debian Policy Manual`_ the first
@@ -662,10 +662,12 @@ function(cpack_deb_prepare_package_vars)
 
   # add ldconfig call in default postrm and postint
   set(CPACK_ADD_LDCONFIG_CALL 0)
+  # all files in CPACK_DEB_SHARED_OBJECT_FILES have dot at the beginning
+  set(_LDCONF_DEFAULTS "./lib" "./usr/lib")
   foreach(_FILE IN LISTS CPACK_DEB_SHARED_OBJECT_FILES)
     get_filename_component(_DIR ${_FILE} DIRECTORY)
-    # all files in CPACK_DEB_SHARED_OBJECT_FILES have dot at the beginning
-    if(_DIR STREQUAL "./lib" OR _DIR STREQUAL "./usr/lib")
+    get_filename_component(_PARENT_DIR ${_DIR} DIRECTORY)
+    if(_DIR IN_LIST _LDCONF_DEFAULTS OR _PARENT_DIR IN_LIST _LDCONF_DEFAULTS)
       set(CPACK_ADD_LDCONFIG_CALL 1)
     endif()
   endforeach()
@@ -673,7 +675,7 @@ function(cpack_deb_prepare_package_vars)
   if(CPACK_ADD_LDCONFIG_CALL)
     set(CPACK_DEBIAN_GENERATE_POSTINST 1)
     set(CPACK_DEBIAN_GENERATE_POSTRM 1)
-    foreach(f IN LISTS PACKAGE_CONTROL_EXTRA)
+    foreach(f IN LISTS CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA)
       get_filename_component(n "${f}" NAME)
       if(n STREQUAL "postinst")
         set(CPACK_DEBIAN_GENERATE_POSTINST 0)

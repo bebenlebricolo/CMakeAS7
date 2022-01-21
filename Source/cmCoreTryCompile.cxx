@@ -8,6 +8,7 @@
 #include <sstream>
 #include <utility>
 
+#include <cm/string_view>
 #include <cmext/string_view>
 
 #include "cmsys/Directory.hxx"
@@ -18,11 +19,11 @@
 #include "cmMessageType.h"
 #include "cmOutputConverter.h"
 #include "cmPolicies.h"
-#include "cmProperty.h"
 #include "cmState.h"
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
 #include "cmTarget.h"
+#include "cmValue.h"
 #include "cmVersion.h"
 #include "cmake.h"
 
@@ -188,6 +189,8 @@ SETUP_LANGUAGE(cuda_properties, CUDA);
 // NOLINTNEXTLINE(bugprone-suspicious-missing-comma)
 SETUP_LANGUAGE(fortran_properties, Fortran);
 // NOLINTNEXTLINE(bugprone-suspicious-missing-comma)
+SETUP_LANGUAGE(hip_properties, HIP);
+// NOLINTNEXTLINE(bugprone-suspicious-missing-comma)
 SETUP_LANGUAGE(objc_properties, OBJC);
 // NOLINTNEXTLINE(bugprone-suspicious-missing-comma)
 SETUP_LANGUAGE(objcxx_properties, OBJCXX);
@@ -200,6 +203,8 @@ SETUP_LANGUAGE(swift_properties, Swift);
 std::string const kCMAKE_CUDA_ARCHITECTURES = "CMAKE_CUDA_ARCHITECTURES";
 std::string const kCMAKE_CUDA_RUNTIME_LIBRARY = "CMAKE_CUDA_RUNTIME_LIBRARY";
 std::string const kCMAKE_ENABLE_EXPORTS = "CMAKE_ENABLE_EXPORTS";
+std::string const kCMAKE_HIP_ARCHITECTURES = "CMAKE_HIP_ARCHITECTURES";
+std::string const kCMAKE_HIP_RUNTIME_LIBRARY = "CMAKE_HIP_RUNTIME_LIBRARY";
 std::string const kCMAKE_ISPC_INSTRUCTION_SETS = "CMAKE_ISPC_INSTRUCTION_SETS";
 std::string const kCMAKE_ISPC_HEADER_SUFFIX = "CMAKE_ISPC_HEADER_SUFFIX";
 std::string const kCMAKE_LINK_SEARCH_END_STATIC =
@@ -217,6 +222,7 @@ std::string const kCMAKE_POSITION_INDEPENDENT_CODE =
 std::string const kCMAKE_SYSROOT = "CMAKE_SYSROOT";
 std::string const kCMAKE_SYSROOT_COMPILE = "CMAKE_SYSROOT_COMPILE";
 std::string const kCMAKE_SYSROOT_LINK = "CMAKE_SYSROOT_LINK";
+std::string const kCMAKE_ARMClang_CMP0123 = "CMAKE_ARMClang_CMP0123";
 std::string const kCMAKE_TRY_COMPILE_OSX_ARCHITECTURES =
   "CMAKE_TRY_COMPILE_OSX_ARCHITECTURES";
 std::string const kCMAKE_TRY_COMPILE_PLATFORM_VARIABLES =
@@ -240,7 +246,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
   this->SrcFileSignature = true;
 
   cmStateEnums::TargetType targetType = cmStateEnums::EXECUTABLE;
-  cmProp tt = this->Makefile->GetDefinition("CMAKE_TRY_COMPILE_TARGET_TYPE");
+  cmValue tt = this->Makefile->GetDefinition("CMAKE_TRY_COMPILE_TARGET_TYPE");
   if (!isTryRun && cmNonempty(tt)) {
     if (*tt == cmState::GetTargetTypeName(cmStateEnums::EXECUTABLE)) {
       targetType = cmStateEnums::EXECUTABLE;
@@ -272,6 +278,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
   LanguageStandardState cState("C");
   LanguageStandardState cudaState("CUDA");
   LanguageStandardState cxxState("CXX");
+  LanguageStandardState hipState("HIP");
   LanguageStandardState objcState("OBJC");
   LanguageStandardState objcxxState("OBJCXX");
   std::vector<std::string> targets;
@@ -321,6 +328,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
     } else if (cState.UpdateIfMatches(argv, i) ||
                cxxState.UpdateIfMatches(argv, i) ||
                cudaState.UpdateIfMatches(argv, i) ||
+               hipState.UpdateIfMatches(argv, i) ||
                objcState.UpdateIfMatches(argv, i) ||
                objcxxState.UpdateIfMatches(argv, i)) {
       continue;
@@ -426,6 +434,9 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
     if (!cudaState.Validate(this->Makefile)) {
       return -1;
     }
+    if (!hipState.Validate(this->Makefile)) {
+      return -1;
+    }
     if (!cxxState.Validate(this->Makefile)) {
       return -1;
     }
@@ -529,7 +540,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
       return -1;
     }
 
-    cmProp def = this->Makefile->GetDefinition("CMAKE_MODULE_PATH");
+    cmValue def = this->Makefile->GetDefinition("CMAKE_MODULE_PATH");
     fprintf(fout, "cmake_minimum_required(VERSION %u.%u.%u.%u)\n",
             cmVersion::GetMajorVersion(), cmVersion::GetMinorVersion(),
             cmVersion::GetPatchVersion(), cmVersion::GetTweakVersion());
@@ -538,7 +549,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
     }
 
     /* Set MSVC runtime library policy to match our selection.  */
-    if (cmProp msvcRuntimeLibraryDefault =
+    if (cmValue msvcRuntimeLibraryDefault =
           this->Makefile->GetDefinition(kCMAKE_MSVC_RUNTIME_LIBRARY_DEFAULT)) {
       fprintf(fout, "cmake_policy(SET CMP0091 %s)\n",
               !msvcRuntimeLibraryDefault->empty() ? "NEW" : "OLD");
@@ -552,16 +563,30 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
       fprintf(fout, "cmake_policy(SET CMP0104 OLD)\n");
     }
 
+    /* Set ARMClang cpu/arch policy to match outer project.  */
+    if (cmValue cmp0123 =
+          this->Makefile->GetDefinition(kCMAKE_ARMClang_CMP0123)) {
+      fprintf(fout, "cmake_policy(SET CMP0123 %s)\n",
+              *cmp0123 == "NEW"_s ? "NEW" : "OLD");
+    }
+
+    /* Set cache/normal variable policy to match outer project.
+       It may affect toolchain files.  */
+    if (this->Makefile->GetPolicyStatus(cmPolicies::CMP0126) !=
+        cmPolicies::NEW) {
+      fprintf(fout, "cmake_policy(SET CMP0126 OLD)\n");
+    }
+
     std::string projectLangs;
     for (std::string const& li : testLangs) {
       projectLangs += " " + li;
       std::string rulesOverrideBase = "CMAKE_USER_MAKE_RULES_OVERRIDE";
       std::string rulesOverrideLang = cmStrCat(rulesOverrideBase, "_", li);
-      if (cmProp rulesOverridePath =
+      if (cmValue rulesOverridePath =
             this->Makefile->GetDefinition(rulesOverrideLang)) {
         fprintf(fout, "set(%s \"%s\")\n", rulesOverrideLang.c_str(),
                 rulesOverridePath->c_str());
-      } else if (cmProp rulesOverridePath2 =
+      } else if (cmValue rulesOverridePath2 =
                    this->Makefile->GetDefinition(rulesOverrideBase)) {
         fprintf(fout, "set(%s \"%s\")\n", rulesOverrideBase.c_str(),
                 rulesOverridePath2->c_str());
@@ -579,9 +604,9 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
     fprintf(fout, "set(CMAKE_VERBOSE_MAKEFILE 1)\n");
     for (std::string const& li : testLangs) {
       std::string langFlags = "CMAKE_" + li + "_FLAGS";
-      cmProp flags = this->Makefile->GetDefinition(langFlags);
+      cmValue flags = this->Makefile->GetDefinition(langFlags);
       fprintf(fout, "set(CMAKE_%s_FLAGS %s)\n", li.c_str(),
-              cmOutputConverter::EscapeForCMake(cmToCStrSafe(flags)).c_str());
+              cmOutputConverter::EscapeForCMake(*flags).c_str());
       fprintf(fout,
               "set(CMAKE_%s_FLAGS \"${CMAKE_%s_FLAGS}"
               " ${COMPILE_DEFINITIONS}\")\n",
@@ -601,6 +626,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
           /* clang-format on */
           this->Makefile->IssueMessage(MessageType::AUTHOR_WARNING, w.str());
         }
+        CM_FALLTHROUGH;
       case cmPolicies::OLD:
         // OLD behavior is to do nothing.
         break;
@@ -618,10 +644,9 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
         for (std::string const& li : testLangs) {
           std::string const langFlagsCfg =
             cmStrCat("CMAKE_", li, "_FLAGS_", cfg);
-          cmProp flagsCfg = this->Makefile->GetDefinition(langFlagsCfg);
-          fprintf(
-            fout, "set(%s %s)\n", langFlagsCfg.c_str(),
-            cmOutputConverter::EscapeForCMake(cmToCStrSafe(flagsCfg)).c_str());
+          cmValue flagsCfg = this->Makefile->GetDefinition(langFlagsCfg);
+          fprintf(fout, "set(%s %s)\n", langFlagsCfg.c_str(),
+                  cmOutputConverter::EscapeForCMake(*flagsCfg).c_str());
         }
       } break;
     }
@@ -639,6 +664,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
           /* clang-format on */
           this->Makefile->IssueMessage(MessageType::AUTHOR_WARNING, w.str());
         }
+        CM_FALLTHROUGH;
       case cmPolicies::OLD:
         // OLD behavior is to do nothing.
         break;
@@ -651,11 +677,10 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
       case cmPolicies::NEW:
         // NEW behavior is to pass linker flags.
         {
-          cmProp exeLinkFlags =
+          cmValue exeLinkFlags =
             this->Makefile->GetDefinition("CMAKE_EXE_LINKER_FLAGS");
           fprintf(fout, "set(CMAKE_EXE_LINKER_FLAGS %s)\n",
-                  cmOutputConverter::EscapeForCMake(cmToCStrSafe(exeLinkFlags))
-                    .c_str());
+                  cmOutputConverter::EscapeForCMake(*exeLinkFlags).c_str());
         }
         break;
     }
@@ -706,6 +731,8 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
       vars.insert(
         &fortran_properties[lang_property_start],
         &fortran_properties[lang_property_start + lang_property_size]);
+      vars.insert(&hip_properties[lang_property_start],
+                  &hip_properties[lang_property_start + lang_property_size]);
       vars.insert(&objc_properties[lang_property_start],
                   &objc_properties[lang_property_start + lang_property_size]);
       vars.insert(
@@ -718,6 +745,8 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
       vars.insert(kCMAKE_CUDA_ARCHITECTURES);
       vars.insert(kCMAKE_CUDA_RUNTIME_LIBRARY);
       vars.insert(kCMAKE_ENABLE_EXPORTS);
+      vars.insert(kCMAKE_HIP_ARCHITECTURES);
+      vars.insert(kCMAKE_HIP_RUNTIME_LIBRARY);
       vars.insert(kCMAKE_ISPC_INSTRUCTION_SETS);
       vars.insert(kCMAKE_ISPC_HEADER_SUFFIX);
       vars.insert(kCMAKE_LINK_SEARCH_END_STATIC);
@@ -733,7 +762,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
       vars.insert(kCMAKE_WARN_DEPRECATED);
       vars.emplace("CMAKE_MSVC_RUNTIME_LIBRARY"_s);
 
-      if (cmProp varListStr = this->Makefile->GetDefinition(
+      if (cmValue varListStr = this->Makefile->GetDefinition(
             kCMAKE_TRY_COMPILE_PLATFORM_VARIABLES)) {
         std::vector<std::string> varList = cmExpandedList(*varListStr);
         vars.insert(varList.begin(), varList.end());
@@ -752,6 +781,8 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
         vars.insert(
           &fortran_properties[pie_property_start],
           &fortran_properties[pie_property_start + pie_property_size]);
+        vars.insert(&hip_properties[pie_property_start],
+                    &hip_properties[pie_property_start + pie_property_size]);
         vars.insert(&objc_properties[pie_property_start],
                     &objc_properties[pie_property_start + pie_property_size]);
         vars.insert(
@@ -770,7 +801,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
          cmLocalGenerator doesn't allow building for "the other"
          architecture only via CMAKE_OSX_ARCHITECTURES.
          */
-      if (cmProp tcArchs = this->Makefile->GetDefinition(
+      if (cmValue tcArchs = this->Makefile->GetDefinition(
             kCMAKE_TRY_COMPILE_OSX_ARCHITECTURES)) {
         vars.erase(kCMAKE_OSX_ARCHITECTURES);
         std::string flag = "-DCMAKE_OSX_ARCHITECTURES=" + *tcArchs;
@@ -778,7 +809,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
       }
 
       for (std::string const& var : vars) {
-        if (cmProp val = this->Makefile->GetDefinition(var)) {
+        if (cmValue val = this->Makefile->GetDefinition(var)) {
           std::string flag = "-D" + var + "=" + *val;
           cmakeFlags.push_back(std::move(flag));
         }
@@ -826,6 +857,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
     cState.Enabled(testLangs.find("C") != testLangs.end());
     cxxState.Enabled(testLangs.find("CXX") != testLangs.end());
     cudaState.Enabled(testLangs.find("CUDA") != testLangs.end());
+    hipState.Enabled(testLangs.find("HIP") != testLangs.end());
     objcState.Enabled(testLangs.find("OBJC") != testLangs.end());
     objcxxState.Enabled(testLangs.find("OBJCXX") != testLangs.end());
 
@@ -833,7 +865,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
     bool honorStandard = true;
 
     if (cState.DidNone() && cxxState.DidNone() && objcState.DidNone() &&
-        objcxxState.DidNone() && cudaState.DidNone()) {
+        objcxxState.DidNone() && cudaState.DidNone() && hipState.DidNone()) {
       switch (this->Makefile->GetPolicyStatus(cmPolicies::CMP0067)) {
         case cmPolicies::WARN:
           warnCMP0067 = this->Makefile->PolicyOptionalWarningEnabled(
@@ -848,6 +880,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
           this->Makefile->IssueMessage(
             MessageType::FATAL_ERROR,
             cmPolicies::GetRequiredPolicyError(cmPolicies::CMP0067));
+          break;
         case cmPolicies::NEW:
           // NEW behavior is to honor the language standard variables.
           // We already initialized honorStandard to true.
@@ -863,6 +896,8 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
                                      warnCMP0067, warnCMP0067Variables);
     cudaState.LoadUnsetPropertyValues(this->Makefile, honorStandard,
                                       warnCMP0067, warnCMP0067Variables);
+    hipState.LoadUnsetPropertyValues(this->Makefile, honorStandard,
+                                     warnCMP0067, warnCMP0067Variables);
     objcState.LoadUnsetPropertyValues(this->Makefile, honorStandard,
                                       warnCMP0067, warnCMP0067Variables);
     objcxxState.LoadUnsetPropertyValues(this->Makefile, honorStandard,
@@ -885,6 +920,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
     cState.WriteProperties(fout, targetName);
     cxxState.WriteProperties(fout, targetName);
     cudaState.WriteProperties(fout, targetName);
+    hipState.WriteProperties(fout, targetName);
     objcState.WriteProperties(fout, targetName);
     objcxxState.WriteProperties(fout, targetName);
 
@@ -919,7 +955,7 @@ int cmCoreTryCompile::TryCompileCode(std::vector<std::string> const& argv,
   if (this->Makefile->GetState()->UseGhsMultiIDE()) {
     // Forward the GHS variables to the inner project cache.
     for (std::string const& var : ghs_platform_vars) {
-      if (cmProp val = this->Makefile->GetDefinition(var)) {
+      if (cmValue val = this->Makefile->GetDefinition(var)) {
         std::string flag = "-D" + var + "=" + "'" + *val + "'";
         cmakeFlags.push_back(std::move(flag));
       }
@@ -1015,17 +1051,21 @@ void cmCoreTryCompile::CleanupFiles(std::string const& binDir)
           // cannot delete them immediately.  Try a few times.
           cmSystemTools::WindowsFileRetry retry =
             cmSystemTools::GetWindowsFileRetry();
-          while (!cmSystemTools::RemoveFile(fullPath) && --retry.Count &&
-                 cmSystemTools::FileExists(fullPath)) {
+          cmsys::Status status;
+          while (!((status = cmSystemTools::RemoveFile(fullPath))) &&
+                 --retry.Count && cmSystemTools::FileExists(fullPath)) {
             cmSystemTools::Delay(retry.Delay);
           }
           if (retry.Count == 0)
 #else
-          if (!cmSystemTools::RemoveFile(fullPath))
+          cmsys::Status status = cmSystemTools::RemoveFile(fullPath);
+          if (!status)
 #endif
           {
-            std::string m = "Remove failed on file: " + fullPath;
-            cmSystemTools::ReportLastSystemError(m.c_str());
+            this->Makefile->IssueMessage(
+              MessageType::FATAL_ERROR,
+              cmStrCat("The file:\n  ", fullPath,
+                       "\ncould not be removed:\n  ", status.GetString()));
           }
         }
       }
@@ -1057,7 +1097,7 @@ void cmCoreTryCompile::FindOutputFile(const std::string& targetName,
   std::vector<std::string> searchDirs;
   searchDirs.emplace_back();
 
-  cmProp config =
+  cmValue config =
     this->Makefile->GetDefinition("CMAKE_TRY_COMPILE_CONFIGURATION");
   // if a config was specified try that first
   if (cmNonempty(config)) {

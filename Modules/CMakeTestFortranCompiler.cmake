@@ -17,11 +17,18 @@ unset(CMAKE_Fortran_COMPILER_WORKS CACHE)
 
 # Try to identify the ABI and configure it into CMakeFortranCompiler.cmake
 include(${CMAKE_ROOT}/Modules/CMakeDetermineCompilerABI.cmake)
-CMAKE_DETERMINE_COMPILER_ABI(Fortran ${CMAKE_ROOT}/Modules/CMakeFortranCompilerABI.F)
+CMAKE_DETERMINE_COMPILER_ABI(Fortran ${CMAKE_ROOT}/Modules/CMakeFortranCompilerABI.F90)
 if(CMAKE_Fortran_ABI_COMPILED)
   # The compiler worked so skip dedicated test below.
   set(CMAKE_Fortran_COMPILER_WORKS TRUE)
+  set(CMAKE_Fortran_COMPILER_SUPPORTS_F90 1)
   message(STATUS "Check for working Fortran compiler: ${CMAKE_Fortran_COMPILER} - skipped")
+else()
+  cmake_determine_compiler_abi(Fortran ${CMAKE_ROOT}/Modules/CMakeFortranCompilerABI.F)
+  if(CMAKE_Fortran_ABI_COMPILED)
+    set(CMAKE_Fortran_COMPILER_WORKS TRUE)
+    message(STATUS "Check for working Fortran 77 compiler: ${CMAKE_Fortran_COMPILER} - skipped")
+  endif()
 endif()
 
 # This file is used by EnableLanguage in cmGlobalGenerator to
@@ -36,6 +43,9 @@ if(NOT CMAKE_Fortran_COMPILER_WORKS)
         PRINT *, 'Hello'
         END
   ")
+  # Clear result from normal variable.
+  unset(CMAKE_Fortran_COMPILER_WORKS)
+  # Puts test result in cache variable.
   try_compile(CMAKE_Fortran_COMPILER_WORKS ${CMAKE_BINARY_DIR}
     ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testFortranCompiler.f
     OUTPUT_VARIABLE OUTPUT)

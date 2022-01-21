@@ -15,7 +15,6 @@
 #include "cmMessageType.h"
 #include "cmPolicies.h"
 #include "cmProcessOutput.h"
-#include "cmProperty.h"
 #include "cmQtAutoGen.h"
 #include "cmQtAutoGenInitializer.h"
 #include "cmState.h"
@@ -23,6 +22,7 @@
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
 #include "cmTarget.h"
+#include "cmValue.h"
 
 cmQtAutoGenGlobalInitializer::Keywords::Keywords()
   : AUTOMOC("AUTOMOC")
@@ -119,7 +119,8 @@ cmQtAutoGenGlobalInitializer::cmQtAutoGenGlobalInitializer(
           target->GetSafeProperty(this->kw().AUTORCC_EXECUTABLE);
 
         // We support Qt4, Qt5 and Qt6
-        auto qtVersion = cmQtAutoGenInitializer::GetQtVersion(target.get());
+        auto qtVersion =
+          cmQtAutoGenInitializer::GetQtVersion(target.get(), mocExec);
         bool const validQt = (qtVersion.first.Major == 4) ||
           (qtVersion.first.Major == 5) || (qtVersion.first.Major == 6);
 
@@ -182,10 +183,10 @@ void cmQtAutoGenGlobalInitializer::GetOrCreateGlobalTarget(
 
     // Set FOLDER property in the target
     {
-      cmProp folder =
+      cmValue folder =
         makefile->GetState()->GetGlobalProperty("AUTOGEN_TARGETS_FOLDER");
-      if (folder != nullptr) {
-        target->SetProperty("FOLDER", *folder);
+      if (folder) {
+        target->SetProperty("FOLDER", folder);
       }
     }
   }

@@ -4,7 +4,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <map>
 #include <ratio>
 #include <sstream>
@@ -35,12 +34,12 @@
 #include "cmGeneratedFileStream.h"
 #include "cmGlobalGenerator.h"
 #include "cmMakefile.h"
-#include "cmProperty.h"
 #include "cmState.h"
 #include "cmStateDirectory.h"
 #include "cmStateSnapshot.h"
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
+#include "cmValue.h"
 #include "cmake.h"
 
 #ifdef _WIN32
@@ -91,7 +90,7 @@ void cmCTestScriptHandler::Initialize()
 cmCTestScriptHandler::~cmCTestScriptHandler() = default;
 
 // just adds an argument to the vector
-void cmCTestScriptHandler::AddConfigurationScript(const char* script,
+void cmCTestScriptHandler::AddConfigurationScript(const std::string& script,
                                                   bool pscope)
 {
   this->ConfigurationScripts.emplace_back(script);
@@ -373,8 +372,8 @@ int cmCTestScriptHandler::ReadInScript(const std::string& total_script_arg)
 int cmCTestScriptHandler::ExtractVariables()
 {
   // Temporary variables
-  cmProp minInterval;
-  cmProp contDuration;
+  cmValue minInterval;
+  cmValue contDuration;
 
   this->SourceDir =
     this->Makefile->GetSafeDefinition("CTEST_SOURCE_DIRECTORY");
@@ -413,7 +412,7 @@ int cmCTestScriptHandler::ExtractVariables()
   int i;
   for (i = 1; i < 10; ++i) {
     sprintf(updateVar, "CTEST_EXTRA_UPDATES_%i", i);
-    cmProp updateVal = this->Makefile->GetDefinition(updateVar);
+    cmValue updateVal = this->Makefile->GetDefinition(updateVar);
     if (updateVal) {
       if (this->UpdateCmd.empty()) {
         cmSystemTools::Error(
@@ -676,7 +675,7 @@ int cmCTestScriptHandler::RunConfigurationDashboard()
 
   // clear the binary directory?
   if (this->EmptyBinDir) {
-    if (!cmCTestScriptHandler::EmptyBinaryDirectory(this->BinaryDir.c_str())) {
+    if (!cmCTestScriptHandler::EmptyBinaryDirectory(this->BinaryDir)) {
       cmCTestLog(this->CTest, ERROR_MESSAGE,
                  "Problem removing the binary directory" << std::endl);
     }
@@ -724,8 +723,8 @@ int cmCTestScriptHandler::RunConfigurationDashboard()
 
   // put the initial cache into the bin dir
   if (!this->InitialCache.empty()) {
-    if (!cmCTestScriptHandler::WriteInitialCache(this->BinaryDir.c_str(),
-                                                 this->InitialCache.c_str())) {
+    if (!cmCTestScriptHandler::WriteInitialCache(this->BinaryDir,
+                                                 this->InitialCache)) {
       this->RestoreBackupDirectories();
       return 9;
     }
@@ -812,8 +811,8 @@ int cmCTestScriptHandler::RunConfigurationDashboard()
   return 0;
 }
 
-bool cmCTestScriptHandler::WriteInitialCache(const char* directory,
-                                             const char* text)
+bool cmCTestScriptHandler::WriteInitialCache(const std::string& directory,
+                                             const std::string& text)
 {
   std::string cacheFile = cmStrCat(directory, "/CMakeCache.txt");
   cmGeneratedFileStream fout(cacheFile);
@@ -821,9 +820,7 @@ bool cmCTestScriptHandler::WriteInitialCache(const char* directory,
     return false;
   }
 
-  if (text != nullptr) {
-    fout.write(text, strlen(text));
-  }
+  fout.write(text.data(), text.size());
 
   // Make sure the operating system has finished writing the file
   // before closing it.  This will ensure the file is finished before
@@ -852,7 +849,7 @@ void cmCTestScriptHandler::RestoreBackupDirectories()
 }
 
 bool cmCTestScriptHandler::RunScript(cmCTest* ctest, cmMakefile* mf,
-                                     const char* sname, bool InProcess,
+                                     const std::string& sname, bool InProcess,
                                      int* returnValue)
 {
   auto sh = cm::make_unique<cmCTestScriptHandler>();
@@ -866,10 +863,10 @@ bool cmCTestScriptHandler::RunScript(cmCTest* ctest, cmMakefile* mf,
   return true;
 }
 
-bool cmCTestScriptHandler::EmptyBinaryDirectory(const char* sname)
+bool cmCTestScriptHandler::EmptyBinaryDirectory(const std::string& sname)
 {
   // try to avoid deleting root
-  if (!sname || strlen(sname) < 2) {
+  if (sname.size() < 2) {
     return false;
   }
 
@@ -924,7 +921,7 @@ bool cmCTestScriptHandler::TryToRemoveBinaryDirectoryOnce(
     }
   }
 
-  return cmSystemTools::RemoveADirectory(directoryPath);
+  return static_cast<bool>(cmSystemTools::RemoveADirectory(directoryPath));
 }
 
 cmDuration cmCTestScriptHandler::GetRemainingTimeAllowed()
@@ -933,7 +930,7 @@ cmDuration cmCTestScriptHandler::GetRemainingTimeAllowed()
     return cmCTest::MaxDuration();
   }
 
-  cmProp timelimitS = this->Makefile->GetDefinition("CTEST_TIME_LIMIT");
+  cmValue timelimitS = this->Makefile->GetDefinition("CTEST_TIME_LIMIT");
 
   if (!timelimitS) {
     return cmCTest::MaxDuration();

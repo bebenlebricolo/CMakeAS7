@@ -18,6 +18,9 @@ else()
   message(FATAL_ERROR "'ninja --version' reported:\n${ninja_out}")
 endif()
 
+# Sanitize NINJA_STATUS since we expect default behavior.
+unset(ENV{NINJA_STATUS})
+
 if(CMAKE_HOST_WIN32)
   run_cmake(SelectCompilerWindows)
 else()
@@ -67,7 +70,7 @@ run_CMP0058(WARN-by)
 run_CMP0058(NEW-no)
 run_CMP0058(NEW-by)
 
-run_cmake(CustomCommandDepfile)
+run_cmake_with_options(CustomCommandDepfile -DCMAKE_BUILD_TYPE=Debug)
 run_cmake(CustomCommandJobPool)
 run_cmake(JobPoolUsesTerminal)
 
@@ -163,12 +166,12 @@ run_LooseObjectDepends()
 function (run_AssumedSources)
   set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/AssumedSources-build)
   run_cmake(AssumedSources)
-  run_ninja("${RunCMake_TEST_BINARY_DIR}" "target.c")
+  run_ninja("${RunCMake_TEST_BINARY_DIR}" "${RunCMake_TEST_BINARY_DIR}/target.c")
   if (NOT EXISTS "${RunCMake_TEST_BINARY_DIR}/target.c")
     message(FATAL_ERROR
       "Dependencies for an assumed source did not hook up properly for 'target.c'.")
   endif ()
-  run_ninja("${RunCMake_TEST_BINARY_DIR}" "target-no-depends.c")
+  run_ninja("${RunCMake_TEST_BINARY_DIR}" "${RunCMake_TEST_BINARY_DIR}/target-no-depends.c")
   if (EXISTS "${RunCMake_TEST_BINARY_DIR}/target-no-depends.c")
     message(FATAL_ERROR
       "Dependencies for an assumed source were magically hooked up for 'target-no-depends.c'.")
@@ -316,12 +319,17 @@ function (run_ChangeBuildType)
 endfunction()
 run_ChangeBuildType()
 
-function(run_Qt5AutoMocDeps)
-  if(CMake_TEST_Qt5 AND CMAKE_TEST_Qt5Core_Version VERSION_GREATER_EQUAL 5.15.0)
-    set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/Qt5AutoMocDeps-build)
-    set(RunCMake_TEST_OPTIONS "-DQt5Core_DIR=${Qt5Core_DIR}" "-DQt5Widgets_DIR=${Qt5Widgets_DIR}")
-    run_cmake(Qt5AutoMocDeps)
-    unset(RunCMake_TEST_OPTIONS)
+function(run_QtAutoMocDeps)
+  set(QtX Qt${CMake_TEST_Qt_version})
+  if(CMake_TEST_${QtX}Core_Version VERSION_GREATER_EQUAL 5.15.0)
+    set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/QtAutoMocDeps-build)
+    run_cmake_with_options(QtAutoMocDeps
+      "-Dwith_qt_version=${CMake_TEST_Qt_version}"
+      "-D${QtX}_DIR=${${QtX}_DIR}"
+      "-D${QtX}Core_DIR=${${QtX}Core_DIR}"
+      "-D${QtX}Widgets_DIR=${${QtX}Widgets_DIR}"
+      "-DCMAKE_PREFIX_PATH:STRING=${CMAKE_PREFIX_PATH}"
+    )
     # Build the project.
     run_ninja("${RunCMake_TEST_BINARY_DIR}")
     # Touch just the library source file, which shouldn't cause a rerun of AUTOMOC
@@ -349,4 +357,6 @@ function(run_Qt5AutoMocDeps)
     run_ninja("${RunCMake_TEST_BINARY_DIR}")
   endif()
 endfunction()
-run_Qt5AutoMocDeps()
+if(CMake_TEST_Qt_version)
+  run_QtAutoMocDeps()
+endif()

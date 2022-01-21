@@ -31,7 +31,6 @@
 #include "cmGeneratorExpression.h"
 #include "cmMakefile.h"
 #include "cmMessageType.h"
-#include "cmProperty.h"
 #include "cmRange.h"
 #include "cmStringAlgorithms.h"
 #include "cmStringReplaceHelper.h"
@@ -39,6 +38,7 @@
 #include "cmSystemTools.h"
 #include "cmTimestamp.h"
 #include "cmUuid.h"
+#include "cmValue.h"
 
 namespace {
 
@@ -241,7 +241,7 @@ bool RegexMatch(std::vector<std::string> const& args,
   status.GetMakefile().ClearMatches();
   // Compile the regular expression.
   cmsys::RegularExpression re;
-  if (!re.compile(regex.c_str())) {
+  if (!re.compile(regex)) {
     std::string e =
       "sub-command REGEX, mode MATCH failed to compile regex \"" + regex +
       "\".";
@@ -283,7 +283,7 @@ bool RegexMatchAll(std::vector<std::string> const& args,
   status.GetMakefile().ClearMatches();
   // Compile the regular expression.
   cmsys::RegularExpression re;
-  if (!re.compile(regex.c_str())) {
+  if (!re.compile(regex)) {
     std::string e =
       "sub-command REGEX, mode MATCHALL failed to compile regex \"" + regex +
       "\".";
@@ -572,7 +572,7 @@ bool HandlePrependCommand(std::vector<std::string> const& args,
   const std::string& variable = args[1];
 
   std::string value = cmJoin(cmMakeRange(args).advance(2), std::string());
-  cmProp oldValue = status.GetMakefile().GetDefinition(variable);
+  cmValue oldValue = status.GetMakefile().GetDefinition(variable);
   if (oldValue) {
     value += *oldValue;
   }
@@ -1054,7 +1054,7 @@ Json::Value& ResolvePath(Json::Value& json, Args path)
     }
   }
   return *search;
-};
+}
 
 Json::Value ReadJson(const std::string& jsonstr)
 {

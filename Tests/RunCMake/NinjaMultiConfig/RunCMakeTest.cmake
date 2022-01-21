@@ -5,6 +5,9 @@ include(RunCMake)
 set(RunCMake_GENERATOR "Ninja Multi-Config")
 set(RunCMake_GENERATOR_IS_MULTI_CONFIG 1)
 
+# Sanitize NINJA_STATUS since we expect default behavior.
+unset(ENV{NINJA_STATUS})
+
 function(check_files dir)
   cmake_parse_arguments(_check_files "" "" "INCLUDE;EXCLUDE" ${ARGN})
 
@@ -98,6 +101,7 @@ run_cmake_build(Simple all-configs Release simplestatic:all)
 run_ninja(Simple default-build-file build.ninja simpleexe)
 run_cmake_build(Simple all-clean Release clean:all)
 run_cmake_build(Simple debug-subdir Debug SimpleSubdir/all)
+run_ninja(Simple debug-in-release-graph-target build-Release.ninja simpleexe2:Debug)
 run_ninja(Simple release-in-minsizerel-graph-subdir build-MinSizeRel.ninja SimpleSubdir/all:Release)
 run_cmake_build(Simple all-subdir Release SimpleSubdir/all:all)
 run_ninja(Simple minsizerel-top build-MinSizeRel.ninja all)
@@ -198,8 +202,11 @@ run_cmake_build(PostBuild release Release Exe)
 run_cmake_build(PostBuild debug-in-release-graph Release Exe:Debug)
 
 set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/LongCommandLine-build)
+set(RunCMake_TEST_OPTIONS "-DCMAKE_CROSS_CONFIGS=all")
 run_cmake_configure(LongCommandLine)
+unset(RunCMake_TEST_OPTIONS)
 run_cmake_build(LongCommandLine release Release custom)
+run_cmake_build(LongCommandLine release-config Release exe:Debug)
 
 set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/Framework-build)
 set(RunCMake_TEST_OPTIONS "-DCMAKE_CROSS_CONFIGS=all")
@@ -337,6 +344,16 @@ run_ninja(CustomCommandOutputGenex echo_dbgx-release build-Release.ninja echo_db
 run_ninja(CustomCommandOutputGenex clean-release-graph build-Release.ninja -t clean)
 run_ninja(CustomCommandOutputGenex echo_dbgx-debug-in-release-graph build-Release.ninja echo_dbgx:Debug)
 run_ninja(CustomCommandOutputGenex clean-release-graph build-Release.ninja -t clean)
+# echo_depend_target
+run_ninja(CustomCommandOutputGenex echo_depend_target-debug-prep build-Debug.ninja echo:Debug)
+run_ninja(CustomCommandOutputGenex echo_depend_target-debug build-Debug.ninja echo_depend_target)
+run_ninja(CustomCommandOutputGenex clean-debug-graph build-Debug.ninja -t clean)
+run_ninja(CustomCommandOutputGenex echo_depend_target-release-prep build-Release.ninja echo:Release)
+run_ninja(CustomCommandOutputGenex echo_depend_target-release build-Release.ninja echo_depend_target)
+run_ninja(CustomCommandOutputGenex clean-release-graph build-Release.ninja -t clean)
+run_ninja(CustomCommandOutputGenex echo_depend_target-debug-in-release-graph-prep build-Release.ninja echo:Release)
+run_ninja(CustomCommandOutputGenex echo_depend_target-debug-in-release-graph build-Release.ninja echo_depend_target:Debug)
+run_ninja(CustomCommandOutputGenex clean-release-graph build-Release.ninja -t clean)
 # echo_target_raw
 run_ninja(CustomCommandOutputGenex echo_target_raw-debug build-Debug.ninja echo_target_raw:Debug)
 run_ninja(CustomCommandOutputGenex clean-debug-graph build-Debug.ninja -t clean)
@@ -439,14 +456,20 @@ if(CMake_TEST_CUDA AND NOT CMake_TEST_CUDA STREQUAL "Clang")
   run_ninja(CudaSimple all-clean build-Debug.ninja clean:Debug)
 endif()
 
-if(CMake_TEST_Qt5)
-  set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/Qt5-build)
-  set(RunCMake_TEST_OPTIONS "-DCMAKE_CROSS_CONFIGS=all" "-DQt5Core_DIR=${Qt5Core_DIR}")
-  run_cmake_configure(Qt5)
+if(CMake_TEST_Qt_version)
+  set(QtX Qt${CMake_TEST_Qt_version})
+  set(RunCMake_TEST_BINARY_DIR ${RunCMake_BINARY_DIR}/QtX-build)
+  set(RunCMake_TEST_OPTIONS
+    "-DCMAKE_CROSS_CONFIGS=all"
+    "-Dwith_qt_version:STRING=${CMake_TEST_Qt_version}"
+    "-D${QtX}Core_DIR=${${QtX}Core_DIR}"
+    "-DCMAKE_PREFIX_PATH:STRING=${CMAKE_PREFIX_PATH}"
+  )
+  run_cmake_configure(QtX)
   unset(RunCMake_TEST_OPTIONS)
   include(${RunCMake_TEST_BINARY_DIR}/target_files.cmake)
-  run_cmake_build(Qt5 debug-in-release-graph Release exe:Debug)
-  if(CMAKE_TEST_Qt5Core_Version VERSION_GREATER_EQUAL 5.15.0)
-    run_ninja(Qt5 automoc-check build-Debug.ninja -t query exe_autogen/timestamp)
+  run_cmake_build(QtX debug-in-release-graph Release exe:Debug)
+  if(CMake_TEST_${QtX}Core_Version VERSION_GREATER_EQUAL 5.15.0)
+    run_ninja(QtX automoc-check build-Debug.ninja -t query exe_autogen/timestamp)
   endif()
 endif()
