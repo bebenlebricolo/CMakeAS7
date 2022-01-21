@@ -9,3 +9,6 @@ if(UNIX AND NOT CYGWIN)
 endif()
 run_cmake(PrefixInPATH)
 run_cmake(Required)
+run_cmake(NO_CACHE)
+
+run_cmake_script(FromScriptMode "-DTEMP_DIR=${RunCMake_BINARY_DIR}/FromScriptMode-temp")

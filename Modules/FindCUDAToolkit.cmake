@@ -75,11 +75,16 @@ The CUDA Toolkit search behavior uses the following order:
        (2) ensure that the correct ``nvcc`` executable shows up in ``$PATH`` for
        :command:`find_program` to find.
 
+Arguments
+^^^^^^^^^
+
+``[<version>]``
+    The ``[<version>]`` argument requests a version with which the package found
+    should be compatible. See :ref:`find_package version format <FIND_PACKAGE_VERSION_FORMAT>`
+    for more details.
+
 Options
 ^^^^^^^
-
-``VERSION``
-    If specified, describes the version of the CUDA Toolkit to search for.
 
 ``REQUIRED``
     If specified, configuration will error if a suitable CUDA Toolkit is not
@@ -410,7 +415,7 @@ Result variables
 ``CUDAToolkit_VERSION_MAJOR``
     The major version of the CUDA Toolkit.
 
-``CUDAToolkit_VERSION_MAJOR``
+``CUDAToolkit_VERSION_MINOR``
     The minor version of the CUDA Toolkit.
 
 ``CUDAToolkit_VERSION_PATCH``
@@ -524,7 +529,7 @@ else()
         # NVIDIA HPC SDK, and distro's splayed layouts
         execute_process(COMMAND ${CUDAToolkit_NVCC_EXECUTABLE} "-v" "__cmake_determine_cuda"
           OUTPUT_VARIABLE _CUDA_NVCC_OUT ERROR_VARIABLE _CUDA_NVCC_OUT)
-        if(_CUDA_NVCC_OUT MATCHES "TOP=([^\r\n]*)")
+        if(_CUDA_NVCC_OUT MATCHES "\\#\\$ TOP=([^\r\n]*)")
           get_filename_component(CUDAToolkit_BIN_DIR "${CMAKE_MATCH_1}/bin" ABSOLUTE)
         else()
           get_filename_component(CUDAToolkit_BIN_DIR "${CUDAToolkit_NVCC_EXECUTABLE}" DIRECTORY)
@@ -737,6 +742,19 @@ elseif(NOT CUDAToolkit_FIND_QUIETLY)
   message(STATUS "Unable to find cuda_runtime.h in \"${CUDAToolkit_TARGET_DIR}/include\" for CUDAToolkit_INCLUDE_DIR.")
 endif()
 
+# The NVHPC layout moves math library headers and libraries to a sibling directory.
+# Create a separate variable so this directory can be selectively added to math targets.
+if(NOT EXISTS "${CUDAToolkit_INCLUDE_DIR}/cublas_v2.h")
+  set(CUDAToolkit_MATH_INCLUDE_DIR "${CUDAToolkit_TARGET_DIR}/../../math_libs/include")
+  cmake_path(NORMAL_PATH CUDAToolkit_MATH_INCLUDE_DIR)
+  if(NOT EXISTS "${CUDAToolkit_MATH_INCLUDE_DIR}/cublas_v2.h")
+    if(NOT CUDAToolkit_FIND_QUIETLY)
+      message(STATUS "Unable to find cublas_v2.h in either \"${CUDAToolkit_INCLUDE_DIR}\" or \"${CUDAToolkit_MATH_INCLUDE_DIR}\"")
+    endif()
+    unset(CUDAToolkit_MATH_INCLUDE_DIR)
+  endif()
+endif()
+
 if(CUDAToolkit_NVCC_EXECUTABLE AND
    CMAKE_CUDA_COMPILER_VERSION AND
    CUDAToolkit_NVCC_EXECUTABLE STREQUAL CMAKE_CUDA_COMPILER)
@@ -839,14 +857,23 @@ if(CUDAToolkit_FOUND)
       HINTS ${CUDAToolkit_LIBRARY_DIR}
             ENV CUDA_PATH
       PATH_SUFFIXES lib64/stubs lib/x64/stubs lib/stubs stubs
+                    # Support NVHPC splayed math library layout
+                    ../../math_libs/${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}/lib64
+                    ../../math_libs/lib64
     )
 
     mark_as_advanced(CUDA_${lib_name}_LIBRARY)
 
     if (NOT TARGET CUDA::${lib_name} AND CUDA_${lib_name}_LIBRARY)
-      add_library(CUDA::${lib_name} IMPORTED INTERFACE)
+      add_library(CUDA::${lib_name} UNKNOWN IMPORTED)
       target_include_directories(CUDA::${lib_name} SYSTEM INTERFACE "${CUDAToolkit_INCLUDE_DIRS}")
-      target_link_libraries(CUDA::${lib_name} INTERFACE "${CUDA_${lib_name}_LIBRARY}")
+      if(DEFINED CUDAToolkit_MATH_INCLUDE_DIR)
+        string(FIND ${CUDA_${lib_name}_LIBRARY} "math_libs" math_libs)
+        if(NOT ${math_libs} EQUAL -1)
+          target_include_directories(CUDA::${lib_name} SYSTEM INTERFACE "${CUDAToolkit_MATH_INCLUDE_DIR}")
+        endif()
+      endif()
+      set_property(TARGET CUDA::${lib_name} PROPERTY IMPORTED_LOCATION "${CUDA_${lib_name}_LIBRARY}")
       foreach(dep ${arg_DEPS})
         if(TARGET CUDA::${dep})
           target_link_libraries(CUDA::${lib_name} INTERFACE CUDA::${dep})

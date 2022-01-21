@@ -125,6 +125,11 @@ The module defines the following commands:
     list of dependency component or component group identifiers in
     QtIFW style.
 
+    .. versionadded:: 3.21
+
+    Component or group names listed as dependencies may contain hyphens.
+    This requires QtIFW 3.1 or later.
+
   ``AUTO_DEPEND_ON``
     .. versionadded:: 3.8
 
@@ -259,6 +264,11 @@ The module defines the following commands:
 
     list of dependency component or component group identifiers in
     QtIFW style.
+
+    .. versionadded:: 3.21
+
+    Component or group names listed as dependencies may contain hyphens.
+    This requires QtIFW 3.1 or later.
 
   ``AUTO_DEPEND_ON``
     .. versionadded:: 3.8
@@ -429,6 +439,8 @@ set(_CPACK_IFW_PREFIXES
   "QtIFW-")
 
 set(_CPACK_IFW_VERSIONS
+  "4.2"
+  "4.1"
   "4.0"
   "3.2"
   "3.2.0"

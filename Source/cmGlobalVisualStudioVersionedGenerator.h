@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+#include <cm/optional>
+
 #include "cmGlobalVisualStudio14Generator.h"
 #include "cmVSSetupHelper.h"
 
@@ -21,6 +23,7 @@ class cmGlobalVisualStudioVersionedGenerator
 public:
   static std::unique_ptr<cmGlobalGeneratorFactory> NewFactory15();
   static std::unique_ptr<cmGlobalGeneratorFactory> NewFactory16();
+  static std::unique_ptr<cmGlobalGeneratorFactory> NewFactory17();
 
   bool MatchesGeneratorName(const std::string& name) const override;
 
@@ -28,12 +31,16 @@ public:
 
   bool GetVSInstance(std::string& dir) const;
 
-  bool GetVSInstanceVersion(unsigned long long& vsInstanceVersion) const;
+  cm::optional<std::string> FindMSBuildCommandEarly(cmMakefile* mf) override;
+
+  cm::optional<std::string> GetVSInstanceVersion() const override;
 
   AuxToolset FindAuxToolset(std::string& version,
                             std::string& props) const override;
 
   bool IsStdOutEncodingSupported() const override;
+
+  bool IsUtf8EncodingSupported() const override;
 
   const char* GetAndroidApplicationTypeRevision() const override;
 
@@ -66,5 +73,8 @@ private:
   friend class Factory15;
   class Factory16;
   friend class Factory16;
+  class Factory17;
+  friend class Factory17;
   mutable cmVSSetupAPIHelper vsSetupAPIHelper;
+  cm::optional<std::string> LastGeneratorInstanceString;
 };

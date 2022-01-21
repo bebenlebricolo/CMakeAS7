@@ -2,11 +2,13 @@
    file Copyright.txt or https://cmake.org/licensing for details.  */
 #include "cmInstallTargetGenerator.h"
 
+#include <algorithm>
 #include <cassert>
 #include <map>
 #include <set>
 #include <sstream>
 #include <utility>
+#include <vector>
 
 #include "cmComputeLinkInformation.h"
 #include "cmGeneratorExpression.h"
@@ -18,11 +20,11 @@
 #include "cmMessageType.h"
 #include "cmOutputConverter.h"
 #include "cmPolicies.h"
-#include "cmProperty.h"
 #include "cmStateTypes.h"
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
 #include "cmTarget.h"
+#include "cmValue.h"
 #include "cmake.h"
 
 namespace {
@@ -46,7 +48,7 @@ cmInstallTargetGenerator::cmInstallTargetGenerator(
   std::string const& component, MessageLevel message, bool exclude_from_all,
   bool optional, cmListFileBacktrace backtrace)
   : cmInstallGenerator(dest, configurations, component, message,
-                       exclude_from_all, std::move(backtrace))
+                       exclude_from_all, false, std::move(backtrace))
   , TargetName(std::move(targetName))
   , Target(nullptr)
   , FilePermissions(std::move(file_permissions))
@@ -77,12 +79,15 @@ void cmInstallTargetGenerator::GenerateScriptForConfig(
   }
 
   // Tweak files located in the destination directory.
-  std::string toDir = cmStrCat(this->ConvertToAbsoluteDestination(dest), '/');
+  std::string toDir = cmStrCat(ConvertToAbsoluteDestination(dest), '/');
 
   // Add pre-installation tweaks.
   if (!files.NoTweak) {
-    this->AddTweak(os, indent, config, toDir, files.To,
-                   &cmInstallTargetGenerator::PreReplacementTweaks);
+    AddTweak(os, indent, config, toDir, files.To,
+             [this](std::ostream& o, Indent i, const std::string& c,
+                    const std::string& f) {
+               this->PreReplacementTweaks(o, i, c, f);
+             });
   }
 
   // Write code to install the target file.
@@ -102,8 +107,11 @@ void cmInstallTargetGenerator::GenerateScriptForConfig(
 
   // Add post-installation tweaks.
   if (!files.NoTweak) {
-    this->AddTweak(os, indent, config, toDir, files.To,
-                   &cmInstallTargetGenerator::PostReplacementTweaks);
+    AddTweak(os, indent, config, toDir, files.To,
+             [this](std::ostream& o, Indent i, const std::string& c,
+                    const std::string& f) {
+               this->PostReplacementTweaks(o, i, c, f);
+             });
   }
 }
 
@@ -202,7 +210,7 @@ cmInstallTargetGenerator::Files cmInstallTargetGenerator::GetFiles(
 
         // Get App Bundle Extension
         std::string ext;
-        if (cmProp p = this->Target->GetProperty("BUNDLE_EXTENSION")) {
+        if (cmValue p = this->Target->GetProperty("BUNDLE_EXTENSION")) {
           ext = *p;
         } else {
           ext = "app";
@@ -338,6 +346,7 @@ cmInstallTargetGenerator::Files cmInstallTargetGenerator::GetFiles(
 
       // Add the names based on the current namelink mode.
       if (haveNamelink) {
+        files.NamelinkMode = this->NamelinkMode;
         // With a namelink we need to check the mode.
         if (this->NamelinkMode == NamelinkModeOnly) {
           // Install the namelink only.
@@ -458,63 +467,6 @@ bool cmInstallTargetGenerator::Compute(cmLocalGenerator* lg)
   }
 
   return true;
-}
-
-void cmInstallTargetGenerator::AddTweak(std::ostream& os, Indent indent,
-                                        const std::string& config,
-                                        std::string const& file,
-                                        TweakMethod tweak)
-{
-  std::ostringstream tw;
-  (this->*tweak)(tw, indent.Next(), config, file);
-  std::string tws = tw.str();
-  if (!tws.empty()) {
-    os << indent << "if(EXISTS \"" << file << "\" AND\n"
-       << indent << "   NOT IS_SYMLINK \"" << file << "\")\n";
-    os << tws;
-    os << indent << "endif()\n";
-  }
-}
-
-void cmInstallTargetGenerator::AddTweak(std::ostream& os, Indent indent,
-                                        const std::string& config,
-                                        std::string const& dir,
-                                        std::vector<std::string> const& files,
-                                        TweakMethod tweak)
-{
-  if (files.size() == 1) {
-    // Tweak a single file.
-    this->AddTweak(os, indent, config,
-                   this->GetDestDirPath(cmStrCat(dir, files[0])), tweak);
-  } else {
-    // Generate a foreach loop to tweak multiple files.
-    std::ostringstream tw;
-    this->AddTweak(tw, indent.Next(), config, "${file}", tweak);
-    std::string tws = tw.str();
-    if (!tws.empty()) {
-      Indent indent2 = indent.Next().Next();
-      os << indent << "foreach(file\n";
-      for (std::string const& f : files) {
-        os << indent2 << "\"" << this->GetDestDirPath(cmStrCat(dir, f))
-           << "\"\n";
-      }
-      os << indent2 << ")\n";
-      os << tws;
-      os << indent << "endforeach()\n";
-    }
-  }
-}
-
-std::string cmInstallTargetGenerator::GetDestDirPath(std::string const& file)
-{
-  // Construct the path of the file on disk after installation on
-  // which tweaks may be performed.
-  std::string toDestDirPath = "$ENV{DESTDIR}";
-  if (file[0] != '/' && file[0] != '$') {
-    toDestDirPath += "/";
-  }
-  toDestDirPath += file;
-  return toDestDirPath;
 }
 
 void cmInstallTargetGenerator::PreReplacementTweaks(std::ostream& os,
@@ -730,33 +682,52 @@ void cmInstallTargetGenerator::AddChrpathPatchRule(
            " this limitation.";
       mf->IssueMessage(MessageType::WARNING, msg.str());
     } else {
-      // Note: These paths are kept unique to avoid
-      // install_name_tool corruption.
-      std::set<std::string> runpaths;
-      for (std::string const& i : oldRuntimeDirs) {
-        std::string runpath =
-          mf->GetGlobalGenerator()->ExpandCFGIntDir(i, config);
-
-        if (runpaths.find(runpath) == runpaths.end()) {
-          runpaths.insert(runpath);
-          os << indent << "execute_process(COMMAND " << installNameTool
-             << "\n";
-          os << indent << "  -delete_rpath \"" << runpath << "\"\n";
-          os << indent << "  \"" << toDestDirPath << "\")\n";
+      // To be consistent with older versions, runpath changes must be ordered,
+      // deleted first, then added, *and* the same path must only appear once.
+      std::map<std::string, std::string> runpath_change;
+      std::vector<std::string> ordered;
+      for (std::string const& dir : oldRuntimeDirs) {
+        // Normalize path and add to map of changes to make
+        auto iter_inserted = runpath_change.insert(
+          { mf->GetGlobalGenerator()->ExpandCFGIntDir(dir, config),
+            "delete" });
+        if (iter_inserted.second) {
+          // Add path to ordered list of changes
+          ordered.push_back(iter_inserted.first->first);
         }
       }
 
-      runpaths.clear();
-      for (std::string const& i : newRuntimeDirs) {
-        std::string runpath =
-          mf->GetGlobalGenerator()->ExpandCFGIntDir(i, config);
-
-        if (runpaths.find(runpath) == runpaths.end()) {
-          os << indent << "execute_process(COMMAND " << installNameTool
-             << "\n";
-          os << indent << "  -add_rpath \"" << runpath << "\"\n";
-          os << indent << "  \"" << toDestDirPath << "\")\n";
+      for (std::string const& dir : newRuntimeDirs) {
+        // Normalize path and add to map of changes to make
+        auto iter_inserted = runpath_change.insert(
+          { mf->GetGlobalGenerator()->ExpandCFGIntDir(dir, config), "add" });
+        if (iter_inserted.second) {
+          // Add path to ordered list of changes
+          ordered.push_back(iter_inserted.first->first);
+        } else if (iter_inserted.first->second != "add") {
+          // Rpath was requested to be deleted and then later re-added. Drop it
+          // from the list by marking as an empty value.
+          iter_inserted.first->second.clear();
         }
+      }
+
+      // Remove rpaths that are unchanged (value was set to empty)
+      ordered.erase(
+        std::remove_if(ordered.begin(), ordered.end(),
+                       [&runpath_change](const std::string& runpath) {
+                         return runpath_change.find(runpath)->second.empty();
+                       }),
+        ordered.end());
+
+      if (!ordered.empty()) {
+        os << indent << "execute_process(COMMAND " << installNameTool << "\n";
+        for (std::string const& runpath : ordered) {
+          // Either 'add_rpath' or 'delete_rpath' since we've removed empty
+          // entries
+          os << indent << "  -" << runpath_change.find(runpath)->second
+             << "_rpath \"" << runpath << "\"\n";
+        }
+        os << indent << "  \"" << toDestDirPath << "\")\n";
       }
     }
   } else {
@@ -875,7 +846,7 @@ void cmInstallTargetGenerator::AddUniversalInstallRule(
     return;
   }
 
-  cmProp xcodeVersion = mf->GetDefinition("XCODE_VERSION");
+  cmValue xcodeVersion = mf->GetDefinition("XCODE_VERSION");
   if (!xcodeVersion ||
       cmSystemTools::VersionCompareGreater("6", *xcodeVersion)) {
     return;

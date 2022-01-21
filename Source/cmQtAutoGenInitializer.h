@@ -95,12 +95,16 @@ public:
 
     GenVarsT(GenT gen)
       : Gen(gen)
-      , GenNameUpper(cmQtAutoGen::GeneratorNameUpper(gen)){};
+      , GenNameUpper(cmQtAutoGen::GeneratorNameUpper(gen))
+    {
+    }
   };
 
-  /** @return The detected Qt version and the required Qt major version.  */
+  /** @param mocExecutable The file path to the moc executable. Will be used as
+     fallback to query the version
+      @return The detected Qt version and the required Qt major version. */
   static std::pair<IntegerVersion, unsigned int> GetQtVersion(
-    cmGeneratorTarget const* genTarget);
+    cmGeneratorTarget const* genTarget, std::string mocExecutable);
 
   cmQtAutoGenInitializer(cmQtAutoGenGlobalInitializer* globalInitializer,
                          cmGeneratorTarget* genTarget,
@@ -141,6 +145,8 @@ private:
 
   void ConfigFileNames(ConfigString& configString, cm::string_view prefix,
                        cm::string_view suffix);
+  void ConfigFileNamesAndGenex(ConfigString& configString, std::string& genex,
+                               cm::string_view prefix, cm::string_view suffix);
   void ConfigFileClean(ConfigString& configString);
 
   std::string GetMocBuildPath(MUFile const& muf);
@@ -205,7 +211,9 @@ private:
   struct MocT : public GenVarsT
   {
     MocT()
-      : GenVarsT(GenT::MOC){};
+      : GenVarsT(GenT::MOC)
+    {
+    }
 
     bool RelaxedMode = false;
     bool PathPrefix = false;
@@ -233,19 +241,26 @@ private:
     using UiFileT = std::pair<std::string, std::vector<std::string>>;
 
     UicT()
-      : GenVarsT(GenT::UIC){};
+      : GenVarsT(GenT::UIC)
+    {
+    }
 
     std::set<std::string> SkipUi;
-    std::vector<UiFileT> UiFiles;
+    std::vector<std::string> UiFilesNoOptions;
+    std::vector<UiFileT> UiFilesWithOptions;
     ConfigStrings<std::vector<std::string>> Options;
     std::vector<std::string> SearchPaths;
+    std::vector<std::pair<ConfigString /*ui header*/, std::string /*genex*/>>
+      UiHeaders;
   } Uic;
 
   /** rcc variables.  */
   struct RccT : public GenVarsT
   {
     RccT()
-      : GenVarsT(GenT::RCC){};
+      : GenVarsT(GenT::RCC)
+    {
+    }
 
     bool GlobalTarget = false;
     std::vector<Qrc> Qrcs;

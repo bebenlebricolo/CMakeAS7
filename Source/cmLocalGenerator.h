@@ -20,8 +20,8 @@
 #include "cmMessageType.h"
 #include "cmOutputConverter.h"
 #include "cmPolicies.h"
-#include "cmProperty.h"
 #include "cmStateSnapshot.h"
+#include "cmValue.h"
 
 class cmCompiledGeneratorExpression;
 class cmComputeLinkInformation;
@@ -171,13 +171,21 @@ public:
                                             cmGeneratorTarget* target,
                                             const std::string& config,
                                             const std::string& lang);
+  bool AppendLWYUFlags(std::string& flags, const cmGeneratorTarget* target,
+                       const std::string& lang);
+
+  enum class IncludePathStyle
+  {
+    Default,
+    Absolute,
+  };
+
   //! Get the include flags for the current makefile and language
-  std::string GetIncludeFlags(const std::vector<std::string>& includes,
-                              cmGeneratorTarget* target,
-                              const std::string& lang,
-                              bool forceFullPaths = false,
-                              bool forResponseFile = false,
-                              const std::string& config = "");
+  std::string GetIncludeFlags(
+    std::vector<std::string> const& includes, cmGeneratorTarget* target,
+    std::string const& lang, std::string const& config,
+    bool forResponseFile = false,
+    IncludePathStyle pathStyle = IncludePathStyle::Default);
 
   using GeneratorTargetVector =
     std::vector<std::unique_ptr<cmGeneratorTarget>>;
@@ -239,7 +247,7 @@ public:
   void AppendFeatureOptions(std::string& flags, const std::string& lang,
                             const char* feature);
 
-  cmProp GetFeature(const std::string& feature, const std::string& config);
+  cmValue GetFeature(const std::string& feature, const std::string& config);
 
   /** \brief Get absolute path to dependency \a name
    *
@@ -255,11 +263,6 @@ public:
    */
   bool GetRealDependency(const std::string& name, const std::string& config,
                          std::string& dep);
-
-  virtual std::string ConvertToIncludeReference(
-    std::string const& path,
-    cmOutputConverter::OutputFormat format = cmOutputConverter::SHELL,
-    bool forceFullPaths = false);
 
   /** Called from command-line hook to clear dependencies.  */
   virtual void ClearDependencies(cmMakefile* /* mf */, bool /* verbose */) {}
@@ -462,16 +465,6 @@ public:
   std::string const& GetCurrentSourceDirectory() const;
 
   /**
-   * Convert the given remote path to a relative path with respect to
-   * the given local path.  Both paths must use forward slashes and not
-   * already be escaped or quoted.
-   * The conversion is skipped if the paths are not both in the source
-   * or both in the binary tree.
-   */
-  std::string MaybeConvertToRelativePath(std::string const& local_path,
-                                         std::string const& remote_path) const;
-
-  /**
    * Generate a macOS application bundle Info.plist file.
    */
   void GenerateAppleInfoPList(cmGeneratorTarget* target,
@@ -554,9 +547,16 @@ public:
   void CreateEvaluationFileOutputs(const std::string& config);
   void ProcessEvaluationFiles(std::vector<std::string>& generatedFiles);
 
-  cmProp GetRuleLauncher(cmGeneratorTarget* target, const std::string& prop);
+  cmValue GetRuleLauncher(cmGeneratorTarget* target, const std::string& prop);
 
 protected:
+  // The default implementation ignores the IncludePathStyle and always
+  // uses absolute paths.  A generator may override this to use relative
+  // paths in some cases.
+  virtual std::string ConvertToIncludeReference(
+    std::string const& path, IncludePathStyle pathStyle,
+    cmOutputConverter::OutputFormat format);
+
   //! put all the libraries for a target on into the given stream
   void OutputLinkLibraries(cmComputeLinkInformation* pcli,
                            cmLinkLineComputer* linkLineComputer,
@@ -583,14 +583,13 @@ protected:
   virtual bool CheckDefinition(std::string const& define) const;
 
   cmMakefile* Makefile;
-  cmStateSnapshot StateSnapshot;
   cmListFileBacktrace DirectoryBacktrace;
   cmGlobalGenerator* GlobalGenerator;
   std::map<std::string, std::string> UniqueObjectNamesMap;
   std::string::size_type ObjectPathMax;
   std::set<std::string> ObjectMaxPathViolations;
 
-  std::set<std::string> EnvCPATH;
+  std::vector<std::string> EnvCPATH;
 
   using GeneratorTargetMap =
     std::unordered_map<std::string, cmGeneratorTarget*>;
@@ -652,7 +651,7 @@ private:
 
   void ComputeObjectMaxPath();
   bool AllAppleArchSysrootsAreTheSame(const std::vector<std::string>& archs,
-                                      const char* sysroot);
+                                      cmValue sysroot);
 
   void CopyPchCompilePdb(const std::string& config, cmGeneratorTarget* target,
                          const std::string& ReuseFrom,
@@ -660,16 +659,16 @@ private:
                          std::vector<std::string> const& extensions);
   void IncludeFileInUnitySources(cmGeneratedFileStream& unity_file,
                                  std::string const& sf_full_path,
-                                 cmProp beforeInclude, cmProp afterInclude,
-                                 cmProp uniqueIdName) const;
+                                 cmValue beforeInclude, cmValue afterInclude,
+                                 cmValue uniqueIdName) const;
   std::vector<std::string> AddUnityFilesModeAuto(
     cmGeneratorTarget* target, std::string const& lang,
-    std::vector<cmSourceFile*> const& filtered_sources, cmProp beforeInclude,
-    cmProp afterInclude, std::string const& filename_base, size_t batchSize);
+    std::vector<cmSourceFile*> const& filtered_sources, cmValue beforeInclude,
+    cmValue afterInclude, std::string const& filename_base, size_t batchSize);
   std::vector<std::string> AddUnityFilesModeGroup(
     cmGeneratorTarget* target, std::string const& lang,
-    std::vector<cmSourceFile*> const& filtered_sources, cmProp beforeInclude,
-    cmProp afterInclude, std::string const& filename_base);
+    std::vector<cmSourceFile*> const& filtered_sources, cmValue beforeInclude,
+    cmValue afterInclude, std::string const& filename_base);
 };
 
 #if !defined(CMAKE_BOOTSTRAP)

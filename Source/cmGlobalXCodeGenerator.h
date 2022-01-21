@@ -14,6 +14,7 @@
 #include <cm/string_view>
 
 #include "cmGlobalGenerator.h"
+#include "cmTransformDepfile.h"
 #include "cmXCodeObject.h"
 
 class cmCustomCommand;
@@ -111,6 +112,17 @@ public:
 
   bool ShouldStripResourcePath(cmMakefile*) const override;
 
+  /**
+   * Used to determine if this generator supports DEPFILE option.
+   */
+  bool SupportsCustomCommandDepfile() const override { return true; }
+  virtual cm::optional<cmDepfileFormat> DepfileFormat() const override
+  {
+    return this->XcodeBuildSystem == BuildSystem::One
+      ? cmDepfileFormat::MakeDepfile
+      : cmDepfileFormat::GccDepfile;
+  }
+
   bool SetSystemName(std::string const& s, cmMakefile* mf) override;
   bool SetGeneratorToolset(std::string const& ts, bool build,
                            cmMakefile* mf) override;
@@ -126,12 +138,14 @@ protected:
   void AddExtraIDETargets() override;
   void Generate() override;
 
-  FindMakeProgramStage GetFindMakeProgramStage() const override
-  {
-    return FindMakeProgramStage::Early;
-  }
-
 private:
+  enum EmbedActionFlags
+  {
+    NoActionOnCopyByDefault = 0,
+    CodeSignOnCopyByDefault = 1,
+    RemoveHeadersOnCopyByDefault = 2,
+  };
+
   bool ParseGeneratorToolset(std::string const& ts, cmMakefile* mf);
   bool ProcessGeneratorToolsetField(std::string const& key,
                                     std::string const& value, cmMakefile* mf);
@@ -196,7 +210,13 @@ private:
                                     const char* attribute);
   cmXCodeObject* CreateUtilityTarget(cmGeneratorTarget* gtgt);
   void AddDependAndLinkInformation(cmXCodeObject* target);
+  void AddEmbeddedObjects(cmXCodeObject* target,
+                          const std::string& copyFilesBuildPhaseName,
+                          const std::string& embedPropertyName,
+                          const std::string& dstSubfolderSpec,
+                          int actionsOnByDefault);
   void AddEmbeddedFrameworks(cmXCodeObject* target);
+  void AddEmbeddedAppExtensions(cmXCodeObject* target);
   void AddPositionIndependentLinkAttribute(cmGeneratorTarget* target,
                                            cmXCodeObject* buildSettings,
                                            const std::string& configName);
@@ -302,7 +322,7 @@ private:
   bool XcodeBuildCommandInitialized;
 
   void PrintCompilerAdvice(std::ostream&, std::string const&,
-                           const char*) const override
+                           cmValue) const override
   {
   }
 
@@ -323,13 +343,12 @@ private:
   cmXCodeObject* FrameworkGroup;
   cmMakefile* CurrentMakefile;
   cmLocalGenerator* CurrentLocalGenerator;
+  cmLocalGenerator* CurrentRootGenerator = nullptr;
   std::vector<std::string> CurrentConfigurationTypes;
   std::string CurrentReRunCMakeMakefile;
   std::string CurrentXCodeHackMakefile;
   std::string CurrentProject;
   std::set<std::string> TargetDoneSet;
-  std::vector<std::string> ProjectSourceDirectoryComponents;
-  std::vector<std::string> ProjectOutputDirectoryComponents;
   std::map<std::string, cmXCodeObject*> GroupMap;
   std::map<std::string, cmXCodeObject*> GroupNameMap;
   std::map<std::string, cmXCodeObject*> TargetGroup;

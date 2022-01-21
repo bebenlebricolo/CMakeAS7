@@ -36,8 +36,30 @@ or
 depending on whether ``VAR`` is set in CMake to any value not considered
 a false constant by the :command:`if` command.  The "..." content on the
 line after the variable name, if any, is processed as above.
-Input file lines of the form ``#cmakedefine01 VAR`` will be replaced with
-either ``#define VAR 1`` or ``#define VAR 0`` similarly.
+
+Unlike lines of the form ``#cmakedefine VAR ...``, in lines of the form
+``#cmakedefine01 VAR``, ``VAR`` itself will expand to ``VAR 0`` or ``VAR 1``
+rather than being assigned the value ``...``. Therefore, input lines of the form
+
+.. code-block:: c
+
+  #cmakedefine01 VAR
+
+will be replaced with either
+
+.. code-block:: c
+
+  #define VAR 0
+
+or
+
+.. code-block:: c
+
+  #define VAR 1
+
+Input lines of the form ``#cmakedefine01 VAR ...`` will expand
+as ``#cmakedefine01 VAR ... 0`` or ``#cmakedefine01 VAR ... 0``,
+which may lead to undefined behavior.
 
 .. versionadded:: 3.10
   The result lines (with the exception of the ``#undef`` comments) can be
@@ -74,6 +96,7 @@ The arguments are:
   with respect to the value of :variable:`CMAKE_CURRENT_BINARY_DIR`.
   If the path names an existing directory the output file is placed
   in that directory with the same file name as the input file.
+  If the path contains non-existent directories, they are created.
 
 ``NO_SOURCE_PERMISSIONS``
   .. versionadded:: 3.19

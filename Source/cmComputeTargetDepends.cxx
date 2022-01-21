@@ -17,15 +17,15 @@
 #include "cmMakefile.h"
 #include "cmMessageType.h"
 #include "cmPolicies.h"
-#include "cmProperty.h"
 #include "cmRange.h"
 #include "cmSourceFile.h"
+#include "cmSourceFileLocationKind.h"
 #include "cmState.h"
 #include "cmStateTypes.h"
-#include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
 #include "cmTarget.h"
 #include "cmTargetDepend.h"
+#include "cmValue.h"
 #include "cmake.h"
 
 /*
@@ -227,32 +227,19 @@ void cmComputeTargetDepends::CollectTargetDepends(int depender_index)
             this->AddInterfaceDepends(depender_index, lib, it, emitted);
           }
         }
+        for (cmLinkItem const& obj : impl->Objects) {
+          if (cmSourceFile const* o = depender->Makefile->GetSource(
+                obj.AsStr(), cmSourceFileLocationKind::Known)) {
+            this->AddObjectDepends(depender_index, o, emitted);
+          }
+        }
       }
 
       // Add dependencies on object libraries not otherwise handled above.
       std::vector<cmSourceFile const*> objectFiles;
       depender->GetExternalObjects(objectFiles, it);
       for (cmSourceFile const* o : objectFiles) {
-        std::string const& objLib = o->GetObjectLibrary();
-        if (!objLib.empty()) {
-          cmLinkItem const& objItem =
-            depender->ResolveLinkItem(objLib, cmListFileBacktrace());
-          if (emitted.insert(objItem).second) {
-            if (depender->GetType() != cmStateEnums::EXECUTABLE &&
-                depender->GetType() != cmStateEnums::STATIC_LIBRARY &&
-                depender->GetType() != cmStateEnums::SHARED_LIBRARY &&
-                depender->GetType() != cmStateEnums::MODULE_LIBRARY &&
-                depender->GetType() != cmStateEnums::OBJECT_LIBRARY) {
-              this->GlobalGenerator->GetCMakeInstance()->IssueMessage(
-                MessageType::FATAL_ERROR,
-                "Only executables and libraries may reference target objects.",
-                depender->GetBacktrace());
-              return;
-            }
-            const_cast<cmGeneratorTarget*>(depender)->Target->AddUtility(
-              objLib, false);
-          }
-        }
+        this->AddObjectDepends(depender_index, o, emitted);
       }
     }
   }
@@ -293,6 +280,12 @@ void cmComputeTargetDepends::AddInterfaceDepends(
         this->AddInterfaceDepends(depender_index, libBT, config, emitted);
       }
     }
+    for (cmLinkItem const& obj : iface->Objects) {
+      if (cmSourceFile const* o = depender->Makefile->GetSource(
+            obj.AsStr(), cmSourceFileLocationKind::Known)) {
+        this->AddObjectDepends(depender_index, o, emitted);
+      }
+    }
   }
 }
 
@@ -319,6 +312,34 @@ void cmComputeTargetDepends::AddInterfaceDepends(
   }
 }
 
+void cmComputeTargetDepends::AddObjectDepends(int depender_index,
+                                              cmSourceFile const* o,
+                                              std::set<cmLinkItem>& emitted)
+{
+  std::string const& objLib = o->GetObjectLibrary();
+  if (objLib.empty()) {
+    return;
+  }
+  cmGeneratorTarget const* depender = this->Targets[depender_index];
+  cmLinkItem const& objItem =
+    depender->ResolveLinkItem(BT<std::string>(objLib));
+  if (emitted.insert(objItem).second) {
+    if (depender->GetType() != cmStateEnums::EXECUTABLE &&
+        depender->GetType() != cmStateEnums::STATIC_LIBRARY &&
+        depender->GetType() != cmStateEnums::SHARED_LIBRARY &&
+        depender->GetType() != cmStateEnums::MODULE_LIBRARY &&
+        depender->GetType() != cmStateEnums::OBJECT_LIBRARY) {
+      this->GlobalGenerator->GetCMakeInstance()->IssueMessage(
+        MessageType::FATAL_ERROR,
+        "Only executables and libraries may reference target objects.",
+        depender->GetBacktrace());
+      return;
+    }
+    const_cast<cmGeneratorTarget*>(depender)->Target->AddUtility(objLib,
+                                                                 false);
+  }
+}
+
 void cmComputeTargetDepends::AddTargetDepend(int depender_index,
                                              cmLinkItem const& dependee_name,
                                              bool linking, bool cross)
@@ -338,6 +359,7 @@ void cmComputeTargetDepends::AddTargetDepend(int depender_index,
       case cmPolicies::WARN:
         e << cmPolicies::GetPolicyWarning(cmPolicies::CMP0046) << "\n";
         issueMessage = true;
+        CM_FALLTHROUGH;
       case cmPolicies::OLD:
         break;
       case cmPolicies::NEW:
@@ -345,6 +367,7 @@ void cmComputeTargetDepends::AddTargetDepend(int depender_index,
       case cmPolicies::REQUIRED_ALWAYS:
         issueMessage = true;
         messageType = MessageType::FATAL_ERROR;
+        break;
     }
     if (issueMessage) {
       cmake* cm = this->GlobalGenerator->GetCMakeInstance();
@@ -447,7 +470,7 @@ void cmComputeTargetDepends::ComputeIntermediateGraph()
         gt->GetType() != cmStateEnums::OBJECT_LIBRARY) {
       intermediateEdges = initialEdges;
     } else {
-      if (cmProp optimizeDependencies =
+      if (cmValue optimizeDependencies =
             gt->GetProperty("OPTIMIZE_DEPENDENCIES")) {
         if (cmIsOn(optimizeDependencies)) {
           this->OptimizeLinkDependencies(gt, intermediateEdges, initialEdges);

@@ -3,7 +3,6 @@
 #include "cmCTestBuildHandler.h"
 
 #include <cstdlib>
-#include <cstring>
 #include <set>
 #include <utility>
 
@@ -20,10 +19,10 @@
 #include "cmGeneratedFileStream.h"
 #include "cmMakefile.h"
 #include "cmProcessOutput.h"
-#include "cmProperty.h"
 #include "cmStringAlgorithms.h"
 #include "cmStringReplaceHelper.h"
 #include "cmSystemTools.h"
+#include "cmValue.h"
 #include "cmXMLWriter.h"
 
 static const char* cmCTestErrorMatches[] = {
@@ -250,11 +249,11 @@ void cmCTestBuildHandler::PopulateCustomVectors(cmMakefile* mf)
   }
 
   // Record the user-specified custom warning rules.
-  if (cmProp customWarningMatchers =
+  if (cmValue customWarningMatchers =
         mf->GetDefinition("CTEST_CUSTOM_WARNING_MATCH")) {
     cmExpandList(*customWarningMatchers, this->ReallyCustomWarningMatches);
   }
-  if (cmProp customWarningExceptions =
+  if (cmValue customWarningExceptions =
         mf->GetDefinition("CTEST_CUSTOM_WARNING_EXCEPTION")) {
     cmExpandList(*customWarningExceptions,
                  this->ReallyCustomWarningExceptions);
@@ -657,14 +656,14 @@ bool cmCTestBuildHandler::IsLaunchedErrorFile(const char* fname)
 {
   // error-{hash}.xml
   return (cmHasLiteralPrefix(fname, "error-") &&
-          strcmp(fname + strlen(fname) - 4, ".xml") == 0);
+          cmHasLiteralSuffix(fname, ".xml"));
 }
 
 bool cmCTestBuildHandler::IsLaunchedWarningFile(const char* fname)
 {
   // warning-{hash}.xml
   return (cmHasLiteralPrefix(fname, "warning-") &&
-          strcmp(fname + strlen(fname) - 4, ".xml") == 0);
+          cmHasLiteralSuffix(fname, ".xml"));
 }
 
 //######################################################################

@@ -12,46 +12,41 @@
 
 #include "cmGlobalGenerator.h"
 #include "cmMakefile.h"
-#include "cmMessageType.h"
-#include "cmProperty.h"
 #include "cmState.h"
 #include "cmStateTypes.h"
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
+#include "cmValue.h"
 
 class cmExecutionStatus;
 
 cmFindLibraryCommand::cmFindLibraryCommand(cmExecutionStatus& status)
-  : cmFindBase(status)
+  : cmFindBase("find_library", status)
 {
   this->EnvironmentPath = "LIB";
   this->NamesPerDirAllowed = true;
+  this->VariableDocumentation = "Path to a library.";
+  this->VariableType = cmStateEnums::FILEPATH;
 }
 
 // cmFindLibraryCommand
 bool cmFindLibraryCommand::InitialPass(std::vector<std::string> const& argsIn)
 {
   this->DebugMode = this->ComputeIfDebugModeWanted();
-  this->VariableDocumentation = "Path to a library.";
   this->CMakePathName = "LIBRARY";
+
   if (!this->ParseArguments(argsIn)) {
     return false;
   }
-  if (this->AlreadyInCache) {
-    // If the user specifies the entry on the command line without a
-    // type we should add the type and docstring but keep the original
-    // value.
-    if (this->AlreadyInCacheWithoutMetaInfo) {
-      this->Makefile->AddCacheDefinition(this->VariableName, "",
-                                         this->VariableDocumentation.c_str(),
-                                         cmStateEnums::FILEPATH);
-    }
+
+  if (this->AlreadyDefined) {
+    this->NormalizeFindResult();
     return true;
   }
 
   // add custom lib<qual> paths instead of using fixed lib32, lib64 or
   // libx32
-  if (cmProp customLib = this->Makefile->GetDefinition(
+  if (cmValue customLib = this->Makefile->GetDefinition(
         "CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX")) {
     this->AddArchitecturePaths(customLib->c_str());
   }
@@ -75,24 +70,7 @@ bool cmFindLibraryCommand::InitialPass(std::vector<std::string> const& argsIn)
   }
 
   std::string const library = this->FindLibrary();
-  if (!library.empty()) {
-    // Save the value in the cache
-    this->Makefile->AddCacheDefinition(this->VariableName, library,
-                                       this->VariableDocumentation.c_str(),
-                                       cmStateEnums::FILEPATH);
-    return true;
-  }
-  std::string notfound = this->VariableName + "-NOTFOUND";
-  this->Makefile->AddCacheDefinition(this->VariableName, notfound,
-                                     this->VariableDocumentation.c_str(),
-                                     cmStateEnums::FILEPATH);
-  if (this->Required) {
-    this->Makefile->IssueMessage(
-      MessageType::FATAL_ERROR,
-      "Could not find " + this->VariableName +
-        " using the following names: " + cmJoin(this->Names, ", "));
-    cmSystemTools::SetFatalErrorOccured();
-  }
+  this->StoreFindResult(library);
   return true;
 }
 
@@ -208,7 +186,8 @@ std::string cmFindLibraryCommand::FindLibrary()
 
 struct cmFindLibraryHelper
 {
-  cmFindLibraryHelper(cmMakefile* mf, cmFindBase const* findBase);
+  cmFindLibraryHelper(std::string debugName, cmMakefile* mf,
+                      cmFindBase const* findBase);
 
   // Context information.
   cmMakefile* Makefile;
@@ -268,7 +247,7 @@ struct cmFindLibraryHelper
         cmStrCat(this->PrefixRegexStr, name, this->SuffixRegexStr);
       this->DebugSearches.FailedAt(path, regexName);
     }
-  };
+  }
 
   void DebugLibraryFound(std::string const& name, std::string const& path)
   {
@@ -277,22 +256,49 @@ struct cmFindLibraryHelper
         cmStrCat(this->PrefixRegexStr, name, this->SuffixRegexStr);
       this->DebugSearches.FoundAt(path, regexName);
     }
-  };
+  }
 };
 
-cmFindLibraryHelper::cmFindLibraryHelper(cmMakefile* mf,
+namespace {
+
+std::string const& get_prefixes(cmMakefile* mf)
+{
+#ifdef _WIN32
+  static std::string defaultPrefix = ";lib";
+#else
+  static std::string defaultPrefix = "lib";
+#endif
+  cmValue prefixProp = mf->GetDefinition("CMAKE_FIND_LIBRARY_PREFIXES");
+  return (prefixProp) ? *prefixProp : defaultPrefix;
+}
+
+std::string const& get_suffixes(cmMakefile* mf)
+{
+#ifdef _WIN32
+  static std::string defaultSuffix = ".lib;.dll.a;.a";
+#elif defined(__APPLE__)
+  static std::string defaultSuffix = ".tbd;.dylib;.so;.a";
+#elif defined(__hpux)
+  static std::string defaultSuffix = ".sl;.so;.a";
+#else
+  static std::string defaultSuffix = ".so;.a";
+#endif
+  cmValue suffixProp = mf->GetDefinition("CMAKE_FIND_LIBRARY_SUFFIXES");
+  return (suffixProp) ? *suffixProp : defaultSuffix;
+}
+}
+cmFindLibraryHelper::cmFindLibraryHelper(std::string debugName, cmMakefile* mf,
                                          cmFindBase const* base)
   : Makefile(mf)
   , DebugMode(base->DebugModeEnabled())
-  , DebugSearches("find_library", base)
+  , DebugSearches(std::move(debugName), base)
 {
   this->GG = this->Makefile->GetGlobalGenerator();
 
   // Collect the list of library name prefixes/suffixes to try.
-  std::string const& prefixes_list =
-    this->Makefile->GetRequiredDefinition("CMAKE_FIND_LIBRARY_PREFIXES");
-  std::string const& suffixes_list =
-    this->Makefile->GetRequiredDefinition("CMAKE_FIND_LIBRARY_SUFFIXES");
+  std::string const& prefixes_list = get_prefixes(this->Makefile);
+  std::string const& suffixes_list = get_suffixes(this->Makefile);
+
   cmExpandList(prefixes_list, this->Prefixes, true);
   cmExpandList(suffixes_list, this->Suffixes, true);
   this->RegexFromList(this->PrefixRegexStr, this->Prefixes);
@@ -374,7 +380,7 @@ void cmFindLibraryHelper::AddName(std::string const& name)
     regex += "(\\.[0-9]+\\.[0-9]+)?";
   }
   regex += "$";
-  entry.Regex.compile(regex.c_str());
+  entry.Regex.compile(regex);
   this->Names.push_back(std::move(entry));
 }
 
@@ -485,7 +491,7 @@ std::string cmFindLibraryCommand::FindNormalLibrary()
 std::string cmFindLibraryCommand::FindNormalLibraryNamesPerDir()
 {
   // Search for all names in each directory.
-  cmFindLibraryHelper helper(this->Makefile, this);
+  cmFindLibraryHelper helper(this->FindCommandName, this->Makefile, this);
   for (std::string const& n : this->Names) {
     helper.AddName(n);
   }
@@ -502,7 +508,7 @@ std::string cmFindLibraryCommand::FindNormalLibraryNamesPerDir()
 std::string cmFindLibraryCommand::FindNormalLibraryDirsPerName()
 {
   // Search the entire path for each name.
-  cmFindLibraryHelper helper(this->Makefile, this);
+  cmFindLibraryHelper helper(this->FindCommandName, this->Makefile, this);
   for (std::string const& n : this->Names) {
     // Switch to searching for this name.
     helper.SetName(n);

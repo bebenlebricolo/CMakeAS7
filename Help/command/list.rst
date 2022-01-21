@@ -141,8 +141,8 @@ Appends elements to the list.
 Includes or removes items from the list that match the mode's pattern.
 In ``REGEX`` mode, items will be matched against the given regular expression.
 
-For more information on regular expressions see also the
-:command:`string` command.
+For more information on regular expressions look under
+:ref:`string(REGEX) <Regex Specification>`.
 
 .. _INSERT:
 
@@ -161,8 +161,9 @@ Inserts elements to the list to the specified location.
 .. versionadded:: 3.15
 
 If no variable name is given, removes exactly one element. Otherwise,
-assign the last element's value to the given variable and removes it,
-up to the last variable name given.
+with `N` variable names provided, assign the last `N` elements' values
+to the given variables and then remove the last `N` values from
+``<list>``.
 
 .. _POP_FRONT:
 
@@ -173,8 +174,9 @@ up to the last variable name given.
 .. versionadded:: 3.15
 
 If no variable name is given, removes exactly one element. Otherwise,
-assign the first element's value to the given variable and removes it,
-up to the last variable name given.
+with `N` variable names provided, assign the first `N` elements' values
+to the given variables and then remove the first `N` values from
+``<list>``.
 
 .. _PREPEND:
 

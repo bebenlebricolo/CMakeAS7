@@ -83,7 +83,7 @@ to 1 all prerequisites will be found recursively, if set to 0 only
 direct prerequisites are listed.  <exclude_system> must be 0 or 1
 indicating whether to include or exclude "system" prerequisites.  With
 <verbose> set to 0 only the full path names of the prerequisites are
-printed, set to 1 extra informatin will be displayed.
+printed, set to 1 extra information will be displayed.
 
 ::
 
@@ -746,7 +746,7 @@ function(get_prerequisites target prerequisites_var exclude_system recurse exepa
     set(gp_regex_error "")
     set(gp_regex_fallback "")
     set(gp_regex_cmp_count 1)
-  elseif(gp_tool MATCHES "objdump$")
+  elseif(gp_tool MATCHES "objdump(\\.exe)?$")
     set(gp_cmd_args "-p")
     set(gp_regex "^\t*DLL Name: (.*\\.[Dd][Ll][Ll])${eol_char}$")
     set(gp_regex_error "")

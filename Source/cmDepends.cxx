@@ -11,9 +11,9 @@
 #include "cmGeneratedFileStream.h"
 #include "cmLocalUnixMakefileGenerator3.h"
 #include "cmMakefile.h"
-#include "cmProperty.h"
 #include "cmStringAlgorithms.h"
 #include "cmSystemTools.h"
+#include "cmValue.h"
 
 cmDepends::cmDepends(cmLocalUnixMakefileGenerator3* lg, std::string targetDir)
   : LocalGenerator(lg)
@@ -229,11 +229,10 @@ bool cmDepends::CheckDependencies(std::istream& internalDepends,
 void cmDepends::SetIncludePathFromLanguage(const std::string& lang)
 {
   // Look for the new per "TARGET_" variant first:
-  cmProp includePath = nullptr;
   std::string includePathVar =
     cmStrCat("CMAKE_", lang, "_TARGET_INCLUDE_PATH");
   cmMakefile* mf = this->LocalGenerator->GetMakefile();
-  includePath = mf->GetDefinition(includePathVar);
+  cmValue includePath = mf->GetDefinition(includePathVar);
   if (includePath) {
     cmExpandList(*includePath, this->IncludePath);
   } else {

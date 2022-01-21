@@ -104,6 +104,8 @@ const char* cmGlobalVisualStudioGenerator::GetIDEVersion() const
       return "15.0";
     case cmGlobalVisualStudioGenerator::VS16:
       return "16.0";
+    case cmGlobalVisualStudioGenerator::VS17:
+      return "17.0";
   }
   return "";
 }
@@ -168,6 +170,15 @@ void cmGlobalVisualStudioGenerator::WriteSLNHeader(std::ostream& fout)
         fout << "# Visual Studio Express 16 for Windows Desktop\n";
       } else {
         fout << "# Visual Studio Version 16\n";
+      }
+      break;
+    case cmGlobalVisualStudioGenerator::VS17:
+      // Visual Studio 17 writes .sln format 12.00
+      fout << "Microsoft Visual Studio Solution File, Format Version 12.00\n";
+      if (this->ExpressEdition) {
+        fout << "# Visual Studio Express 17 for Windows Desktop\n";
+      } else {
+        fout << "# Visual Studio Version 17\n";
       }
       break;
   }
@@ -508,7 +519,7 @@ std::string cmGlobalVisualStudioGenerator::GetUtilityDepend(
 std::string cmGlobalVisualStudioGenerator::GetStartupProjectName(
   cmLocalGenerator const* root) const
 {
-  cmProp n = root->GetMakefile()->GetProperty("VS_STARTUP_PROJECT");
+  cmValue n = root->GetMakefile()->GetProperty("VS_STARTUP_PROJECT");
   if (cmNonempty(n)) {
     std::string startup = *n;
     if (this->FindTarget(startup)) {
@@ -809,7 +820,7 @@ bool cmGlobalVisualStudioGenerator::TargetIsFortranOnly(
   // This allows the project to control the language choice in
   // a target with none of its own sources, e.g. when also using
   // object libraries.
-  cmProp linkLang = gt->GetProperty("LINKER_LANGUAGE");
+  cmValue linkLang = gt->GetProperty("LINKER_LANGUAGE");
   if (cmNonempty(linkLang)) {
     languages.insert(*linkLang);
   }

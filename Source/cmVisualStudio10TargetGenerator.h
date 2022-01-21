@@ -16,6 +16,7 @@
 
 class cmComputeLinkInformation;
 class cmCustomCommand;
+class cmCustomCommandGenerator;
 class cmGeneratedFileStream;
 class cmGlobalVisualStudio10Generator;
 class cmLocalVisualStudio10Generator;
@@ -57,6 +58,10 @@ private:
   struct Elem;
   struct OptionsHelper;
 
+  using ConfigToSettings =
+    std::unordered_map<std::string,
+                       std::unordered_map<std::string, std::string>>;
+
   std::string ConvertPath(std::string const& path, bool forceRelative);
   std::string CalcCondition(const std::string& config) const;
   void WriteProjectConfigurations(Elem& e0);
@@ -65,12 +70,15 @@ private:
   void WriteCEDebugProjectConfigurationValues(Elem& e0);
   void WriteMSToolConfigurationValuesManaged(Elem& e1,
                                              std::string const& config);
-  void WriteHeaderSource(Elem& e1, cmSourceFile const* sf);
-  void WriteExtraSource(Elem& e1, cmSourceFile const* sf);
+  void WriteHeaderSource(Elem& e1, cmSourceFile const* sf,
+                         ConfigToSettings const& toolSettings);
+  void WriteExtraSource(Elem& e1, cmSourceFile const* sf,
+                        ConfigToSettings& toolSettings);
   void WriteNsightTegraConfigurationValues(Elem& e1,
                                            std::string const& config);
   void WriteAndroidConfigurationValues(Elem& e1, std::string const& config);
   void WriteSource(Elem& e2, cmSourceFile const* sf);
+  void FinishWritingSource(Elem& e2, ConfigToSettings const& toolSettings);
   void WriteExcludeFromBuild(Elem& e2,
                              std::vector<size_t> const& exclude_configs);
   void WriteAllSources(Elem& e0);
@@ -143,13 +151,15 @@ private:
                           std::string const& script,
                           std::string const& additional_inputs,
                           std::string const& outputs,
-                          std::string const& comment, bool symbolic);
+                          std::string const& comment,
+                          cmCustomCommandGenerator const& ccg, bool symbolic);
   void WriteCustomRuleCSharp(Elem& e0, std::string const& config,
                              std::string const& commandName,
                              std::string const& script,
                              std::string const& inputs,
                              std::string const& outputs,
-                             std::string const& comment);
+                             std::string const& comment,
+                             cmCustomCommandGenerator const& ccg);
   void WriteCustomCommands(Elem& e0);
   void WriteCustomCommand(Elem& e0, cmSourceFile const* sf);
   void WriteGroups();
@@ -216,6 +226,7 @@ private:
   bool Managed;
   bool NsightTegra;
   bool Android;
+  bool HaveCustomCommandDepfile = false;
   unsigned int NsightTegraVersion[4];
   bool TargetCompileAsWinRT;
   std::set<std::string> IPOEnabledConfigurations;
@@ -248,9 +259,6 @@ private:
   void ClassifyAllConfigSources();
   void ClassifyAllConfigSource(cmGeneratorTarget::AllConfigSource const& acs);
 
-  using ConfigToSettings =
-    std::unordered_map<std::string,
-                       std::unordered_map<std::string, std::string>>;
   std::unordered_map<std::string, ConfigToSettings> ParsedToolTargetSettings;
   bool PropertyIsSameInAllConfigs(const ConfigToSettings& toolSettings,
                                   const std::string& propName);

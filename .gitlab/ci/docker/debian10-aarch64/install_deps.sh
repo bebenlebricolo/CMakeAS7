@@ -23,10 +23,17 @@ apt-get install -y \
 apt-get install -y \
     jq
 
+# Packages needed to test CTest.
+apt-get install -y \
+    cvs \
+    subversion \
+    mercurial
+
 # Packages needed to test find modules.
 apt-get install -y \
     alsa-utils \
     doxygen graphviz \
+    freeglut3-dev \
     gnutls-dev \
     libarchive-dev \
     libblas-dev \
@@ -45,6 +52,8 @@ apt-get install -y \
     libgif-dev \
     libgl1-mesa-dev \
     libglew-dev \
+    libgmock-dev \
+    libgrpc++-dev libgrpc-dev \
     libgsl-dev \
     libgtest-dev \
     libgtk2.0-dev \
@@ -56,7 +65,7 @@ apt-get install -y \
     libopenmpi-dev openmpi-bin \
     libpng-dev \
     libpq-dev postgresql-server-dev-11 \
-    libprotobuf-dev libprotobuf-c-dev libprotoc-dev protobuf-compiler \
+    libprotobuf-dev libprotobuf-c-dev libprotoc-dev protobuf-compiler protobuf-compiler-grpc \
     libsdl-dev \
     libsqlite3-dev \
     libtiff-dev \

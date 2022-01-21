@@ -27,12 +27,8 @@ else()
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "WindowsCE")
-  set(CMAKE_CREATE_WIN32_EXE "/entry:WinMainCRTStartup")
-  set(CMAKE_CREATE_CONSOLE_EXE "/entry:mainACRTStartup")
   set(_PLATFORM_LINK_FLAGS " /subsystem:windowsce")
 else()
-  set(CMAKE_CREATE_WIN32_EXE "/subsystem:windows")
-  set(CMAKE_CREATE_CONSOLE_EXE "/subsystem:console")
   set(_PLATFORM_LINK_FLAGS "")
 endif()
 
@@ -71,7 +67,10 @@ if(NOT MSVC_VERSION)
     message(FATAL_ERROR "MSVC compiler version not detected properly: ${_compiler_version}")
   endif()
 
-  if(MSVC_VERSION GREATER_EQUAL 1920)
+  if(MSVC_VERSION GREATER_EQUAL 1930)
+    # VS 2022 or greater
+    set(MSVC_TOOLSET_VERSION 143)
+  elseif(MSVC_VERSION GREATER_EQUAL 1920)
     # VS 2019 or greater
     set(MSVC_TOOLSET_VERSION 142)
   elseif(MSVC_VERSION GREATER_EQUAL 1910)
@@ -350,6 +349,14 @@ macro(__windows_compiler_msvc lang)
   set(CMAKE_${lang}_USE_RESPONSE_FILE_FOR_OBJECTS 1)
   set(CMAKE_${lang}_LINK_EXECUTABLE
     "${_CMAKE_VS_LINK_EXE}<CMAKE_LINKER> ${CMAKE_CL_NOLOGO} <OBJECTS> ${CMAKE_START_TEMP_FILE} /out:<TARGET> /implib:<TARGET_IMPLIB> /pdb:<TARGET_PDB> /version:<TARGET_VERSION_MAJOR>.<TARGET_VERSION_MINOR>${_PLATFORM_LINK_FLAGS} <CMAKE_${lang}_LINK_FLAGS> <LINK_FLAGS> <LINK_LIBRARIES>${CMAKE_END_TEMP_FILE}")
+
+  if(CMAKE_SYSTEM_NAME STREQUAL "WindowsCE")
+    set(CMAKE_${lang}_CREATE_WIN32_EXE "/entry:WinMainCRTStartup")
+    set(CMAKE_${lang}_CREATE_CONSOLE_EXE "/entry:mainACRTStartup")
+  else()
+    set(CMAKE_${lang}_CREATE_WIN32_EXE "/subsystem:windows")
+    set(CMAKE_${lang}_CREATE_CONSOLE_EXE "/subsystem:console")
+  endif()
 
   set(CMAKE_PCH_EXTENSION .pch)
   set(CMAKE_LINK_PCH ON)
