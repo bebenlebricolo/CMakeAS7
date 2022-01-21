@@ -590,9 +590,9 @@ if (QT4_FOUND)
 endif()
 
 find_package(PkgConfig QUIET)
-if(PKG_CONFIG_FOUND)
-  add_RunCMake_test(FindPkgConfig)
-endif()
+#if(PKG_CONFIG_FOUND)
+#  add_RunCMake_test(FindPkgConfig)
+#endif()
 
 if(CMake_TEST_FindGTK2)
   add_RunCMake_test(FindGTK2)
